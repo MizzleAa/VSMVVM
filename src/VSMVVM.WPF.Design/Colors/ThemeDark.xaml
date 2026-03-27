@@ -1,0 +1,83 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Dark Theme Semantic Colors - Zinc Base + Blue Accent -->
+    <!-- Use with DynamicResource for runtime theme switching -->
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Colors/Palette.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- Background (Zinc) -->
+    <SolidColorBrush x:Key="BgPrimary" Color="{StaticResource Zinc950}"/>
+    <SolidColorBrush x:Key="BgSecondary" Color="{StaticResource Zinc900}"/>
+    <SolidColorBrush x:Key="BgTertiary" Color="{StaticResource Zinc800}"/>
+    <SolidColorBrush x:Key="BgMuted" Color="{StaticResource Zinc700}"/>
+    <SolidColorBrush x:Key="BgInverse" Color="{StaticResource Zinc50}"/>
+
+    <!-- Foreground / Text (Zinc) -->
+    <SolidColorBrush x:Key="TextPrimary" Color="{StaticResource Zinc50}"/>
+    <SolidColorBrush x:Key="TextSecondary" Color="{StaticResource Zinc300}"/>
+    <SolidColorBrush x:Key="TextMuted" Color="{StaticResource Zinc500}"/>
+    <SolidColorBrush x:Key="TextInverse" Color="{StaticResource Zinc900}"/>
+    <SolidColorBrush x:Key="TextPlaceholder" Color="{StaticResource Zinc500}"/>
+
+    <!-- Border (Zinc) -->
+    <SolidColorBrush x:Key="BorderDefault" Color="{StaticResource Zinc700}"/>
+    <SolidColorBrush x:Key="BorderHover" Color="{StaticResource Zinc600}"/>
+    <SolidColorBrush x:Key="BorderFocus" Color="{StaticResource Blue400}"/>
+    <SolidColorBrush x:Key="BorderMuted" Color="{StaticResource Zinc800}"/>
+
+    <!-- Accent / Primary (Blue - Company Key Color) -->
+    <SolidColorBrush x:Key="AccentPrimary" Color="{StaticResource Blue500}"/>
+    <SolidColorBrush x:Key="AccentPrimaryHover" Color="{StaticResource Blue400}"/>
+    <SolidColorBrush x:Key="AccentPrimaryActive" Color="{StaticResource Blue300}"/>
+    <SolidColorBrush x:Key="AccentPrimaryMuted" Color="{StaticResource Blue900}"/>
+    <SolidColorBrush x:Key="Accent" Color="{StaticResource Blue500}"/>
+
+    <!-- Secondary (Zinc) -->
+    <SolidColorBrush x:Key="AccentSecondary" Color="{StaticResource Zinc400}"/>
+    <SolidColorBrush x:Key="AccentSecondaryHover" Color="{StaticResource Zinc300}"/>
+
+    <!-- Status: Success -->
+    <SolidColorBrush x:Key="Success" Color="{StaticResource Green500}"/>
+    <SolidColorBrush x:Key="SuccessHover" Color="{StaticResource Green400}"/>
+    <SolidColorBrush x:Key="SuccessMuted" Color="{StaticResource Green950}"/>
+    <SolidColorBrush x:Key="SuccessText" Color="{StaticResource Green400}"/>
+
+    <!-- Status: Warning -->
+    <SolidColorBrush x:Key="Warning" Color="{StaticResource Amber500}"/>
+    <SolidColorBrush x:Key="WarningHover" Color="{StaticResource Amber400}"/>
+    <SolidColorBrush x:Key="WarningMuted" Color="{StaticResource Amber950}"/>
+    <SolidColorBrush x:Key="WarningText" Color="{StaticResource Amber400}"/>
+
+    <!-- Status: Error / Danger -->
+    <SolidColorBrush x:Key="Error" Color="{StaticResource Red500}"/>
+    <SolidColorBrush x:Key="ErrorHover" Color="{StaticResource Red400}"/>
+    <SolidColorBrush x:Key="ErrorMuted" Color="{StaticResource Red950}"/>
+    <SolidColorBrush x:Key="ErrorText" Color="{StaticResource Red400}"/>
+    <SolidColorBrush x:Key="Danger" Color="{StaticResource Red500}"/>
+
+    <!-- Status: Info -->
+    <SolidColorBrush x:Key="Info" Color="{StaticResource Sky500}"/>
+    <SolidColorBrush x:Key="InfoHover" Color="{StaticResource Sky400}"/>
+    <SolidColorBrush x:Key="InfoMuted" Color="{StaticResource Sky950}"/>
+    <SolidColorBrush x:Key="InfoText" Color="{StaticResource Sky400}"/>
+
+    <!-- Overlay -->
+    <SolidColorBrush x:Key="Overlay" Color="{StaticResource Black}" Opacity="0.7"/>
+    <SolidColorBrush x:Key="OverlayLight" Color="{StaticResource Black}" Opacity="0.5"/>
+
+    <!-- Ring / Focus (Blue) -->
+    <SolidColorBrush x:Key="RingDefault" Color="{StaticResource Blue400}"/>
+    <SolidColorBrush x:Key="RingOffset" Color="{StaticResource Zinc900}"/>
+
+    <!-- Scrollbar (Zinc) -->
+    <SolidColorBrush x:Key="ScrollbarTrack" Color="{StaticResource Zinc800}"/>
+    <SolidColorBrush x:Key="ScrollbarThumb" Color="{StaticResource Zinc600}"/>
+    <SolidColorBrush x:Key="ScrollbarThumbHover" Color="{StaticResource Zinc500}"/>
+
+</ResourceDictionary>
+
+

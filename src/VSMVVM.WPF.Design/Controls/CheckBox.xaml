@@ -1,0 +1,104 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Sizing.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Spacing.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Effects.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Typography.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- Default CheckBox -->
+    <Style TargetType="{x:Type CheckBox}">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <StackPanel Orientation="Horizontal">
+                        <Border x:Name="checkBorder"
+                                Width="{StaticResource W4_5}"
+                                Height="{StaticResource H4_5}"
+                                Background="{DynamicResource BgTertiary}"
+                                BorderBrush="{DynamicResource BorderDefault}"
+                                BorderThickness="{StaticResource Border}"
+                                CornerRadius="{StaticResource Rounded}"
+                                SnapsToDevicePixels="True">
+                            <Path x:Name="checkMark"
+                                  Data="M3,8 L7,12 L13,4"
+                                  Stroke="{DynamicResource TextInverse}"
+                                  StrokeThickness="{DynamicResource H0_5}"
+                                  Stretch="Uniform"
+                                  Margin="{StaticResource M0_5}"
+                                  Visibility="Collapsed"/>
+                        </Border>
+                        <ContentPresenter Margin="{StaticResource Ml2}"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"/>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="checkBorder" Property="Background" Value="{DynamicResource AccentPrimary}"/>
+                            <Setter TargetName="checkBorder" Property="BorderBrush" Value="{DynamicResource AccentPrimary}"/>
+                            <Setter TargetName="checkMark" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="checkBorder" Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="{StaticResource Opacity50}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Default RadioButton -->
+    <Style TargetType="{x:Type RadioButton}">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <StackPanel Orientation="Horizontal">
+                        <Border x:Name="radioBorder"
+                                Width="{StaticResource W4_5}"
+                                Height="{StaticResource H4_5}"
+                                Background="{DynamicResource BgTertiary}"
+                                BorderBrush="{DynamicResource BorderDefault}"
+                                BorderThickness="{StaticResource Border}"
+                                CornerRadius="{StaticResource RoundedFull}"
+                                SnapsToDevicePixels="True">
+                            <Ellipse x:Name="radioDot"
+                                     Width="{StaticResource W2}"
+                                     Height="{StaticResource H2}"
+                                     Fill="{DynamicResource TextInverse}"
+                                     Visibility="Collapsed"/>
+                        </Border>
+                        <ContentPresenter Margin="{StaticResource Ml2}"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"/>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="radioBorder" Property="Background" Value="{DynamicResource AccentPrimary}"/>
+                            <Setter TargetName="radioBorder" Property="BorderBrush" Value="{DynamicResource AccentPrimary}"/>
+                            <Setter TargetName="radioDot" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="radioBorder" Property="BorderBrush" Value="{DynamicResource BorderHover}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="{StaticResource Opacity50}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

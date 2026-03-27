@@ -1,0 +1,47 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- VSMVVM.WPF.Design Resource System -->
+    <!-- App.xaml에서 이 하나의 파일만 Merge하면 전체 디자인이 적용됩니다 -->
+
+    <ResourceDictionary.MergedDictionaries>
+
+        <!-- Design Tokens -->
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Spacing.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Sizing.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Typography.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Effects.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Utilities.xaml"/>
+
+        <!-- Color Palette (Static) -->
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Colors/Palette.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Colors/PaletteBrushes.xaml"/>
+
+        <!-- Theme (Dark by default) -->
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Colors/ThemeDark.xaml"/>
+
+        <!-- Default Control Styles -->
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/Text.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/Button.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/TextBox.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/CheckBox.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/ComboBox.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/ListBox.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/ListView.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/DataGrid.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/TabControl.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/ScrollViewer.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/ProgressBar.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/ContextMenu.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/Expander.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/Window.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/Dialog.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Controls/Panels.xaml"/>
+
+        <!-- Components -->
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Components/LoadingOverlay.xaml"/>
+
+    </ResourceDictionary.MergedDictionaries>
+
+</ResourceDictionary>

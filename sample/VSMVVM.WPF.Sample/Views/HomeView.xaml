@@ -1,0 +1,115 @@
+﻿<UserControl x:Class="VSMVVM.WPF.Sample.Views.HomeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
+             me:ViewModelLocator.AutoWireViewModel="True">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{StaticResource P2}">
+        <StackPanel>
+            <TextBlock Text="VSMVVM Framework"
+                       FontSize="{StaticResource Text2xl}" FontWeight="{StaticResource FontBold}"
+                       Foreground="{DynamicResource TextPrimary}" Margin="{StaticResource Mb2}"/>
+            <TextBlock Text="Source Generator + IoC + Region Navigation + Design System"
+                       FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}"
+                       Margin="{StaticResource Mb6}"/>
+
+            <WrapPanel>
+                <!-- Controls -->
+                <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                        Padding="{StaticResource P4}" Width="{StaticResource W56}" Margin="{StaticResource M2}">
+                    <StackPanel>
+                        <TextBlock Text="Controls" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                                   Foreground="{DynamicResource AccentPrimary}"/>
+                        <TextBlock Text="22 default styled controls: Button, TextBox, DataGrid, TabControl, and more."
+                                   FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}"
+                                   TextWrapping="Wrap" Margin="{StaticResource Mt2}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Components -->
+                <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                        Padding="{StaticResource P4}" Width="{StaticResource W56}" Margin="{StaticResource M2}">
+                    <StackPanel>
+                        <TextBlock Text="Components" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                                   Foreground="{DynamicResource AccentPrimary}"/>
+                        <TextBlock Text="LoadingOverlay, JsonEditor, DateTimePicker, InfoPopup."
+                                   FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}"
+                                   TextWrapping="Wrap" Margin="{StaticResource Mt2}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Source Gen -->
+                <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                        Padding="{StaticResource P4}" Width="{StaticResource W56}" Margin="{StaticResource M2}">
+                    <StackPanel>
+                        <TextBlock Text="Source Generator" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                                   Foreground="{DynamicResource AccentPrimary}"/>
+                        <TextBlock Text="[Property], [PropertyChangedFor], [RelayCommand], [AsyncRelayCommand]."
+                                   FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}"
+                                   TextWrapping="Wrap" Margin="{StaticResource Mt2}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Messenger -->
+                <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                        Padding="{StaticResource P4}" Width="{StaticResource W56}" Margin="{StaticResource M2}">
+                    <StackPanel>
+                        <TextBlock Text="Messenger" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                                   Foreground="{DynamicResource AccentPrimary}"/>
+                        <TextBlock Text="Pub/Sub messaging with Message&lt;T&gt; and IMessenger."
+                                   FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}"
+                                   TextWrapping="Wrap" Margin="{StaticResource Mt2}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Dialog -->
+                <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                        Padding="{StaticResource P4}" Width="{StaticResource W56}" Margin="{StaticResource M2}">
+                    <StackPanel>
+                        <TextBlock Text="Dialog" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                                   Foreground="{DynamicResource AccentPrimary}"/>
+                        <TextBlock Text="IDialogService for modal dialogs and confirmations."
+                                   FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}"
+                                   TextWrapping="Wrap" Margin="{StaticResource Mt2}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Navigation -->
+                <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                        Padding="{StaticResource P4}" Width="{StaticResource W56}" Margin="{StaticResource M2}">
+                    <StackPanel>
+                        <TextBlock Text="Navigation" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                                   Foreground="{DynamicResource AccentPrimary}"/>
+                        <TextBlock Text="IRegionManager + INavigateAware lifecycle events."
+                                   FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}"
+                                   TextWrapping="Wrap" Margin="{StaticResource Mt2}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Validation -->
+                <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                        Padding="{StaticResource P4}" Width="{StaticResource W56}" Margin="{StaticResource M2}">
+                    <StackPanel>
+                        <TextBlock Text="Validation" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                                   Foreground="{DynamicResource AccentPrimary}"/>
+                        <TextBlock Text="ObservableValidator with DataAnnotations."
+                                   FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}"
+                                   TextWrapping="Wrap" Margin="{StaticResource Mt2}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Services -->
+                <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                        Padding="{StaticResource P4}" Width="{StaticResource W56}" Margin="{StaticResource M2}">
+                    <StackPanel>
+                        <TextBlock Text="Services" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                                   Foreground="{DynamicResource AccentPrimary}"/>
+                        <TextBlock Text="Guard, DispatcherService, and StateStore."
+                                   FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}"
+                                   TextWrapping="Wrap" Margin="{StaticResource Mt2}"/>
+                    </StackPanel>
+                </Border>
+            </WrapPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

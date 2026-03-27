@@ -1,0 +1,131 @@
+<UserControl x:Class="VSMVVM.WPF.Design.Components.JsonEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Index.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid DataContext="{Binding ElementName=Root}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 에디터 영역 (라인 번호 + RichTextBox) -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource BgPrimary}"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="{StaticResource Border}"
+                CornerRadius="{StaticResource RoundedMd}"
+                ClipToBounds="True"
+                SnapsToDevicePixels="True">
+            <ScrollViewer x:Name="EditorScrollViewer"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- 라인 번호 패널 -->
+                    <Border Grid.Column="0"
+                            BorderBrush="{DynamicResource BorderDefault}"
+                            BorderThickness="{StaticResource BorderR}"
+                            Padding="{StaticResource Px2}"
+                            MinWidth="{StaticResource W10}">
+                        <ItemsControl x:Name="LineNumbersPanel">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}"
+                                               FontFamily="Consolas"
+                                               FontSize="{StaticResource TextSm}"
+                                               Foreground="{DynamicResource TextMuted}"
+                                               TextAlignment="Right"
+                                               LineHeight="20"
+                                               LineStackingStrategy="BlockLineHeight"
+                                               Padding="{StaticResource Pr1}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+
+                    <!-- JSON 편집 RichTextBox -->
+                    <RichTextBox x:Name="EditorBox"
+                                 Grid.Column="1"
+                                 Background="Transparent"
+                                 Foreground="{DynamicResource TextPrimary}"
+                                 CaretBrush="{DynamicResource TextPrimary}"
+                                 BorderThickness="{StaticResource Border0}"
+                                 FontFamily="Consolas"
+                                 FontSize="{StaticResource TextSm}"
+                                 AcceptsReturn="True"
+                                 AcceptsTab="False"
+                                 VerticalScrollBarVisibility="Disabled"
+                                 HorizontalScrollBarVisibility="Disabled"
+                                 Padding="{StaticResource Px2}"
+                                 TextChanged="OnEditorTextChanged"
+                                 PreviewKeyDown="OnEditorPreviewKeyDown">
+                        <RichTextBox.Document>
+                            <FlowDocument PageWidth="NaN"
+                                          LineHeight="20"
+                                          LineStackingStrategy="BlockLineHeight">
+                                <Paragraph Margin="0" Padding="0">
+                                    <Run Text=""/>
+                                </Paragraph>
+                            </FlowDocument>
+                        </RichTextBox.Document>
+                    </RichTextBox>
+                </Grid>
+            </ScrollViewer>
+        </Border>
+
+        <!-- 하단 상태 바 -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource BgSecondary}"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="{StaticResource Border}"
+                CornerRadius="{StaticResource RoundedMd}"
+                Margin="{StaticResource Mt1}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 유효성 인디케이터 -->
+                <Ellipse Grid.Column="0"
+                         x:Name="ValidationIndicator"
+                         Width="{StaticResource W2}"
+                         Height="{StaticResource H2}"
+                         Fill="{DynamicResource Emerald500Brush}"
+                         VerticalAlignment="Center"
+                         Margin="{StaticResource Mx2}"/>
+
+                <!-- 상태 메시지 -->
+                <TextBlock Grid.Column="1"
+                           x:Name="ValidationMessage"
+                           Text="Valid JSON"
+                           FontFamily="Consolas"
+                           FontSize="{StaticResource TextXs}"
+                           Foreground="{DynamicResource TextMuted}"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+
+                <!-- Format 버튼 -->
+                <Button Grid.Column="2"
+                        Content="Format"
+                        FontSize="{StaticResource TextXs}"
+                        Height="{StaticResource H6}"
+                        Padding="{StaticResource Px3}"
+                        Click="OnFormatClick"/>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

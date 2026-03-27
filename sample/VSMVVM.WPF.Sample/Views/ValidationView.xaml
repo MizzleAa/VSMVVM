@@ -1,0 +1,46 @@
+<UserControl x:Class="VSMVVM.WPF.Sample.Views.ValidationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
+             me:ViewModelLocator.AutoWireViewModel="True">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{StaticResource P2}">
+        <StackPanel>
+            <TextBlock Text="Validation"
+                       FontSize="{StaticResource Text2xl}" FontWeight="{StaticResource FontBold}"
+                       Foreground="{DynamicResource TextPrimary}" Margin="{StaticResource Mb4}"/>
+            <TextBlock Text="ObservableValidator with DataAnnotations validation."
+                       FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}" Margin="{StaticResource Mb6}"/>
+
+            <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                    Padding="{StaticResource P4}" Width="{StaticResource W96}" HorizontalAlignment="Left">
+                <StackPanel>
+                    <TextBlock Text="Name (required, 2-50 chars):" FontSize="{StaticResource TextSm}"
+                               Foreground="{DynamicResource TextSecondary}" Margin="{StaticResource Mb1}"/>
+                    <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"
+                             Margin="{StaticResource Mb1}"/>
+                    <TextBlock Text="{Binding NameError}" FontSize="{StaticResource TextXs}"
+                               Foreground="{DynamicResource Danger}" Margin="{StaticResource Mb3}"/>
+
+                    <TextBlock Text="Email (required, email format):" FontSize="{StaticResource TextSm}"
+                               Foreground="{DynamicResource TextSecondary}" Margin="{StaticResource Mb1}"/>
+                    <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"
+                             Margin="{StaticResource Mb1}"/>
+                    <TextBlock Text="{Binding EmailError}" FontSize="{StaticResource TextXs}"
+                               Foreground="{DynamicResource Danger}" Margin="{StaticResource Mb3}"/>
+
+                    <TextBlock Text="Age (1-150):" FontSize="{StaticResource TextSm}"
+                               Foreground="{DynamicResource TextSecondary}" Margin="{StaticResource Mb1}"/>
+                    <TextBox Text="{Binding Age, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"
+                             Margin="{StaticResource Mb1}"/>
+                    <TextBlock Text="{Binding AgeError}" FontSize="{StaticResource TextXs}"
+                               Foreground="{DynamicResource Danger}" Margin="{StaticResource Mb3}"/>
+
+                    <Button Content="Submit" Command="{Binding SubmitCommand}" Margin="{StaticResource Mt2}"/>
+                    <TextBlock Text="{Binding SubmitResult}" FontSize="{StaticResource TextSm}"
+                               Foreground="{DynamicResource AccentPrimary}" Margin="{StaticResource Mt2}"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

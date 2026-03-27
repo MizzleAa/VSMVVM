@@ -1,0 +1,226 @@
+<UserControl x:Class="VSMVVM.WPF.Design.Components.DateTimePicker"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root"
+             d:DesignHeight="32" d:DesignWidth="260"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Index.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid DataContext="{Binding ElementName=Root}">
+        <!-- Main Display Button -->
+        <ToggleButton x:Name="TogglePopup"
+                      IsChecked="{Binding IsPopupOpen, Mode=TwoWay}"
+                      Height="{StaticResource H8}"
+                      Cursor="Hand"
+                      SnapsToDevicePixels="True">
+            <ToggleButton.Template>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="border"
+                            Background="{DynamicResource BgPrimary}"
+                            BorderBrush="{DynamicResource BorderDefault}"
+                            BorderThickness="{StaticResource Border}"
+                            CornerRadius="{StaticResource RoundedMd}"
+                            Padding="{StaticResource Px2}"
+                            SnapsToDevicePixels="True">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding DisplayText}"
+                                       Foreground="{DynamicResource TextPrimary}"
+                                       FontSize="{StaticResource TextSm}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Left"/>
+                            <Path Grid.Column="1"
+                                  Data="M 0 0 L 5 5 L 10 0 Z"
+                                  Fill="{DynamicResource TextSecondary}"
+                                  Stretch="Uniform"
+                                  Width="{StaticResource W2}"
+                                  Height="{StaticResource H2}"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  Margin="{StaticResource M1}"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentPrimary}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource AccentPrimary}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="border" Property="Opacity" Value="{StaticResource Opacity50}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </ToggleButton.Template>
+        </ToggleButton>
+
+        <!-- Popup Dropdown -->
+        <Popup AllowsTransparency="True"
+               IsOpen="{Binding IsPopupOpen, Mode=TwoWay}"
+               Placement="Bottom"
+               PlacementTarget="{Binding ElementName=TogglePopup}"
+               StaysOpen="False"
+               PopupAnimation="Slide">
+            <Border Background="{DynamicResource BgSecondary}"
+                    BorderBrush="{DynamicResource BorderDefault}"
+                    BorderThickness="{StaticResource Border}"
+                    CornerRadius="{StaticResource RoundedMd}"
+                    Padding="{StaticResource P3}"
+                    Margin="{StaticResource M1}"
+                    SnapsToDevicePixels="True"
+                    Effect="{StaticResource ShadowLg}">
+                <StackPanel>
+                    <!-- Date Section Label -->
+                    <TextBlock Text="Date"
+                               Foreground="{DynamicResource TextSecondary}"
+                               FontSize="{StaticResource TextXs}"
+                               FontWeight="{StaticResource FontSemibold}"
+                               Margin="{StaticResource Mb1}"/>
+
+                    <!-- Date Spinners: Year / Month / Day -->
+                    <StackPanel Orientation="Horizontal" Margin="{StaticResource Mb3}">
+                        <!-- Year -->
+                        <StackPanel Margin="{StaticResource Mr2}">
+                            <RepeatButton Click="IncrementYear"
+                                          Width="{StaticResource W14}" Height="{StaticResource H5}"
+                                          Interval="200" Delay="400">
+                                <Path Data="M0,6 L6,0 L12,6" Stroke="{DynamicResource TextSecondary}" StrokeThickness="{StaticResource H0_5}" Stretch="Uniform" Width="{StaticResource W2}" Height="{StaticResource H2}"/>
+                            </RepeatButton>
+                            <TextBox Text="{Binding YearText, UpdateSourceTrigger=LostFocus}"
+                                     TextAlignment="Center"
+                                     Width="{StaticResource W14}" Height="{StaticResource H7}"
+                                     HorizontalContentAlignment="Center"/>
+                            <RepeatButton Click="DecrementYear"
+                                          Width="{StaticResource W14}" Height="{StaticResource H5}"
+                                          Interval="200" Delay="400">
+                                <Path Data="M0,0 L6,6 L12,0" Stroke="{DynamicResource TextSecondary}" StrokeThickness="{StaticResource H0_5}" Stretch="Uniform" Width="{StaticResource W2}" Height="{StaticResource H2}"/>
+                            </RepeatButton>
+                        </StackPanel>
+                        <!-- Month -->
+                        <StackPanel Margin="{StaticResource Mr2}">
+                            <RepeatButton Click="IncrementMonth"
+                                          Width="{StaticResource W14}" Height="{StaticResource H5}"
+                                          Interval="200" Delay="400">
+                                <Path Data="M0,6 L6,0 L12,6" Stroke="{DynamicResource TextSecondary}" StrokeThickness="{StaticResource H0_5}" Stretch="Uniform" Width="{StaticResource W2}" Height="{StaticResource H2}"/>
+                            </RepeatButton>
+                            <TextBox Text="{Binding MonthText, UpdateSourceTrigger=LostFocus}"
+                                     TextAlignment="Center"
+                                     Width="{StaticResource W14}" Height="{StaticResource H7}"
+                                     HorizontalContentAlignment="Center"/>
+                            <RepeatButton Click="DecrementMonth"
+                                          Width="{StaticResource W14}" Height="{StaticResource H5}"
+                                          Interval="200" Delay="400">
+                                <Path Data="M0,0 L6,6 L12,0" Stroke="{DynamicResource TextSecondary}" StrokeThickness="{StaticResource H0_5}" Stretch="Uniform" Width="{StaticResource W2}" Height="{StaticResource H2}"/>
+                            </RepeatButton>
+                        </StackPanel>
+                        <!-- Day -->
+                        <StackPanel>
+                            <RepeatButton Click="IncrementDay"
+                                          Width="{StaticResource W14}" Height="{StaticResource H5}"
+                                          Interval="200" Delay="400">
+                                <Path Data="M0,6 L6,0 L12,6" Stroke="{DynamicResource TextSecondary}" StrokeThickness="{StaticResource H0_5}" Stretch="Uniform" Width="{StaticResource W2}" Height="{StaticResource H2}"/>
+                            </RepeatButton>
+                            <TextBox Text="{Binding DayText, UpdateSourceTrigger=LostFocus}"
+                                     TextAlignment="Center"
+                                     Width="{StaticResource W14}" Height="{StaticResource H7}"
+                                     HorizontalContentAlignment="Center"/>
+                            <RepeatButton Click="DecrementDay"
+                                          Width="{StaticResource W14}" Height="{StaticResource H5}"
+                                          Interval="200" Delay="400">
+                                <Path Data="M0,0 L6,6 L12,0" Stroke="{DynamicResource TextSecondary}" StrokeThickness="{StaticResource H0_5}" Stretch="Uniform" Width="{StaticResource W2}" Height="{StaticResource H2}"/>
+                            </RepeatButton>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Time Section Label -->
+                    <TextBlock Text="Time"
+                               Foreground="{DynamicResource TextSecondary}"
+                               FontSize="{StaticResource TextXs}"
+                               FontWeight="{StaticResource FontSemibold}"
+                               Margin="{StaticResource Mb1}"/>
+
+                    <!-- Time Spinners: Hour : Minute : Second -->
+                    <StackPanel Orientation="Horizontal" Margin="{StaticResource Mb3}">
+                        <!-- Hour -->
+                        <StackPanel Margin="{StaticResource Mr2}">
+                            <RepeatButton Click="IncrementHour"
+                                          Width="{StaticResource W14}" Height="{StaticResource H5}"
+                                          Interval="200" Delay="400">
+                                <Path Data="M0,6 L6,0 L12,6" Stroke="{DynamicResource TextSecondary}" StrokeThickness="{StaticResource H0_5}" Stretch="Uniform" Width="{StaticResource W2}" Height="{StaticResource H2}"/>
+                            </RepeatButton>
+                            <TextBox Text="{Binding HourText, UpdateSourceTrigger=LostFocus}"
+                                     TextAlignment="Center"
+                                     Width="{StaticResource W14}" Height="{StaticResource H7}"
+                                     HorizontalContentAlignment="Center"/>
+                            <RepeatButton Click="DecrementHour"
+                                          Width="{StaticResource W14}" Height="{StaticResource H5}"
+                                          Interval="200" Delay="400">
+                                <Path Data="M0,0 L6,6 L12,0" Stroke="{DynamicResource TextSecondary}" StrokeThickness="{StaticResource H0_5}" Stretch="Uniform" Width="{StaticResource W2}" Height="{StaticResource H2}"/>
+                            </RepeatButton>
+                        </StackPanel>
+                        <!-- Minute -->
+                        <StackPanel Margin="{StaticResource Mr2}">
+                            <RepeatButton Click="IncrementMinute"
+                                          Width="{StaticResource W14}" Height="{StaticResource H5}"
+                                          Interval="200" Delay="400">
+                                <Path Data="M0,6 L6,0 L12,6" Stroke="{DynamicResource TextSecondary}" StrokeThickness="{StaticResource H0_5}" Stretch="Uniform" Width="{StaticResource W2}" Height="{StaticResource H2}"/>
+                            </RepeatButton>
+                            <TextBox Text="{Binding MinuteText, UpdateSourceTrigger=LostFocus}"
+                                     TextAlignment="Center"
+                                     Width="{StaticResource W14}" Height="{StaticResource H7}"
+                                     HorizontalContentAlignment="Center"/>
+                            <RepeatButton Click="DecrementMinute"
+                                          Width="{StaticResource W14}" Height="{StaticResource H5}"
+                                          Interval="200" Delay="400">
+                                <Path Data="M0,0 L6,6 L12,0" Stroke="{DynamicResource TextSecondary}" StrokeThickness="{StaticResource H0_5}" Stretch="Uniform" Width="{StaticResource W2}" Height="{StaticResource H2}"/>
+                            </RepeatButton>
+                        </StackPanel>
+                        <!-- Second -->
+                        <StackPanel>
+                            <RepeatButton Click="IncrementSecond"
+                                          Width="{StaticResource W14}" Height="{StaticResource H5}"
+                                          Interval="200" Delay="400">
+                                <Path Data="M0,6 L6,0 L12,6" Stroke="{DynamicResource TextSecondary}" StrokeThickness="{StaticResource H0_5}" Stretch="Uniform" Width="{StaticResource W2}" Height="{StaticResource H2}"/>
+                            </RepeatButton>
+                            <TextBox Text="{Binding SecondText, UpdateSourceTrigger=LostFocus}"
+                                     TextAlignment="Center"
+                                     Width="{StaticResource W14}" Height="{StaticResource H7}"
+                                     HorizontalContentAlignment="Center"/>
+                            <RepeatButton Click="DecrementSecond"
+                                          Width="{StaticResource W14}" Height="{StaticResource H5}"
+                                          Interval="200" Delay="400">
+                                <Path Data="M0,0 L6,6 L12,0" Stroke="{DynamicResource TextSecondary}" StrokeThickness="{StaticResource H0_5}" Stretch="Uniform" Width="{StaticResource W2}" Height="{StaticResource H2}"/>
+                            </RepeatButton>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Bottom Buttons -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Now" Click="SetNow"
+                                FontSize="{StaticResource TextXs}"
+                                Height="{StaticResource H6}"
+                                Padding="{StaticResource Px3}"
+                                Margin="{StaticResource Mr2}"/>
+                        <Button Content="OK" Click="Confirm"
+                                FontSize="{StaticResource TextXs}"
+                                Height="{StaticResource H6}"
+                                Padding="{StaticResource Px3}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

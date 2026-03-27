@@ -1,0 +1,43 @@
+﻿<UserControl x:Class="VSMVVM.WPF.Sample.Views.LocalizationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
+             me:ViewModelLocator.AutoWireViewModel="True">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{StaticResource P2}">
+        <StackPanel>
+            <TextBlock Text="Localization"
+                       FontSize="{StaticResource Text2xl}" FontWeight="{StaticResource FontBold}"
+                       Foreground="{DynamicResource TextPrimary}" Margin="{StaticResource Mb4}"/>
+            <TextBlock Text="ILocalizeService: ResourceManager + ChangeLocale + GetString demo."
+                       FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}" Margin="{StaticResource Mb6}"/>
+
+            <!-- Language Switch -->
+            <TextBlock Text="Switch Language" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                       Foreground="{DynamicResource AccentPrimary}" Margin="{StaticResource Mb2}"/>
+            <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                    Padding="{StaticResource P4}" Width="{StaticResource W96}" HorizontalAlignment="Left" Margin="{StaticResource Mb6}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="{StaticResource Mb4}">
+                        <Button Content="English" Command="{Binding SwitchToEnglishCommand}" Margin="{StaticResource Mr2}"/>
+                        <Button Content="Korean" Command="{Binding SwitchToKoreanCommand}"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Current Locale:" FontSize="{StaticResource TextXs}" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mb1}"/>
+                    <TextBlock Text="{Binding CurrentLocale}" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontBold}"
+                               Foreground="{DynamicResource AccentPrimary}" FontFamily="Consolas" Margin="{StaticResource Mb4}"/>
+
+                    <TextBlock Text="APP_TITLE:" FontSize="{StaticResource TextXs}" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mb1}"/>
+                    <TextBlock Text="{Binding AppTitle}" FontSize="{StaticResource TextBase}" Foreground="{DynamicResource TextPrimary}" Margin="{StaticResource Mb3}"/>
+
+                    <TextBlock Text="GREETING:" FontSize="{StaticResource TextXs}" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mb1}"/>
+                    <TextBlock Text="{Binding Greeting}" FontSize="{StaticResource TextLg}" FontWeight="{StaticResource FontSemibold}"
+                               Foreground="{DynamicResource TextPrimary}" Margin="{StaticResource Mb3}"/>
+
+                    <TextBlock Text="DYNAMIC_TEXT:" FontSize="{StaticResource TextXs}" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mb1}"/>
+                    <TextBlock Text="{Binding DynamicText}" FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<LangVersion>12</LangVersion>
+		<Nullable>disable</Nullable>
+		<Platforms>AnyCPU;x64;x86</Platforms>
+		<Version>1.0.0</Version>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<PackageTags>mvvm,wpf,ioc,vsmvvm</PackageTags>
+		<RootNamespace>VSMVVM.WPF</RootNamespace>
+		<AssemblyName>VSMVVM.WPF</AssemblyName>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VSMVVM.Core\VSMVVM.Core.csproj" />
+	</ItemGroup>
+
+</Project>

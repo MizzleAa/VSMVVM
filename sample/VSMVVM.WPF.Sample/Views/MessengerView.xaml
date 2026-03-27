@@ -1,0 +1,61 @@
+<UserControl x:Class="VSMVVM.WPF.Sample.Views.MessengerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
+             me:ViewModelLocator.AutoWireViewModel="True">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{StaticResource P2}">
+        <StackPanel>
+            <TextBlock Text="Messenger"
+                       FontSize="{StaticResource Text2xl}"
+                       FontWeight="{StaticResource FontBold}"
+                       Foreground="{DynamicResource TextPrimary}"
+                       Margin="{StaticResource Mb4}"/>
+            <TextBlock Text="IMessenger send/receive demo with Message&lt;T&gt;."
+                       FontSize="{StaticResource TextSm}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       Margin="{StaticResource Mb6}"/>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="{StaticResource GridW3}"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Send Panel -->
+                <Border Grid.Column="0" Background="{DynamicResource BgSecondary}"
+                        CornerRadius="{StaticResource RoundedMd}" Padding="{StaticResource P4}">
+                    <StackPanel>
+                        <TextBlock Text="Send Message" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                                   Foreground="{DynamicResource AccentPrimary}" Margin="{StaticResource Mb3}"/>
+                        <TextBox Text="{Binding MessageInput, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="{StaticResource Mb3}"/>
+                        <Button Content="Send" Command="{Binding SendMessageCommand}" Margin="{StaticResource Mb4}"/>
+                        <TextBlock Text="Send Log" FontSize="{StaticResource TextSm}" FontWeight="{StaticResource FontSemibold}"
+                                   Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mb2}"/>
+                        <TextBox Text="{Binding SendLog, Mode=OneWay}" IsReadOnly="True"
+                                 Height="{StaticResource H40}" AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 FontSize="{StaticResource TextXs}"
+                                 Foreground="{DynamicResource TextSecondary}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Receive Panel -->
+                <Border Grid.Column="2" Background="{DynamicResource BgSecondary}"
+                        CornerRadius="{StaticResource RoundedMd}" Padding="{StaticResource P4}">
+                    <StackPanel>
+                        <TextBlock Text="Received Messages" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                                   Foreground="{DynamicResource AccentPrimary}" Margin="{StaticResource Mb3}"/>
+                        <TextBox Text="{Binding ReceiveLog, Mode=OneWay}" IsReadOnly="True"
+                                 Height="{StaticResource H40}" AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 FontSize="{StaticResource TextXs}"
+                                 Foreground="{DynamicResource TextSecondary}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

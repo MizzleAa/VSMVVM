@@ -1,0 +1,69 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- Border Radius -->
+    <CornerRadius x:Key="RoundedNone">0</CornerRadius>
+    <CornerRadius x:Key="RoundedSm">2</CornerRadius>
+    <CornerRadius x:Key="Rounded">4</CornerRadius>
+    <CornerRadius x:Key="RoundedMd">6</CornerRadius>
+    <CornerRadius x:Key="RoundedLg">8</CornerRadius>
+    <CornerRadius x:Key="RoundedXl">12</CornerRadius>
+    <CornerRadius x:Key="Rounded2xl">16</CornerRadius>
+    <CornerRadius x:Key="Rounded3xl">24</CornerRadius>
+    <CornerRadius x:Key="RoundedFull">9999</CornerRadius>
+    <CornerRadius x:Key="RoundedLgBottom">0,0,8,8</CornerRadius>
+    <CornerRadius x:Key="RoundedLgTop">8,8,0,0</CornerRadius>
+    <CornerRadius x:Key="RoundedLgRight">0,8,8,0</CornerRadius>
+
+    <!-- Drop Shadows -->
+    <DropShadowEffect x:Key="ShadowSm" BlurRadius="4" ShadowDepth="1" Opacity="0.05" Color="Black" Direction="270"/>
+    <DropShadowEffect x:Key="Shadow" BlurRadius="6" ShadowDepth="2" Opacity="0.1" Color="Black" Direction="270"/>
+    <DropShadowEffect x:Key="ShadowMd" BlurRadius="10" ShadowDepth="4" Opacity="0.1" Color="Black" Direction="270"/>
+    <DropShadowEffect x:Key="ShadowLg" BlurRadius="15" ShadowDepth="8" Opacity="0.1" Color="Black" Direction="270"/>
+    <DropShadowEffect x:Key="ShadowXl" BlurRadius="25" ShadowDepth="12" Opacity="0.1" Color="Black" Direction="270"/>
+    <DropShadowEffect x:Key="Shadow2xl" BlurRadius="50" ShadowDepth="25" Opacity="0.25" Color="Black" Direction="270"/>
+
+    <!-- Blur Effects -->
+    <BlurEffect x:Key="BlurNone" Radius="0"/>
+    <BlurEffect x:Key="BlurSm" Radius="4"/>
+    <BlurEffect x:Key="Blur" Radius="8"/>
+    <BlurEffect x:Key="BlurMd" Radius="12"/>
+    <BlurEffect x:Key="BlurLg" Radius="16"/>
+    <BlurEffect x:Key="BlurXl" Radius="24"/>
+    <BlurEffect x:Key="Blur2xl" Radius="40"/>
+
+    <!-- Opacity -->
+    <sys:Double x:Key="Opacity0">0</sys:Double>
+    <sys:Double x:Key="Opacity5">0.05</sys:Double>
+    <sys:Double x:Key="Opacity10">0.1</sys:Double>
+    <sys:Double x:Key="Opacity20">0.2</sys:Double>
+    <sys:Double x:Key="Opacity25">0.25</sys:Double>
+    <sys:Double x:Key="Opacity30">0.3</sys:Double>
+    <sys:Double x:Key="Opacity40">0.4</sys:Double>
+    <sys:Double x:Key="Opacity50">0.5</sys:Double>
+    <sys:Double x:Key="Opacity60">0.6</sys:Double>
+    <sys:Double x:Key="Opacity70">0.7</sys:Double>
+    <sys:Double x:Key="Opacity75">0.75</sys:Double>
+    <sys:Double x:Key="Opacity80">0.8</sys:Double>
+    <sys:Double x:Key="Opacity90">0.9</sys:Double>
+    <sys:Double x:Key="Opacity95">0.95</sys:Double>
+    <sys:Double x:Key="Opacity100">1</sys:Double>
+
+    <!-- Border Width -->
+    <Thickness x:Key="Border0">0</Thickness>
+    <Thickness x:Key="Border">1</Thickness>
+    <Thickness x:Key="Border2">2</Thickness>
+    <Thickness x:Key="Border4">4</Thickness>
+    <Thickness x:Key="Border8">8</Thickness>
+    <Thickness x:Key="BorderT">0,1,0,0</Thickness>
+    <Thickness x:Key="BorderR">0,0,1,0</Thickness>
+    <Thickness x:Key="BorderB">0,0,0,1</Thickness>
+    <Thickness x:Key="BorderL">1,0,0,0</Thickness>
+    <Thickness x:Key="BorderX">1,0,1,0</Thickness>
+    <Thickness x:Key="BorderY">0,1,0,1</Thickness>
+    <Thickness x:Key="BorderRB">0,0,1,1</Thickness>
+
+</ResourceDictionary>
+

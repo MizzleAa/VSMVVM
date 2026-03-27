@@ -1,0 +1,344 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ========================== -->
+    <!-- Spacing Scale     -->
+    <!-- M = Margin, P = Padding    -->
+    <!-- t/r/b/l = Top/Right/Bottom/Left -->
+    <!-- x/y = Horizontal/Vertical  -->
+    <!-- ========================== -->
+
+    <!-- Scale 0 (0px) -->
+    <Thickness x:Key="M0">0</Thickness>
+    <Thickness x:Key="P0">0</Thickness>
+
+    <!-- Scale 0.5 (2px) -->
+    <Thickness x:Key="M0_5">2</Thickness>
+    <Thickness x:Key="Mt0_5">0,2,0,0</Thickness>
+    <Thickness x:Key="Mr0_5">0,0,2,0</Thickness>
+    <Thickness x:Key="Mb0_5">0,0,0,2</Thickness>
+    <Thickness x:Key="Ml0_5">2,0,0,0</Thickness>
+    <Thickness x:Key="Mx0_5">2,0,2,0</Thickness>
+    <Thickness x:Key="My0_5">0,2,0,2</Thickness>
+    <Thickness x:Key="P0_5">2</Thickness>
+    <Thickness x:Key="Pt0_5">0,2,0,0</Thickness>
+    <Thickness x:Key="Pr0_5">0,0,2,0</Thickness>
+    <Thickness x:Key="Pb0_5">0,0,0,2</Thickness>
+    <Thickness x:Key="Pl0_5">2,0,0,0</Thickness>
+    <Thickness x:Key="Px0_5">2,0,2,0</Thickness>
+    <Thickness x:Key="Py0_5">0,2,0,2</Thickness>
+
+    <!-- Scale 1 (4px) -->
+    <Thickness x:Key="M1">4</Thickness>
+    <Thickness x:Key="Mt1">0,4,0,0</Thickness>
+    <Thickness x:Key="Mr1">0,0,4,0</Thickness>
+    <Thickness x:Key="Mb1">0,0,0,4</Thickness>
+    <Thickness x:Key="Ml1">4,0,0,0</Thickness>
+    <Thickness x:Key="Mx1">4,0,4,0</Thickness>
+    <Thickness x:Key="My1">0,4,0,4</Thickness>
+    <Thickness x:Key="P1">4</Thickness>
+    <Thickness x:Key="Pt1">0,4,0,0</Thickness>
+    <Thickness x:Key="Pr1">0,0,4,0</Thickness>
+    <Thickness x:Key="Pb1">0,0,0,4</Thickness>
+    <Thickness x:Key="Pl1">4,0,0,0</Thickness>
+    <Thickness x:Key="Px1">4,0,4,0</Thickness>
+    <Thickness x:Key="Py1">0,4,0,4</Thickness>
+
+    <!-- Scale 1 Compound (multi-axis) -->
+    <Thickness x:Key="Mr1Mb1">0,0,4,4</Thickness>
+    <Thickness x:Key="Px2Py1">8,4,8,4</Thickness>
+    <Thickness x:Key="Px3Py2">12,8,12,8</Thickness>
+
+    <!-- Scale 1.5 (6px) -->
+    <Thickness x:Key="M1_5">6</Thickness>
+    <Thickness x:Key="Mt1_5">0,6,0,0</Thickness>
+    <Thickness x:Key="Mr1_5">0,0,6,0</Thickness>
+    <Thickness x:Key="Mb1_5">0,0,0,6</Thickness>
+    <Thickness x:Key="Ml1_5">6,0,0,0</Thickness>
+    <Thickness x:Key="Mx1_5">6,0,6,0</Thickness>
+    <Thickness x:Key="My1_5">0,6,0,6</Thickness>
+    <Thickness x:Key="P1_5">6</Thickness>
+    <Thickness x:Key="Pt1_5">0,6,0,0</Thickness>
+    <Thickness x:Key="Pr1_5">0,0,6,0</Thickness>
+    <Thickness x:Key="Pb1_5">0,0,0,6</Thickness>
+    <Thickness x:Key="Pl1_5">6,0,0,0</Thickness>
+    <Thickness x:Key="Px1_5">6,0,6,0</Thickness>
+    <Thickness x:Key="Py1_5">0,6,0,6</Thickness>
+
+    <!-- Scale 2 (8px) -->
+    <Thickness x:Key="M2">8</Thickness>
+    <Thickness x:Key="Mt2">0,8,0,0</Thickness>
+    <Thickness x:Key="Mr2">0,0,8,0</Thickness>
+    <Thickness x:Key="Mb2">0,0,0,8</Thickness>
+    <Thickness x:Key="Ml2">8,0,0,0</Thickness>
+    <Thickness x:Key="Mx2">8,0,8,0</Thickness>
+    <Thickness x:Key="My2">0,8,0,8</Thickness>
+    <Thickness x:Key="P2">8</Thickness>
+    <Thickness x:Key="Pt2">0,8,0,0</Thickness>
+    <Thickness x:Key="Pr2">0,0,8,0</Thickness>
+    <Thickness x:Key="Pb2">0,0,0,8</Thickness>
+    <Thickness x:Key="Pl2">8,0,0,0</Thickness>
+    <Thickness x:Key="Px2">8,0,8,0</Thickness>
+    <Thickness x:Key="Py2">0,8,0,8</Thickness>
+
+    <!-- Scale 2.5 (10px) -->
+    <Thickness x:Key="M2_5">10</Thickness>
+    <Thickness x:Key="Mt2_5">0,10,0,0</Thickness>
+    <Thickness x:Key="Mr2_5">0,0,10,0</Thickness>
+    <Thickness x:Key="Mb2_5">0,0,0,10</Thickness>
+    <Thickness x:Key="Ml2_5">10,0,0,0</Thickness>
+    <Thickness x:Key="Mx2_5">10,0,10,0</Thickness>
+    <Thickness x:Key="My2_5">0,10,0,10</Thickness>
+    <Thickness x:Key="P2_5">10</Thickness>
+    <Thickness x:Key="Pt2_5">0,10,0,0</Thickness>
+    <Thickness x:Key="Pr2_5">0,0,10,0</Thickness>
+    <Thickness x:Key="Pb2_5">0,0,0,10</Thickness>
+    <Thickness x:Key="Pl2_5">10,0,0,0</Thickness>
+    <Thickness x:Key="Px2_5">10,0,10,0</Thickness>
+    <Thickness x:Key="Py2_5">0,10,0,10</Thickness>
+
+    <!-- Scale 3 (12px) -->
+    <Thickness x:Key="M3">12</Thickness>
+    <Thickness x:Key="Mt3">0,12,0,0</Thickness>
+    <Thickness x:Key="Mr3">0,0,12,0</Thickness>
+    <Thickness x:Key="Mb3">0,0,0,12</Thickness>
+    <Thickness x:Key="Ml3">12,0,0,0</Thickness>
+    <Thickness x:Key="Mx3">12,0,12,0</Thickness>
+    <Thickness x:Key="My3">0,12,0,12</Thickness>
+    <Thickness x:Key="P3">12</Thickness>
+    <Thickness x:Key="Pt3">0,12,0,0</Thickness>
+    <Thickness x:Key="Pr3">0,0,12,0</Thickness>
+    <Thickness x:Key="Pb3">0,0,0,12</Thickness>
+    <Thickness x:Key="Pl3">12,0,0,0</Thickness>
+    <Thickness x:Key="Px3">12,0,12,0</Thickness>
+    <Thickness x:Key="Py3">0,12,0,12</Thickness>
+
+    <!-- Scale 3.5 (14px) -->
+    <Thickness x:Key="M3_5">14</Thickness>
+    <Thickness x:Key="Mt3_5">0,14,0,0</Thickness>
+    <Thickness x:Key="Mr3_5">0,0,14,0</Thickness>
+    <Thickness x:Key="Mb3_5">0,0,0,14</Thickness>
+    <Thickness x:Key="Ml3_5">14,0,0,0</Thickness>
+    <Thickness x:Key="Mx3_5">14,0,14,0</Thickness>
+    <Thickness x:Key="My3_5">0,14,0,14</Thickness>
+    <Thickness x:Key="P3_5">14</Thickness>
+    <Thickness x:Key="Pt3_5">0,14,0,0</Thickness>
+    <Thickness x:Key="Pr3_5">0,0,14,0</Thickness>
+    <Thickness x:Key="Pb3_5">0,0,0,14</Thickness>
+    <Thickness x:Key="Pl3_5">14,0,0,0</Thickness>
+    <Thickness x:Key="Px3_5">14,0,14,0</Thickness>
+    <Thickness x:Key="Py3_5">0,14,0,14</Thickness>
+
+    <!-- Scale 4 (16px) -->
+    <Thickness x:Key="M4">16</Thickness>
+    <Thickness x:Key="Mt4">0,16,0,0</Thickness>
+    <Thickness x:Key="Mr4">0,0,16,0</Thickness>
+    <Thickness x:Key="Mb4">0,0,0,16</Thickness>
+    <Thickness x:Key="Ml4">16,0,0,0</Thickness>
+    <Thickness x:Key="Mx4">16,0,16,0</Thickness>
+    <Thickness x:Key="My4">0,16,0,16</Thickness>
+    <Thickness x:Key="P4">16</Thickness>
+    <Thickness x:Key="Pt4">0,16,0,0</Thickness>
+    <Thickness x:Key="Pr4">0,0,16,0</Thickness>
+    <Thickness x:Key="Pb4">0,0,0,16</Thickness>
+    <Thickness x:Key="Pl4">16,0,0,0</Thickness>
+    <Thickness x:Key="Px4">16,0,16,0</Thickness>
+    <Thickness x:Key="Py4">0,16,0,16</Thickness>
+
+    <!-- Scale 4.5 (18px) -->
+    <Thickness x:Key="M4_5">18</Thickness>
+    <Thickness x:Key="Mt4_5">0,18,0,0</Thickness>
+    <Thickness x:Key="Mr4_5">0,0,18,0</Thickness>
+    <Thickness x:Key="Mb4_5">0,0,0,18</Thickness>
+    <Thickness x:Key="Ml4_5">18,0,0,0</Thickness>
+    <Thickness x:Key="Mx4_5">18,0,18,0</Thickness>
+    <Thickness x:Key="My4_5">0,18,0,18</Thickness>
+    <Thickness x:Key="P4_5">18</Thickness>
+    <Thickness x:Key="Pt4_5">0,18,0,0</Thickness>
+    <Thickness x:Key="Pr4_5">0,0,18,0</Thickness>
+    <Thickness x:Key="Pb4_5">0,0,0,18</Thickness>
+    <Thickness x:Key="Pl4_5">18,0,0,0</Thickness>
+    <Thickness x:Key="Px4_5">18,0,18,0</Thickness>
+    <Thickness x:Key="Py4_5">0,18,0,18</Thickness>
+
+    <!-- Scale 5 (20px) -->
+    <Thickness x:Key="M5">20</Thickness>
+    <Thickness x:Key="Mt5">0,20,0,0</Thickness>
+    <Thickness x:Key="Mr5">0,0,20,0</Thickness>
+    <Thickness x:Key="Mb5">0,0,0,20</Thickness>
+    <Thickness x:Key="Ml5">20,0,0,0</Thickness>
+    <Thickness x:Key="Mx5">20,0,20,0</Thickness>
+    <Thickness x:Key="My5">0,20,0,20</Thickness>
+    <Thickness x:Key="P5">20</Thickness>
+    <Thickness x:Key="Pt5">0,20,0,0</Thickness>
+    <Thickness x:Key="Pr5">0,0,20,0</Thickness>
+    <Thickness x:Key="Pb5">0,0,0,20</Thickness>
+    <Thickness x:Key="Pl5">20,0,0,0</Thickness>
+    <Thickness x:Key="Px5">20,0,20,0</Thickness>
+    <Thickness x:Key="Py5">0,20,0,20</Thickness>
+
+    <!-- Scale 6 (24px) -->
+    <Thickness x:Key="M6">24</Thickness>
+    <Thickness x:Key="Mt6">0,24,0,0</Thickness>
+    <Thickness x:Key="Mr6">0,0,24,0</Thickness>
+    <Thickness x:Key="Mb6">0,0,0,24</Thickness>
+    <Thickness x:Key="Ml6">24,0,0,0</Thickness>
+    <Thickness x:Key="Mx6">24,0,24,0</Thickness>
+    <Thickness x:Key="My6">0,24,0,24</Thickness>
+    <Thickness x:Key="P6">24</Thickness>
+    <Thickness x:Key="Pt6">0,24,0,0</Thickness>
+    <Thickness x:Key="Pr6">0,0,24,0</Thickness>
+    <Thickness x:Key="Pb6">0,0,0,24</Thickness>
+    <Thickness x:Key="Pl6">24,0,0,0</Thickness>
+    <Thickness x:Key="Px6">24,0,24,0</Thickness>
+    <Thickness x:Key="Py6">0,24,0,24</Thickness>
+
+    <!-- Scale 7 (28px) -->
+    <Thickness x:Key="M7">28</Thickness>
+    <Thickness x:Key="Mt7">0,28,0,0</Thickness>
+    <Thickness x:Key="Mr7">0,0,28,0</Thickness>
+    <Thickness x:Key="Mb7">0,0,0,28</Thickness>
+    <Thickness x:Key="Ml7">28,0,0,0</Thickness>
+    <Thickness x:Key="Mx7">28,0,28,0</Thickness>
+    <Thickness x:Key="My7">0,28,0,28</Thickness>
+    <Thickness x:Key="P7">28</Thickness>
+    <Thickness x:Key="Pt7">0,28,0,0</Thickness>
+    <Thickness x:Key="Pr7">0,0,28,0</Thickness>
+    <Thickness x:Key="Pb7">0,0,0,28</Thickness>
+    <Thickness x:Key="Pl7">28,0,0,0</Thickness>
+    <Thickness x:Key="Px7">28,0,28,0</Thickness>
+    <Thickness x:Key="Py7">0,28,0,28</Thickness>
+
+    <!-- Scale 8 (32px) -->
+    <Thickness x:Key="M8">32</Thickness>
+    <Thickness x:Key="Mt8">0,32,0,0</Thickness>
+    <Thickness x:Key="Mr8">0,0,32,0</Thickness>
+    <Thickness x:Key="Mb8">0,0,0,32</Thickness>
+    <Thickness x:Key="Ml8">32,0,0,0</Thickness>
+    <Thickness x:Key="Mx8">32,0,32,0</Thickness>
+    <Thickness x:Key="My8">0,32,0,32</Thickness>
+    <Thickness x:Key="P8">32</Thickness>
+    <Thickness x:Key="Pt8">0,32,0,0</Thickness>
+    <Thickness x:Key="Pr8">0,0,32,0</Thickness>
+    <Thickness x:Key="Pb8">0,0,0,32</Thickness>
+    <Thickness x:Key="Pl8">32,0,0,0</Thickness>
+    <Thickness x:Key="Px8">32,0,32,0</Thickness>
+    <Thickness x:Key="Py8">0,32,0,32</Thickness>
+
+    <!-- Scale 9 (36px) -->
+    <Thickness x:Key="M9">36</Thickness>
+    <Thickness x:Key="Mt9">0,36,0,0</Thickness>
+    <Thickness x:Key="Mr9">0,0,36,0</Thickness>
+    <Thickness x:Key="Mb9">0,0,0,36</Thickness>
+    <Thickness x:Key="Ml9">36,0,0,0</Thickness>
+    <Thickness x:Key="Mx9">36,0,36,0</Thickness>
+    <Thickness x:Key="My9">0,36,0,36</Thickness>
+    <Thickness x:Key="P9">36</Thickness>
+    <Thickness x:Key="Pt9">0,36,0,0</Thickness>
+    <Thickness x:Key="Pr9">0,0,36,0</Thickness>
+    <Thickness x:Key="Pb9">0,0,0,36</Thickness>
+    <Thickness x:Key="Pl9">36,0,0,0</Thickness>
+    <Thickness x:Key="Px9">36,0,36,0</Thickness>
+    <Thickness x:Key="Py9">0,36,0,36</Thickness>
+
+    <!-- Scale 10 (40px) -->
+    <Thickness x:Key="M10">40</Thickness>
+    <Thickness x:Key="Mt10">0,40,0,0</Thickness>
+    <Thickness x:Key="Mr10">0,0,40,0</Thickness>
+    <Thickness x:Key="Mb10">0,0,0,40</Thickness>
+    <Thickness x:Key="Ml10">40,0,0,0</Thickness>
+    <Thickness x:Key="Mx10">40,0,40,0</Thickness>
+    <Thickness x:Key="My10">0,40,0,40</Thickness>
+    <Thickness x:Key="P10">40</Thickness>
+    <Thickness x:Key="Pt10">0,40,0,0</Thickness>
+    <Thickness x:Key="Pr10">0,0,40,0</Thickness>
+    <Thickness x:Key="Pb10">0,0,0,40</Thickness>
+    <Thickness x:Key="Pl10">40,0,0,0</Thickness>
+    <Thickness x:Key="Px10">40,0,40,0</Thickness>
+    <Thickness x:Key="Py10">0,40,0,40</Thickness>
+
+    <!-- Scale 11 (44px) -->
+    <Thickness x:Key="M11">44</Thickness>
+    <Thickness x:Key="Mt11">0,44,0,0</Thickness>
+    <Thickness x:Key="Mr11">0,0,44,0</Thickness>
+    <Thickness x:Key="Mb11">0,0,0,44</Thickness>
+    <Thickness x:Key="Ml11">44,0,0,0</Thickness>
+    <Thickness x:Key="Mx11">44,0,44,0</Thickness>
+    <Thickness x:Key="My11">0,44,0,44</Thickness>
+    <Thickness x:Key="P11">44</Thickness>
+    <Thickness x:Key="Pt11">0,44,0,0</Thickness>
+    <Thickness x:Key="Pr11">0,0,44,0</Thickness>
+    <Thickness x:Key="Pb11">0,0,0,44</Thickness>
+    <Thickness x:Key="Pl11">44,0,0,0</Thickness>
+    <Thickness x:Key="Px11">44,0,44,0</Thickness>
+    <Thickness x:Key="Py11">0,44,0,44</Thickness>
+
+    <!-- Scale 12 (48px) -->
+    <Thickness x:Key="M12">48</Thickness>
+    <Thickness x:Key="Mt12">0,48,0,0</Thickness>
+    <Thickness x:Key="Mr12">0,0,48,0</Thickness>
+    <Thickness x:Key="Mb12">0,0,0,48</Thickness>
+    <Thickness x:Key="Ml12">48,0,0,0</Thickness>
+    <Thickness x:Key="Mx12">48,0,48,0</Thickness>
+    <Thickness x:Key="My12">0,48,0,48</Thickness>
+    <Thickness x:Key="P12">48</Thickness>
+    <Thickness x:Key="Pt12">0,48,0,0</Thickness>
+    <Thickness x:Key="Pr12">0,0,48,0</Thickness>
+    <Thickness x:Key="Pb12">0,0,0,48</Thickness>
+    <Thickness x:Key="Pl12">48,0,0,0</Thickness>
+    <Thickness x:Key="Px12">48,0,48,0</Thickness>
+    <Thickness x:Key="Py12">0,48,0,48</Thickness>
+
+    <!-- Scale 14 (56px) -->
+    <Thickness x:Key="M14">56</Thickness>
+    <Thickness x:Key="Mx14">56,0,56,0</Thickness>
+    <Thickness x:Key="My14">0,56,0,56</Thickness>
+    <Thickness x:Key="P14">56</Thickness>
+    <Thickness x:Key="Px14">56,0,56,0</Thickness>
+    <Thickness x:Key="Py14">0,56,0,56</Thickness>
+
+    <!-- Scale 16 (64px) -->
+    <Thickness x:Key="M16">64</Thickness>
+    <Thickness x:Key="Mx16">64,0,64,0</Thickness>
+    <Thickness x:Key="My16">0,64,0,64</Thickness>
+    <Thickness x:Key="P16">64</Thickness>
+    <Thickness x:Key="Px16">64,0,64,0</Thickness>
+    <Thickness x:Key="Py16">0,64,0,64</Thickness>
+
+    <!-- Scale 20 (80px) -->
+    <Thickness x:Key="M20">80</Thickness>
+    <Thickness x:Key="P20">80</Thickness>
+
+    <!-- Scale 24 (96px) -->
+    <Thickness x:Key="M24">96</Thickness>
+    <Thickness x:Key="P24">96</Thickness>
+
+    <!-- ========================== -->
+    <!-- Gap Values (for Grid/StackPanel spacing) -->
+    <!-- ========================== -->
+    <sys:Double x:Key="Gap0">0</sys:Double>
+    <sys:Double x:Key="Gap0_5">2</sys:Double>
+    <sys:Double x:Key="Gap1">4</sys:Double>
+    <sys:Double x:Key="Gap1_5">6</sys:Double>
+    <sys:Double x:Key="Gap2">8</sys:Double>
+    <sys:Double x:Key="Gap2_5">10</sys:Double>
+    <sys:Double x:Key="Gap3">12</sys:Double>
+    <sys:Double x:Key="Gap3_5">14</sys:Double>
+    <sys:Double x:Key="Gap4">16</sys:Double>
+    <sys:Double x:Key="Gap5">20</sys:Double>
+    <sys:Double x:Key="Gap6">24</sys:Double>
+    <sys:Double x:Key="Gap7">28</sys:Double>
+    <sys:Double x:Key="Gap8">32</sys:Double>
+    <sys:Double x:Key="Gap9">36</sys:Double>
+    <sys:Double x:Key="Gap10">40</sys:Double>
+    <sys:Double x:Key="Gap11">44</sys:Double>
+    <sys:Double x:Key="Gap12">48</sys:Double>
+    <sys:Double x:Key="Gap14">56</sys:Double>
+    <sys:Double x:Key="Gap16">64</sys:Double>
+    <sys:Double x:Key="Gap20">80</sys:Double>
+    <sys:Double x:Key="Gap24">96</sys:Double>
+
+</ResourceDictionary>
+

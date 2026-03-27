@@ -1,0 +1,83 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Light Theme Semantic Colors -->
+    <!-- Use with DynamicResource for runtime theme switching -->
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Colors/Palette.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- Background -->
+    <SolidColorBrush x:Key="BgPrimary" Color="{StaticResource White}"/>
+    <SolidColorBrush x:Key="BgSecondary" Color="{StaticResource Slate50}"/>
+    <SolidColorBrush x:Key="BgTertiary" Color="{StaticResource Slate100}"/>
+    <SolidColorBrush x:Key="BgMuted" Color="{StaticResource Slate200}"/>
+    <SolidColorBrush x:Key="BgInverse" Color="{StaticResource Slate900}"/>
+
+    <!-- Foreground / Text -->
+    <SolidColorBrush x:Key="TextPrimary" Color="{StaticResource Slate900}"/>
+    <SolidColorBrush x:Key="TextSecondary" Color="{StaticResource Slate600}"/>
+    <SolidColorBrush x:Key="TextMuted" Color="{StaticResource Slate400}"/>
+    <SolidColorBrush x:Key="TextInverse" Color="{StaticResource White}"/>
+    <SolidColorBrush x:Key="TextPlaceholder" Color="{StaticResource Slate400}"/>
+
+    <!-- Border -->
+    <SolidColorBrush x:Key="BorderDefault" Color="{StaticResource Slate200}"/>
+    <SolidColorBrush x:Key="BorderHover" Color="{StaticResource Slate300}"/>
+    <SolidColorBrush x:Key="BorderFocus" Color="{StaticResource Blue500}"/>
+    <SolidColorBrush x:Key="BorderMuted" Color="{StaticResource Slate100}"/>
+
+    <!-- Accent / Primary -->
+    <SolidColorBrush x:Key="AccentPrimary" Color="{StaticResource Blue500}"/>
+    <SolidColorBrush x:Key="AccentPrimaryHover" Color="{StaticResource Blue600}"/>
+    <SolidColorBrush x:Key="AccentPrimaryActive" Color="{StaticResource Blue700}"/>
+    <SolidColorBrush x:Key="AccentPrimaryMuted" Color="{StaticResource Blue100}"/>
+    <SolidColorBrush x:Key="Accent" Color="{StaticResource Blue500}"/>
+
+    <!-- Secondary -->
+    <SolidColorBrush x:Key="AccentSecondary" Color="{StaticResource Slate500}"/>
+    <SolidColorBrush x:Key="AccentSecondaryHover" Color="{StaticResource Slate600}"/>
+
+    <!-- Status: Success -->
+    <SolidColorBrush x:Key="Success" Color="{StaticResource Green500}"/>
+    <SolidColorBrush x:Key="SuccessHover" Color="{StaticResource Green600}"/>
+    <SolidColorBrush x:Key="SuccessMuted" Color="{StaticResource Green100}"/>
+    <SolidColorBrush x:Key="SuccessText" Color="{StaticResource Green700}"/>
+
+    <!-- Status: Warning -->
+    <SolidColorBrush x:Key="Warning" Color="{StaticResource Amber500}"/>
+    <SolidColorBrush x:Key="WarningHover" Color="{StaticResource Amber600}"/>
+    <SolidColorBrush x:Key="WarningMuted" Color="{StaticResource Amber100}"/>
+    <SolidColorBrush x:Key="WarningText" Color="{StaticResource Amber700}"/>
+
+    <!-- Status: Error / Danger -->
+    <SolidColorBrush x:Key="Error" Color="{StaticResource Red500}"/>
+    <SolidColorBrush x:Key="ErrorHover" Color="{StaticResource Red600}"/>
+    <SolidColorBrush x:Key="ErrorMuted" Color="{StaticResource Red100}"/>
+    <SolidColorBrush x:Key="ErrorText" Color="{StaticResource Red700}"/>
+    <SolidColorBrush x:Key="Danger" Color="{StaticResource Red500}"/>
+
+    <!-- Status: Info -->
+    <SolidColorBrush x:Key="Info" Color="{StaticResource Sky500}"/>
+    <SolidColorBrush x:Key="InfoHover" Color="{StaticResource Sky600}"/>
+    <SolidColorBrush x:Key="InfoMuted" Color="{StaticResource Sky100}"/>
+    <SolidColorBrush x:Key="InfoText" Color="{StaticResource Sky700}"/>
+
+    <!-- Overlay -->
+    <SolidColorBrush x:Key="Overlay" Color="{StaticResource Black}" Opacity="0.5"/>
+    <SolidColorBrush x:Key="OverlayLight" Color="{StaticResource Black}" Opacity="0.3"/>
+
+    <!-- Ring / Focus -->
+    <SolidColorBrush x:Key="RingDefault" Color="{StaticResource Blue500}"/>
+    <SolidColorBrush x:Key="RingOffset" Color="{StaticResource White}"/>
+
+    <!-- Scrollbar -->
+    <SolidColorBrush x:Key="ScrollbarTrack" Color="{StaticResource Slate100}"/>
+    <SolidColorBrush x:Key="ScrollbarThumb" Color="{StaticResource Slate300}"/>
+    <SolidColorBrush x:Key="ScrollbarThumbHover" Color="{StaticResource Slate400}"/>
+
+</ResourceDictionary>
+
+

@@ -1,0 +1,146 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ========================== -->
+    <!-- Typography        -->
+    <!-- ========================== -->
+
+    <!-- Font Family -->
+    <FontFamily x:Key="FontSans">Segoe UI, San Francisco, Helvetica Neue, Arial, sans-serif</FontFamily>
+    <FontFamily x:Key="FontSerif">Georgia, Cambria, Times New Roman, serif</FontFamily>
+    <FontFamily x:Key="FontMono">Cascadia Code, Consolas, Monaco, Courier New, monospace</FontFamily>
+
+    <!-- ========================== -->
+    <!-- Font Size (scale) -->
+    <!-- ========================== -->
+    <sys:Double x:Key="TextXxs">10</sys:Double>
+    <sys:Double x:Key="TextXs">12</sys:Double>
+    <sys:Double x:Key="TextSm">14</sys:Double>
+    <sys:Double x:Key="TextBase">16</sys:Double>
+    <sys:Double x:Key="TextLg">18</sys:Double>
+    <sys:Double x:Key="TextXl">20</sys:Double>
+    <sys:Double x:Key="Text2xl">24</sys:Double>
+    <sys:Double x:Key="Text3xl">30</sys:Double>
+    <sys:Double x:Key="Text4xl">36</sys:Double>
+    <sys:Double x:Key="Text5xl">48</sys:Double>
+    <sys:Double x:Key="Text6xl">60</sys:Double>
+    <sys:Double x:Key="Text7xl">72</sys:Double>
+    <sys:Double x:Key="Text8xl">96</sys:Double>
+    <sys:Double x:Key="Text9xl">128</sys:Double>
+
+    <!-- ========================== -->
+    <!-- Font Weight                -->
+    <!-- ========================== -->
+    <FontWeight x:Key="FontThin">Thin</FontWeight>
+    <FontWeight x:Key="FontExtraLight">ExtraLight</FontWeight>
+    <FontWeight x:Key="FontLight">Light</FontWeight>
+    <FontWeight x:Key="FontNormal">Normal</FontWeight>
+    <FontWeight x:Key="FontMedium">Medium</FontWeight>
+    <FontWeight x:Key="FontSemibold">SemiBold</FontWeight>
+    <FontWeight x:Key="FontBold">Bold</FontWeight>
+    <FontWeight x:Key="FontExtrabold">ExtraBold</FontWeight>
+    <FontWeight x:Key="FontBlack">Black</FontWeight>
+
+    <!-- ========================== -->
+    <!-- Line Height                -->
+    <!-- Note: WPF uses LineHeight property -->
+    <!-- ========================== -->
+    <sys:Double x:Key="LeadingNone">1.0</sys:Double>
+    <sys:Double x:Key="LeadingTight">1.25</sys:Double>
+    <sys:Double x:Key="LeadingSnug">1.375</sys:Double>
+    <sys:Double x:Key="LeadingNormal">1.5</sys:Double>
+    <sys:Double x:Key="LeadingRelaxed">1.625</sys:Double>
+    <sys:Double x:Key="LeadingLoose">2.0</sys:Double>
+
+    <!-- Fixed Line Heights -->
+    <sys:Double x:Key="Leading3">12</sys:Double>
+    <sys:Double x:Key="Leading4">16</sys:Double>
+    <sys:Double x:Key="Leading5">20</sys:Double>
+    <sys:Double x:Key="Leading6">24</sys:Double>
+    <sys:Double x:Key="Leading7">28</sys:Double>
+    <sys:Double x:Key="Leading8">32</sys:Double>
+    <sys:Double x:Key="Leading9">36</sys:Double>
+    <sys:Double x:Key="Leading10">40</sys:Double>
+
+    <!-- ========================== -->
+    <!-- Letter Spacing (Tracking)  -->
+    <!-- Note: Measured in em units approximated to px -->
+    <!-- ========================== -->
+    <sys:Double x:Key="TrackingTighter">-0.8</sys:Double>
+    <sys:Double x:Key="TrackingTight">-0.4</sys:Double>
+    <sys:Double x:Key="TrackingNormal">0</sys:Double>
+    <sys:Double x:Key="TrackingWide">0.4</sys:Double>
+    <sys:Double x:Key="TrackingWider">0.8</sys:Double>
+    <sys:Double x:Key="TrackingWidest">1.6</sys:Double>
+
+    <!-- ========================== -->
+    <!-- Text Styles (Composite)    -->
+    <!-- ========================== -->
+    
+    <!-- Heading Styles -->
+    <Style x:Key="TextH1" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource Text4xl}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontBold}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontSans}"/>
+    </Style>
+
+    <Style x:Key="TextH2" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource Text3xl}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontSemibold}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontSans}"/>
+    </Style>
+
+    <Style x:Key="TextH3" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource Text2xl}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontSemibold}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontSans}"/>
+    </Style>
+
+    <Style x:Key="TextH4" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource TextXl}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontMedium}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontSans}"/>
+    </Style>
+
+    <Style x:Key="TextH5" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource TextLg}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontMedium}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontSans}"/>
+    </Style>
+
+    <Style x:Key="TextH6" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource TextBase}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontMedium}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontSans}"/>
+    </Style>
+
+    <!-- Body Text Styles -->
+    <Style x:Key="TextBody" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource TextBase}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontNormal}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontSans}"/>
+    </Style>
+
+    <Style x:Key="TextBodySm" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontNormal}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontSans}"/>
+    </Style>
+
+    <Style x:Key="TextCaption" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource TextXs}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontNormal}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontSans}"/>
+    </Style>
+
+    <!-- Code Style -->
+    <Style x:Key="TextCode" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontNormal}"/>
+        <Setter Property="FontFamily" Value="{StaticResource FontMono}"/>
+    </Style>
+
+</ResourceDictionary>
+

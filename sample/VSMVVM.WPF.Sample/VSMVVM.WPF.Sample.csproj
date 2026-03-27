@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<UseWPF>true</UseWPF>
+		<LangVersion>12</LangVersion>
+		<Nullable>disable</Nullable>
+		<RootNamespace>VSMVVM.WPF.Sample</RootNamespace>
+		<AssemblyName>VSMVVM.WPF.Sample</AssemblyName>
+		<StartupObject>VSMVVM.WPF.Sample.Program</StartupObject>
+		<ApplicationIcon>Assets\app.ico</ApplicationIcon>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Source Generator (Analyzer) + Runtime -->
+		<ProjectReference Include="..\..\src\VSMVVM.Core\VSMVVM.Core.csproj"
+						  OutputItemType="Analyzer"
+						  ReferenceOutputAssembly="true" />
+		<!-- WPF Controls -->
+		<ProjectReference Include="..\..\src\VSMVVM.WPF\VSMVVM.WPF.csproj" />
+		<!-- Design System -->
+		<ProjectReference Include="..\..\src\VSMVVM.WPF.Design\VSMVVM.WPF.Design.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Resource Include="Assets\info_24.svg" />
+		<Resource Include="Assets\app.ico" />
+	</ItemGroup>
+
+</Project>

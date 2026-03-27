@@ -1,0 +1,71 @@
+<Window x:Class="VSMVVM.WPF.Sample.Views.SplashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
+        xmlns:vm="clr-namespace:VSMVVM.WPF.Sample.ViewModels"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None" AllowsTransparency="True"
+        Background="Transparent"
+        Width="400" Height="250"
+        ResizeMode="NoResize">
+
+    <!-- SplashWindow runs on a separate STA thread BEFORE App resources load.
+         Local resources are used instead of Design tokens. -->
+    <Window.DataContext>
+        <vm:SplashViewModel/>
+    </Window.DataContext>
+
+    <Window.Resources>
+        <SolidColorBrush x:Key="SplashBg" Color="#1e1e2e"/>
+        <SolidColorBrush x:Key="SplashBorder" Color="#313244"/>
+        <SolidColorBrush x:Key="SplashAccent" Color="#89b4fa"/>
+        <SolidColorBrush x:Key="SplashTextMuted" Color="#6c7086"/>
+        <SolidColorBrush x:Key="SplashTextSub" Color="#a6adc8"/>
+        <sys:Double x:Key="SplashTitleSize">32</sys:Double>
+        <sys:Double x:Key="SplashSubtitleSize">12</sys:Double>
+        <sys:Double x:Key="SplashMessageSize">11</sys:Double>
+        <sys:Double x:Key="SplashBarHeight">4</sys:Double>
+        <CornerRadius x:Key="SplashCorner">12</CornerRadius>
+        <Thickness x:Key="SplashPadding">24</Thickness>
+        <Thickness x:Key="SplashSubtitleMargin">0,4,0,0</Thickness>
+        <Thickness x:Key="SplashBarMargin">0,12,0,8</Thickness>
+    </Window.Resources>
+
+    <Border CornerRadius="{StaticResource SplashCorner}"
+            Background="{StaticResource SplashBg}"
+            BorderBrush="{StaticResource SplashBorder}"
+            BorderThickness="1">
+        <Grid Margin="{StaticResource SplashPadding}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="VSMVVM"
+                           FontSize="{StaticResource SplashTitleSize}" FontWeight="Bold"
+                           Foreground="{StaticResource SplashAccent}"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="WPF Sample Application"
+                           FontSize="{StaticResource SplashSubtitleSize}"
+                           Foreground="{StaticResource SplashTextMuted}"
+                           HorizontalAlignment="Center" Margin="{StaticResource SplashSubtitleMargin}"/>
+            </StackPanel>
+
+            <ProgressBar Grid.Row="1"
+                         Height="{StaticResource SplashBarHeight}"
+                         Margin="{StaticResource SplashBarMargin}"
+                         Value="{Binding Progress}" Maximum="1"
+                         Foreground="{StaticResource SplashAccent}"
+                         Background="{StaticResource SplashBorder}"
+                         BorderThickness="0"/>
+
+            <TextBlock Grid.Row="2"
+                       Text="{Binding Message}"
+                       FontSize="{StaticResource SplashMessageSize}"
+                       Foreground="{StaticResource SplashTextSub}"
+                       HorizontalAlignment="Center"/>
+        </Grid>
+    </Border>
+</Window>

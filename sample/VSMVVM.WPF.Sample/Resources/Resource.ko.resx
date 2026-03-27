@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter</value></resheader>
+  <data name="APP_TITLE" xml:space="preserve">
+    <value>VSMVVM &#xC0D8;&#xD50C;</value>
+  </data>
+  <data name="HOME" xml:space="preserve">
+    <value>&#xD648;</value>
+  </data>
+  <data name="CONTROLS" xml:space="preserve">
+    <value>&#xCEE8;&#xD2B8;&#xB864;</value>
+  </data>
+  <data name="COMPONENTS" xml:space="preserve">
+    <value>&#xCEF4;&#xD3EC;&#xB10C;&#xD2B8;</value>
+  </data>
+  <data name="GREETING" xml:space="preserve">
+    <value>&#xC548;&#xB155;&#xD558;&#xC138;&#xC694;!</value>
+  </data>
+  <data name="LANGUAGE" xml:space="preserve">
+    <value>&#xC5B8;&#xC5B4;</value>
+  </data>
+  <data name="CURRENT_LOCALE" xml:space="preserve">
+    <value>&#xD604;&#xC7AC; &#xB85C;&#xCF00;&#xC77C;</value>
+  </data>
+  <data name="DYNAMIC_TEXT" xml:space="preserve">
+    <value>&#xC774; &#xD14D;&#xC2A4;&#xD2B8;&#xB294; &#xC5B8;&#xC5B4;&#xC5D0; &#xB530;&#xB77C; &#xBCC0;&#xACBD;&#xB429;&#xB2C8;&#xB2E4;.</value>
+  </data>
+</root>

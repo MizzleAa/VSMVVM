@@ -1,0 +1,262 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- Ready-to-use Utility Styles -->
+    <!-- Apply directly: Style="{StaticResource StyleM4}" -->
+    <!-- NOTE: Use "Style" prefix to avoid conflict with Spacing.xaml Thickness values -->
+
+    <!-- ======================================== -->
+    <!-- MARGIN STYLES                            -->
+    <!-- ======================================== -->
+    
+    <!-- All sides -->
+    <Style x:Key="StyleM0" TargetType="FrameworkElement"><Setter Property="Margin" Value="0"/></Style>
+    <Style x:Key="StyleM0.5" TargetType="FrameworkElement"><Setter Property="Margin" Value="2"/></Style>
+    <Style x:Key="StyleM1" TargetType="FrameworkElement"><Setter Property="Margin" Value="4"/></Style>
+    <Style x:Key="StyleM1.5" TargetType="FrameworkElement"><Setter Property="Margin" Value="6"/></Style>
+    <Style x:Key="StyleM2" TargetType="FrameworkElement"><Setter Property="Margin" Value="8"/></Style>
+    <Style x:Key="StyleM2.5" TargetType="FrameworkElement"><Setter Property="Margin" Value="10"/></Style>
+    <Style x:Key="StyleM3" TargetType="FrameworkElement"><Setter Property="Margin" Value="12"/></Style>
+    <Style x:Key="StyleM4" TargetType="FrameworkElement"><Setter Property="Margin" Value="16"/></Style>
+    <Style x:Key="StyleM5" TargetType="FrameworkElement"><Setter Property="Margin" Value="20"/></Style>
+    <Style x:Key="StyleM6" TargetType="FrameworkElement"><Setter Property="Margin" Value="24"/></Style>
+    <Style x:Key="StyleM8" TargetType="FrameworkElement"><Setter Property="Margin" Value="32"/></Style>
+    <Style x:Key="StyleM10" TargetType="FrameworkElement"><Setter Property="Margin" Value="40"/></Style>
+    <Style x:Key="StyleM12" TargetType="FrameworkElement"><Setter Property="Margin" Value="48"/></Style>
+
+    <!-- Horizontal (X-axis) -->
+    <Style x:Key="StyleMx0.5" TargetType="FrameworkElement"><Setter Property="Margin" Value="2,0"/></Style>
+    <Style x:Key="StyleMx1" TargetType="FrameworkElement"><Setter Property="Margin" Value="4,0"/></Style>
+    <Style x:Key="StyleMx2" TargetType="FrameworkElement"><Setter Property="Margin" Value="8,0"/></Style>
+    <Style x:Key="StyleMx3" TargetType="FrameworkElement"><Setter Property="Margin" Value="12,0"/></Style>
+    <Style x:Key="StyleMx4" TargetType="FrameworkElement"><Setter Property="Margin" Value="16,0"/></Style>
+    <Style x:Key="StyleMx6" TargetType="FrameworkElement"><Setter Property="Margin" Value="24,0"/></Style>
+    <Style x:Key="StyleMx8" TargetType="FrameworkElement"><Setter Property="Margin" Value="32,0"/></Style>
+
+    <!-- Vertical (Y-axis) -->
+    <Style x:Key="StyleMy0.5" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,2"/></Style>
+    <Style x:Key="StyleMy1" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,4"/></Style>
+    <Style x:Key="StyleMy2" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,8"/></Style>
+    <Style x:Key="StyleMy3" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,12"/></Style>
+    <Style x:Key="StyleMy4" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,16"/></Style>
+    <Style x:Key="StyleMy6" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,24"/></Style>
+    <Style x:Key="StyleMy8" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,32"/></Style>
+
+    <!-- Top -->
+    <Style x:Key="StyleMt0.5" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,2,0,0"/></Style>
+    <Style x:Key="StyleMt1" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,4,0,0"/></Style>
+    <Style x:Key="StyleMt2" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,8,0,0"/></Style>
+    <Style x:Key="StyleMt3" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,12,0,0"/></Style>
+    <Style x:Key="StyleMt4" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,16,0,0"/></Style>
+    <Style x:Key="StyleMt6" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,24,0,0"/></Style>
+    <Style x:Key="StyleMt8" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,32,0,0"/></Style>
+
+    <!-- Bottom -->
+    <Style x:Key="StyleMb0.5" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,0,2"/></Style>
+    <Style x:Key="StyleMb1" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,0,4"/></Style>
+    <Style x:Key="StyleMb2" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,0,8"/></Style>
+    <Style x:Key="StyleMb3" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,0,12"/></Style>
+    <Style x:Key="StyleMb4" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,0,16"/></Style>
+    <Style x:Key="StyleMb6" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,0,24"/></Style>
+    <Style x:Key="StyleMb8" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,0,32"/></Style>
+
+    <!-- Left -->
+    <Style x:Key="StyleMl0.5" TargetType="FrameworkElement"><Setter Property="Margin" Value="2,0,0,0"/></Style>
+    <Style x:Key="StyleMl1" TargetType="FrameworkElement"><Setter Property="Margin" Value="4,0,0,0"/></Style>
+    <Style x:Key="StyleMl2" TargetType="FrameworkElement"><Setter Property="Margin" Value="8,0,0,0"/></Style>
+    <Style x:Key="StyleMl3" TargetType="FrameworkElement"><Setter Property="Margin" Value="12,0,0,0"/></Style>
+    <Style x:Key="StyleMl4" TargetType="FrameworkElement"><Setter Property="Margin" Value="16,0,0,0"/></Style>
+    <Style x:Key="StyleMl6" TargetType="FrameworkElement"><Setter Property="Margin" Value="24,0,0,0"/></Style>
+    <Style x:Key="StyleMl8" TargetType="FrameworkElement"><Setter Property="Margin" Value="32,0,0,0"/></Style>
+
+    <!-- Right -->
+    <Style x:Key="StyleMr0.5" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,2,0"/></Style>
+    <Style x:Key="StyleMr1" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,4,0"/></Style>
+    <Style x:Key="StyleMr2" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,8,0"/></Style>
+    <Style x:Key="StyleMr3" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,12,0"/></Style>
+    <Style x:Key="StyleMr4" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,16,0"/></Style>
+    <Style x:Key="StyleMr6" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,24,0"/></Style>
+    <Style x:Key="StyleMr8" TargetType="FrameworkElement"><Setter Property="Margin" Value="0,0,32,0"/></Style>
+
+    <!-- ======================================== -->
+    <!-- PADDING STYLES (for Control types)      -->
+    <!-- ======================================== -->
+    
+    <Style x:Key="StyleP0" TargetType="Control"><Setter Property="Padding" Value="0"/></Style>
+    <Style x:Key="StyleP0.5" TargetType="Control"><Setter Property="Padding" Value="2"/></Style>
+    <Style x:Key="StyleP1" TargetType="Control"><Setter Property="Padding" Value="4"/></Style>
+    <Style x:Key="StyleP1.5" TargetType="Control"><Setter Property="Padding" Value="6"/></Style>
+    <Style x:Key="StyleP2" TargetType="Control"><Setter Property="Padding" Value="8"/></Style>
+    <Style x:Key="StyleP2.5" TargetType="Control"><Setter Property="Padding" Value="10"/></Style>
+    <Style x:Key="StyleP3" TargetType="Control"><Setter Property="Padding" Value="12"/></Style>
+    <Style x:Key="StyleP4" TargetType="Control"><Setter Property="Padding" Value="16"/></Style>
+    <Style x:Key="StyleP5" TargetType="Control"><Setter Property="Padding" Value="20"/></Style>
+    <Style x:Key="StyleP6" TargetType="Control"><Setter Property="Padding" Value="24"/></Style>
+    <Style x:Key="StyleP8" TargetType="Control"><Setter Property="Padding" Value="32"/></Style>
+    <Style x:Key="StyleP10" TargetType="Control"><Setter Property="Padding" Value="40"/></Style>
+    <Style x:Key="StyleP12" TargetType="Control"><Setter Property="Padding" Value="48"/></Style>
+
+    <!-- Padding Horizontal -->
+    <Style x:Key="StylePx1" TargetType="Control"><Setter Property="Padding" Value="4,0"/></Style>
+    <Style x:Key="StylePx2" TargetType="Control"><Setter Property="Padding" Value="8,0"/></Style>
+    <Style x:Key="StylePx3" TargetType="Control"><Setter Property="Padding" Value="12,0"/></Style>
+    <Style x:Key="StylePx4" TargetType="Control"><Setter Property="Padding" Value="16,0"/></Style>
+    <Style x:Key="StylePx6" TargetType="Control"><Setter Property="Padding" Value="24,0"/></Style>
+    <Style x:Key="StylePx8" TargetType="Control"><Setter Property="Padding" Value="32,0"/></Style>
+
+    <!-- Padding Vertical -->
+    <Style x:Key="StylePy1" TargetType="Control"><Setter Property="Padding" Value="0,4"/></Style>
+    <Style x:Key="StylePy2" TargetType="Control"><Setter Property="Padding" Value="0,8"/></Style>
+    <Style x:Key="StylePy3" TargetType="Control"><Setter Property="Padding" Value="0,12"/></Style>
+    <Style x:Key="StylePy4" TargetType="Control"><Setter Property="Padding" Value="0,16"/></Style>
+    <Style x:Key="StylePy6" TargetType="Control"><Setter Property="Padding" Value="0,24"/></Style>
+    <Style x:Key="StylePy8" TargetType="Control"><Setter Property="Padding" Value="0,32"/></Style>
+
+    <!-- Border Padding (for Border elements) -->
+    <Style x:Key="StyleBP0" TargetType="Border"><Setter Property="Padding" Value="0"/></Style>
+    <Style x:Key="StyleBP1" TargetType="Border"><Setter Property="Padding" Value="4"/></Style>
+    <Style x:Key="StyleBP2" TargetType="Border"><Setter Property="Padding" Value="8"/></Style>
+    <Style x:Key="StyleBP3" TargetType="Border"><Setter Property="Padding" Value="12"/></Style>
+    <Style x:Key="StyleBP4" TargetType="Border"><Setter Property="Padding" Value="16"/></Style>
+    <Style x:Key="StyleBP6" TargetType="Border"><Setter Property="Padding" Value="24"/></Style>
+    <Style x:Key="StyleBP8" TargetType="Border"><Setter Property="Padding" Value="32"/></Style>
+
+    <!-- ======================================== -->
+    <!-- WIDTH STYLES                             -->
+    <!-- ======================================== -->
+    
+    <Style x:Key="StyleW0" TargetType="FrameworkElement"><Setter Property="Width" Value="0"/></Style>
+    <Style x:Key="StyleW1" TargetType="FrameworkElement"><Setter Property="Width" Value="4"/></Style>
+    <Style x:Key="StyleW2" TargetType="FrameworkElement"><Setter Property="Width" Value="8"/></Style>
+    <Style x:Key="StyleW3" TargetType="FrameworkElement"><Setter Property="Width" Value="12"/></Style>
+    <Style x:Key="StyleW4" TargetType="FrameworkElement"><Setter Property="Width" Value="16"/></Style>
+    <Style x:Key="StyleW5" TargetType="FrameworkElement"><Setter Property="Width" Value="20"/></Style>
+    <Style x:Key="StyleW6" TargetType="FrameworkElement"><Setter Property="Width" Value="24"/></Style>
+    <Style x:Key="StyleW8" TargetType="FrameworkElement"><Setter Property="Width" Value="32"/></Style>
+    <Style x:Key="StyleW10" TargetType="FrameworkElement"><Setter Property="Width" Value="40"/></Style>
+    <Style x:Key="StyleW12" TargetType="FrameworkElement"><Setter Property="Width" Value="48"/></Style>
+    <Style x:Key="StyleW14" TargetType="FrameworkElement"><Setter Property="Width" Value="56"/></Style>
+    <Style x:Key="StyleW16" TargetType="FrameworkElement"><Setter Property="Width" Value="64"/></Style>
+    <Style x:Key="StyleW20" TargetType="FrameworkElement"><Setter Property="Width" Value="80"/></Style>
+    <Style x:Key="StyleW24" TargetType="FrameworkElement"><Setter Property="Width" Value="96"/></Style>
+    <Style x:Key="StyleW32" TargetType="FrameworkElement"><Setter Property="Width" Value="128"/></Style>
+    <Style x:Key="StyleW40" TargetType="FrameworkElement"><Setter Property="Width" Value="160"/></Style>
+    <Style x:Key="StyleW48" TargetType="FrameworkElement"><Setter Property="Width" Value="192"/></Style>
+    <Style x:Key="StyleW56" TargetType="FrameworkElement"><Setter Property="Width" Value="224"/></Style>
+    <Style x:Key="StyleW64" TargetType="FrameworkElement"><Setter Property="Width" Value="256"/></Style>
+    <Style x:Key="StyleW72" TargetType="FrameworkElement"><Setter Property="Width" Value="288"/></Style>
+    <Style x:Key="StyleW80" TargetType="FrameworkElement"><Setter Property="Width" Value="320"/></Style>
+    <Style x:Key="StyleW96" TargetType="FrameworkElement"><Setter Property="Width" Value="384"/></Style>
+    <Style x:Key="StyleWAuto" TargetType="FrameworkElement"><Setter Property="Width" Value="Auto"/></Style>
+    <Style x:Key="StyleWFull" TargetType="FrameworkElement"><Setter Property="HorizontalAlignment" Value="Stretch"/></Style>
+
+    <!-- ======================================== -->
+    <!-- HEIGHT STYLES                            -->
+    <!-- ======================================== -->
+    
+    <Style x:Key="StyleH0" TargetType="FrameworkElement"><Setter Property="Height" Value="0"/></Style>
+    <Style x:Key="StyleH1" TargetType="FrameworkElement"><Setter Property="Height" Value="4"/></Style>
+    <Style x:Key="StyleH2" TargetType="FrameworkElement"><Setter Property="Height" Value="8"/></Style>
+    <Style x:Key="StyleH3" TargetType="FrameworkElement"><Setter Property="Height" Value="12"/></Style>
+    <Style x:Key="StyleH4" TargetType="FrameworkElement"><Setter Property="Height" Value="16"/></Style>
+    <Style x:Key="StyleH5" TargetType="FrameworkElement"><Setter Property="Height" Value="20"/></Style>
+    <Style x:Key="StyleH6" TargetType="FrameworkElement"><Setter Property="Height" Value="24"/></Style>
+    <Style x:Key="StyleH8" TargetType="FrameworkElement"><Setter Property="Height" Value="32"/></Style>
+    <Style x:Key="StyleH10" TargetType="FrameworkElement"><Setter Property="Height" Value="40"/></Style>
+    <Style x:Key="StyleH12" TargetType="FrameworkElement"><Setter Property="Height" Value="48"/></Style>
+    <Style x:Key="StyleH14" TargetType="FrameworkElement"><Setter Property="Height" Value="56"/></Style>
+    <Style x:Key="StyleH16" TargetType="FrameworkElement"><Setter Property="Height" Value="64"/></Style>
+    <Style x:Key="StyleH20" TargetType="FrameworkElement"><Setter Property="Height" Value="80"/></Style>
+    <Style x:Key="StyleH24" TargetType="FrameworkElement"><Setter Property="Height" Value="96"/></Style>
+    <Style x:Key="StyleH32" TargetType="FrameworkElement"><Setter Property="Height" Value="128"/></Style>
+    <Style x:Key="StyleH40" TargetType="FrameworkElement"><Setter Property="Height" Value="160"/></Style>
+    <Style x:Key="StyleH48" TargetType="FrameworkElement"><Setter Property="Height" Value="192"/></Style>
+    <Style x:Key="StyleH56" TargetType="FrameworkElement"><Setter Property="Height" Value="224"/></Style>
+    <Style x:Key="StyleH64" TargetType="FrameworkElement"><Setter Property="Height" Value="256"/></Style>
+    <Style x:Key="StyleH72" TargetType="FrameworkElement"><Setter Property="Height" Value="288"/></Style>
+    <Style x:Key="StyleH80" TargetType="FrameworkElement"><Setter Property="Height" Value="320"/></Style>
+    <Style x:Key="StyleH96" TargetType="FrameworkElement"><Setter Property="Height" Value="384"/></Style>
+    <Style x:Key="StyleHAuto" TargetType="FrameworkElement"><Setter Property="Height" Value="Auto"/></Style>
+    <Style x:Key="StyleHFull" TargetType="FrameworkElement"><Setter Property="VerticalAlignment" Value="Stretch"/></Style>
+
+    <!-- ======================================== -->
+    <!-- BORDER THICKNESS STYLES                  -->
+    <!-- ======================================== -->
+    
+    <Style x:Key="StyleBorder0" TargetType="Control"><Setter Property="BorderThickness" Value="0"/></Style>
+    <Style x:Key="StyleBorder1" TargetType="Control"><Setter Property="BorderThickness" Value="1"/></Style>
+    <Style x:Key="StyleBorder2" TargetType="Control"><Setter Property="BorderThickness" Value="2"/></Style>
+    <Style x:Key="StyleBorder4" TargetType="Control"><Setter Property="BorderThickness" Value="4"/></Style>
+    <Style x:Key="StyleBorder8" TargetType="Control"><Setter Property="BorderThickness" Value="8"/></Style>
+
+    <!-- Border for Border elements -->
+    <Style x:Key="StyleBB0" TargetType="Border"><Setter Property="BorderThickness" Value="0"/></Style>
+    <Style x:Key="StyleBB1" TargetType="Border"><Setter Property="BorderThickness" Value="1"/></Style>
+    <Style x:Key="StyleBB2" TargetType="Border"><Setter Property="BorderThickness" Value="2"/></Style>
+    <Style x:Key="StyleBB4" TargetType="Border"><Setter Property="BorderThickness" Value="4"/></Style>
+
+    <!-- Top border only -->
+    <Style x:Key="StyleBorderT1" TargetType="Control"><Setter Property="BorderThickness" Value="0,1,0,0"/></Style>
+    <Style x:Key="StyleBorderT2" TargetType="Control"><Setter Property="BorderThickness" Value="0,2,0,0"/></Style>
+
+    <!-- Bottom border only -->
+    <Style x:Key="StyleBorderB1" TargetType="Control"><Setter Property="BorderThickness" Value="0,0,0,1"/></Style>
+    <Style x:Key="StyleBorderB2" TargetType="Control"><Setter Property="BorderThickness" Value="0,0,0,2"/></Style>
+
+    <!-- Left border only -->
+    <Style x:Key="StyleBorderL1" TargetType="Control"><Setter Property="BorderThickness" Value="1,0,0,0"/></Style>
+    <Style x:Key="StyleBorderL2" TargetType="Control"><Setter Property="BorderThickness" Value="2,0,0,0"/></Style>
+    <Style x:Key="StyleBorderL4" TargetType="Control"><Setter Property="BorderThickness" Value="4,0,0,0"/></Style>
+
+    <!-- Right border only -->
+    <Style x:Key="StyleBorderR1" TargetType="Control"><Setter Property="BorderThickness" Value="0,0,1,0"/></Style>
+    <Style x:Key="StyleBorderR2" TargetType="Control"><Setter Property="BorderThickness" Value="0,0,2,0"/></Style>
+
+    <!-- ======================================== -->
+    <!-- OPACITY STYLES                           -->
+    <!-- ======================================== -->
+    
+    <Style x:Key="StyleOpacity0" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0"/></Style>
+    <Style x:Key="StyleOpacity5" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.05"/></Style>
+    <Style x:Key="StyleOpacity10" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.1"/></Style>
+    <Style x:Key="StyleOpacity20" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.2"/></Style>
+    <Style x:Key="StyleOpacity25" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.25"/></Style>
+    <Style x:Key="StyleOpacity30" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.3"/></Style>
+    <Style x:Key="StyleOpacity40" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.4"/></Style>
+    <Style x:Key="StyleOpacity50" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.5"/></Style>
+    <Style x:Key="StyleOpacity60" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.6"/></Style>
+    <Style x:Key="StyleOpacity70" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.7"/></Style>
+    <Style x:Key="StyleOpacity75" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.75"/></Style>
+    <Style x:Key="StyleOpacity80" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.8"/></Style>
+    <Style x:Key="StyleOpacity90" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.9"/></Style>
+    <Style x:Key="StyleOpacity95" TargetType="FrameworkElement"><Setter Property="Opacity" Value="0.95"/></Style>
+    <Style x:Key="StyleOpacity100" TargetType="FrameworkElement"><Setter Property="Opacity" Value="1"/></Style>
+
+    <!-- ======================================== -->
+    <!-- MIN/MAX SIZE STYLES                      -->
+    <!-- ======================================== -->
+    
+    <Style x:Key="StyleMinW0" TargetType="FrameworkElement"><Setter Property="MinWidth" Value="0"/></Style>
+    <Style x:Key="StyleMinW32" TargetType="FrameworkElement"><Setter Property="MinWidth" Value="128"/></Style>
+    <Style x:Key="StyleMinW48" TargetType="FrameworkElement"><Setter Property="MinWidth" Value="192"/></Style>
+    <Style x:Key="StyleMinW64" TargetType="FrameworkElement"><Setter Property="MinWidth" Value="256"/></Style>
+    
+    <Style x:Key="StyleMaxW32" TargetType="FrameworkElement"><Setter Property="MaxWidth" Value="128"/></Style>
+    <Style x:Key="StyleMaxW48" TargetType="FrameworkElement"><Setter Property="MaxWidth" Value="192"/></Style>
+    <Style x:Key="StyleMaxW64" TargetType="FrameworkElement"><Setter Property="MaxWidth" Value="256"/></Style>
+    <Style x:Key="StyleMaxW96" TargetType="FrameworkElement"><Setter Property="MaxWidth" Value="384"/></Style>
+
+    <Style x:Key="StyleMinH0" TargetType="FrameworkElement"><Setter Property="MinHeight" Value="0"/></Style>
+    <Style x:Key="StyleMinH32" TargetType="FrameworkElement"><Setter Property="MinHeight" Value="128"/></Style>
+    <Style x:Key="StyleMinH48" TargetType="FrameworkElement"><Setter Property="MinHeight" Value="192"/></Style>
+    <Style x:Key="StyleMinH64" TargetType="FrameworkElement"><Setter Property="MinHeight" Value="256"/></Style>
+    
+    <Style x:Key="StyleMaxH32" TargetType="FrameworkElement"><Setter Property="MaxHeight" Value="128"/></Style>
+    <Style x:Key="StyleMaxH48" TargetType="FrameworkElement"><Setter Property="MaxHeight" Value="192"/></Style>
+    <Style x:Key="StyleMaxH64" TargetType="FrameworkElement"><Setter Property="MaxHeight" Value="256"/></Style>
+    <Style x:Key="StyleMaxH96" TargetType="FrameworkElement"><Setter Property="MaxHeight" Value="384"/></Style>
+
+</ResourceDictionary>
+

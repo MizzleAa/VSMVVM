@@ -1,0 +1,247 @@
+<UserControl x:Class="VSMVVM.WPF.Sample.Views.CanvasView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
+             xmlns:ctrl="clr-namespace:VSMVVM.WPF.Controls;assembly=VSMVVM.WPF"
+             xmlns:bh="clr-namespace:VSMVVM.WPF.Sample.Behaviors"
+             me:ViewModelLocator.AutoWireViewModel="True"
+             bh:CanvasViewBehavior.Enable="True">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header + Toolbar -->
+        <StackPanel Grid.Row="0" Margin="{StaticResource P2}">
+			<TextBlock Text="Canvas (TODO)"
+                       FontSize="{StaticResource Text2xl}" FontWeight="{StaticResource FontBold}"
+                       Foreground="{DynamicResource TextPrimary}" Margin="{StaticResource Mb2}"/>
+            <TextBlock Text="ImageCanvas demo: Scroll to zoom · Drag empty space to pan · Click element to select · Drag selected element to move · Resize with handles"
+                       FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}" Margin="{StaticResource Mb2}"
+                       TextWrapping="Wrap"/>
+
+            <!-- Toolbar -->
+            <StackPanel Orientation="Horizontal" Margin="{StaticResource Mb2}">
+                <Button Content="Zoom Fit" Command="{Binding FitToContentCommand}"
+                        Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
+                <Button Content="+ Layer" Command="{Binding AddLayerCommand}"
+                        Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
+                <Button Content="+ Shape" Command="{Binding AddShapeCommand}"
+                        Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
+                <ToggleButton Content="🔒 Pan" IsChecked="{Binding IsPanLocked, Mode=TwoWay}"
+                              Padding="{StaticResource Px2}"
+                              ToolTip="Pan Lock On/Off"/>
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Main Content: Canvas + Layer Panel -->
+        <Grid Grid.Row="1" Margin="{StaticResource M2}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="{StaticResource GridW60}"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Canvas -->
+            <Border Grid.Column="0" Background="{DynamicResource BgTertiary}" CornerRadius="{StaticResource RoundedMd}"
+                    ClipToBounds="True" Margin="{StaticResource Mr2}">
+                <ctrl:BackgroundCanvas x:Name="DemoCanvas"
+                                       ZoomLevel="{Binding ZoomLevel, Mode=TwoWay}"
+                                       IsPanLocked="{Binding IsPanLocked, Mode=TwoWay}"
+                                       MinZoom="0.1" MaxZoom="10.0">
+                    <ctrl:LayeredCanvas x:Name="MainLayeredCanvas"
+                                         Background="{DynamicResource BgSecondary}"/>
+                </ctrl:BackgroundCanvas>
+            </Border>
+
+            <!-- Layer Panel (포토샵 스타일) -->
+            <Border Grid.Column="1" Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                    BorderBrush="{DynamicResource BorderDefault}" BorderThickness="{StaticResource Border}">
+                <DockPanel>
+                    <!-- Panel Header -->
+                    <Border DockPanel.Dock="Top" Padding="{StaticResource P2}"
+                            BorderBrush="{DynamicResource BorderMuted}" BorderThickness="{StaticResource BorderB}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Layers"
+                                       FontSize="{StaticResource TextSm}" FontWeight="{StaticResource FontSemibold}"
+                                       Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Layers.Count, StringFormat={}{0} layers}"
+                                       FontSize="{StaticResource TextXs}" Foreground="{DynamicResource TextMuted}"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- Bottom Toolbar -->
+                    <Border DockPanel.Dock="Bottom" Padding="{StaticResource P1}"
+                            BorderBrush="{DynamicResource BorderMuted}" BorderThickness="{StaticResource BorderT}">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button Style="{DynamicResource BtnOutline}" Content="Up"
+                                    Command="{Binding MoveLayerUpCommand}" ToolTip="Move Layer Up"
+                                    Margin="{StaticResource Mr1}"/>
+                            <Button Style="{DynamicResource BtnOutline}" Content="Down"
+                                    Command="{Binding MoveLayerDownCommand}" ToolTip="Move Layer Down"
+                                    Margin="{StaticResource Mr1}"/>
+                            <Button Style="{DynamicResource BtnOutline}" Content="Del"
+                                    Command="{Binding DeleteLayerCommand}" ToolTip="Delete Selected Layer"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Layer List (포토샵 스타일) -->
+                    <ListBox ItemsSource="{Binding Layers}"
+                             SelectedItem="{Binding SelectedLayer, Mode=TwoWay}"
+                             Background="Transparent" BorderThickness="{StaticResource Border0}"
+                             HorizontalContentAlignment="Stretch"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="Padding" Value="4"/>
+                                <Setter Property="Margin" Value="0"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                <Setter Property="BorderBrush" Value="{DynamicResource BorderMuted}"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ListBoxItem">
+                                            <Border x:Name="ItemBorder"
+                                                    Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    Padding="{TemplateBinding Padding}"
+                                                    CornerRadius="2">
+                                                <ContentPresenter/>
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AccentPrimary}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource BgTertiary}"/>
+                                                </Trigger>
+                                                <MultiTrigger>
+                                                    <MultiTrigger.Conditions>
+                                                        <Condition Property="IsSelected" Value="True"/>
+                                                        <Condition Property="IsMouseOver" Value="True"/>
+                                                    </MultiTrigger.Conditions>
+                                                    <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource AccentPrimary}"/>
+                                                </MultiTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <!-- Layer Header -->
+                                    <Grid Height="40">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Visibility Toggle (Eye) -->
+                                        <Button Grid.Column="0"
+                                                Command="{Binding DataContext.ToggleLayerVisibilityCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}"
+                                                Width="24" Height="24" Margin="0,0,4,0"
+                                                Background="Transparent" BorderThickness="0"
+                                                Cursor="Hand" ToolTip="Toggle Visibility"
+                                                VerticalAlignment="Center">
+                                            <TextBlock Text="👁" FontSize="12" HorizontalAlignment="Center"
+                                                       Opacity="{Binding IsVisible, Converter={x:Static ctrl:BoolToOpacityConverter.Instance}}"/>
+                                        </Button>
+
+                                        <!-- Layer Thumbnail -->
+                                        <Border Grid.Column="1" Width="36" Height="28" Margin="0,0,6,0"
+                                                CornerRadius="3" BorderThickness="1"
+                                                BorderBrush="{DynamicResource BorderMuted}"
+                                                VerticalAlignment="Center">
+                                            <Border CornerRadius="2">
+                                                <Border.Background>
+                                                    <SolidColorBrush Color="{Binding ThumbColor}"/>
+                                                </Border.Background>
+                                                <Grid>
+                                                    <Rectangle Opacity="0.15" Fill="White" RadiusX="2" RadiusY="2"/>
+                                                </Grid>
+                                            </Border>
+                                        </Border>
+
+                                        <!-- Layer Info -->
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="{StaticResource TextSm}"
+                                                       Foreground="{DynamicResource TextPrimary}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock FontSize="10" Foreground="{DynamicResource TextMuted}" Margin="0,1,0,0">
+                                                <Run Text="{Binding ChildCount, Mode=OneWay}"/>
+                                                <Run Text="objects"/>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <!-- ZOrder Badge -->
+                                        <Border Grid.Column="3" VerticalAlignment="Center"
+                                                Background="{DynamicResource BgTertiary}"
+                                                CornerRadius="8" Padding="5,1" Margin="4,0,0,0">
+                                            <TextBlock Text="{Binding ZOrder}"
+                                                       FontSize="10" Foreground="{DynamicResource TextMuted}"
+                                                       HorizontalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- Children List (도형 목록) -->
+                                    <ItemsControl ItemsSource="{Binding Children}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Padding="4,2" Margin="0,1" Cursor="Hand"
+                                                        Background="Transparent" BorderThickness="0"
+                                                        HorizontalAlignment="Left"
+                                                        HorizontalContentAlignment="Left"
+                                                        Command="{Binding DataContext.SelectChildCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Border Width="12" Height="12" CornerRadius="2" Margin="0,0,6,0"
+                                                                VerticalAlignment="Center">
+                                                            <Border.Background>
+                                                                <SolidColorBrush Color="{Binding Color}"/>
+                                                            </Border.Background>
+                                                        </Border>
+                                                        <TextBlock Grid.Column="1" Text="{Binding DisplayName}"
+                                                                   FontSize="11" Foreground="{DynamicResource TextSecondary}"
+                                                                   VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+        </Grid>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Background="{DynamicResource BgSecondary}" Padding="{StaticResource P2}" Margin="{StaticResource M2}"
+                CornerRadius="{StaticResource RoundedSm}">
+            <TextBlock Text="{Binding CanvasInfo}" FontSize="{StaticResource TextSm}" FontFamily="Consolas"
+                       Foreground="{DynamicResource TextSecondary}" HorizontalAlignment="Center"/>
+        </Border>
+    </Grid>
+</UserControl>

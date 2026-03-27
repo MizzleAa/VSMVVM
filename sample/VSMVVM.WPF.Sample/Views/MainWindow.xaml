@@ -113,7 +113,7 @@
                                 Command="{Binding NavigateMultiWindowCommand}"
                                 HorizontalContentAlignment="Left"
                                 Margin="{StaticResource Mt1}"/>
-                        <Button Content="Canvas"
+                        <Button Content="Canvas (TODO)"
                                 Command="{Binding NavigateCanvasCommand}"
                                 HorizontalContentAlignment="Left"
                                 Margin="{StaticResource Mt1}"/>

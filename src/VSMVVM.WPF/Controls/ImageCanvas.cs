@@ -1,7 +1,6 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -9,9 +8,9 @@ using System.Windows.Media;
 namespace VSMVVM.WPF.Controls
 {
     /// <summary>
-    /// Zoom/Pan 기반 이미지 캔버스 컨트롤.
-    /// 마우스 휠 줌, 드래그 팬, 자식 요소 선택/이동/크기조절을 지원합니다.
-    /// LayeredCanvas 내부 도형도 개별 선택 가능.
+    /// 순수 Zoom/Pan 뷰포트 컨트롤.
+    /// 마우스 휠 줌, 드래그 팬만 지원합니다.
+    /// 선택/드래그는 자식 LayeredCanvas에서 처리합니다.
     /// </summary>
     public class ImageCanvas : Canvas
     {
@@ -22,19 +21,11 @@ namespace VSMVVM.WPF.Controls
         private readonly TransformGroup _transformGroup = new TransformGroup();
         private Point _lastMousePosition;
         private bool _isPanning;
-        private bool _isDraggingElement;
-        private Point _dragStartCanvasPos;
-        private double _dragOriginalLeft;
-        private double _dragOriginalTop;
-        private CanvasSelectionAdorner? _currentAdorner;
 
         #endregion
 
         #region DependencyProperties
 
-        /// <summary>
-        /// Zoom 레벨 종속성 프로퍼티.
-        /// </summary>
         public static readonly DependencyProperty ZoomLevelProperty =
             DependencyProperty.Register(
                 nameof(ZoomLevel),
@@ -42,9 +33,6 @@ namespace VSMVVM.WPF.Controls
                 typeof(ImageCanvas),
                 new PropertyMetadata(1.0, OnZoomLevelChanged));
 
-        /// <summary>
-        /// 최소 Zoom 레벨.
-        /// </summary>
         public static readonly DependencyProperty MinZoomProperty =
             DependencyProperty.Register(
                 nameof(MinZoom),
@@ -52,35 +40,12 @@ namespace VSMVVM.WPF.Controls
                 typeof(ImageCanvas),
                 new PropertyMetadata(0.1));
 
-        /// <summary>
-        /// 최대 Zoom 레벨.
-        /// </summary>
         public static readonly DependencyProperty MaxZoomProperty =
             DependencyProperty.Register(
                 nameof(MaxZoom),
                 typeof(double),
                 typeof(ImageCanvas),
                 new PropertyMetadata(20.0));
-
-        /// <summary>
-        /// 현재 선택된 자식 요소.
-        /// </summary>
-        public static readonly DependencyProperty SelectedElementProperty =
-            DependencyProperty.Register(
-                nameof(SelectedElement),
-                typeof(UIElement),
-                typeof(ImageCanvas),
-                new PropertyMetadata(null));
-
-        /// <summary>
-        /// 선택/드래그 기능 활성화 여부.
-        /// </summary>
-        public static readonly DependencyProperty IsSelectionEnabledProperty =
-            DependencyProperty.Register(
-                nameof(IsSelectionEnabled),
-                typeof(bool),
-                typeof(ImageCanvas),
-                new PropertyMetadata(true));
 
         public double ZoomLevel
         {
@@ -100,18 +65,6 @@ namespace VSMVVM.WPF.Controls
             set => SetValue(MaxZoomProperty, value);
         }
 
-        public UIElement? SelectedElement
-        {
-            get => (UIElement?)GetValue(SelectedElementProperty);
-            set => SetValue(SelectedElementProperty, value);
-        }
-
-        public bool IsSelectionEnabled
-        {
-            get => (bool)GetValue(IsSelectionEnabledProperty);
-            set => SetValue(IsSelectionEnabledProperty, value);
-        }
-
         #endregion
 
         #region Constructor
@@ -122,6 +75,7 @@ namespace VSMVVM.WPF.Controls
             _transformGroup.Children.Add(_translateTransform);
             RenderTransform = _transformGroup;
             ClipToBounds = true;
+            SizeChanged += (_, __) => UpdateLayeredCanvasSize();
         }
 
         #endregion
@@ -151,52 +105,34 @@ namespace VSMVVM.WPF.Controls
             _translateTransform.Y = position.Y - canvasY * newZoom;
 
             ZoomLevel = newZoom;
-            _currentAdorner?.InvalidateVisual();
+            UpdateLayeredCanvasSize();
+
+            // 자식 LayeredCanvas의 adorner 갱신
+            foreach (UIElement child in Children)
+            {
+                if (child is LayeredCanvas lc)
+                    lc.InvalidateAdorner();
+            }
 
             e.Handled = true;
         }
 
         /// <summary>
-        /// 마우스 다운: 자식 요소 위 → 선택 + 드래그, 빈 공간 → 팬.
-        /// 그룹 우선 선택: LayeredCanvas 첫 클릭 → 그룹 선택, 이미 선택된 상태에서 재클릭 → 내부 도형 선택.
+        /// 마우스 다운: 빈 공간 클릭 시 팬 시작.
+        /// LayeredCanvas 위 클릭은 LayeredCanvas가 자체 처리.
         /// </summary>
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
         {
             base.OnMouseLeftButtonDown(e);
 
-            if (IsSelectionEnabled)
+            // 자식 LayeredCanvas가 이미 드래그를 시작했으면 panning 하지 않음
+            if (e.Handled) return;
+
+            // LayeredCanvas에서 요소가 선택되었으면 panning 차단
+            foreach (UIElement child in Children)
             {
-                var canvasPoint = e.GetPosition(this);
-
-                // 1단계: 직접 자식 level에서 HitTest (LayeredCanvas 포함)
-                var directHit = FindDirectHitChild(canvasPoint);
-
-                if (directHit != null)
-                {
-                    // LayeredCanvas인 경우: 컨테이너 자체는 선택 불가 → 항상 내부 레이어로 드릴다운
-                    if (directHit is LayeredCanvas layered)
-                    {
-                        var innerHit = FindHitInLayeredCanvas(layered, canvasPoint);
-                        if (innerHit != null)
-                        {
-                            SelectElement(innerHit);
-                            StartDrag(innerHit, e);
-                            return;
-                        }
-                        // 내부 hit 없으면 선택 해제 (컨테이너 자체는 선택하지 않음)
-                        ClearSelection();
-                        return;
-                    }
-
-                    // 일반 자식 요소
-                    SelectElement(directHit);
-                    StartDrag(directHit, e);
+                if (child is LayeredCanvas lc && lc.IsDragging)
                     return;
-                }
-                else
-                {
-                    ClearSelection();
-                }
             }
 
             _isPanning = true;
@@ -205,65 +141,11 @@ namespace VSMVVM.WPF.Controls
         }
 
         /// <summary>
-        /// 드래그 모드 시작 헬퍼.
-        /// </summary>
-        private void StartDrag(UIElement element, MouseButtonEventArgs e)
-        {
-            _isDraggingElement = true;
-
-            var parentCanvas = FindParentCanvas(element);
-            _dragStartCanvasPos = parentCanvas != null && parentCanvas != this
-                ? e.GetPosition(parentCanvas)
-                : e.GetPosition(this);
-
-            var left = GetLeft(element);
-            var top = GetTop(element);
-            _dragOriginalLeft = double.IsNaN(left) ? 0 : left;
-            _dragOriginalTop = double.IsNaN(top) ? 0 : top;
-
-            CaptureMouse();
-            e.Handled = true;
-        }
-
-        /// <summary>
-        /// 마우스 이동: 드래그 또는 팬.
+        /// 마우스 이동: 팬.
         /// </summary>
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
-
-            if (_isDraggingElement && SelectedElement != null)
-            {
-                // 부모 Canvas 기준으로 드래그 좌표 계산
-                var parentCanvas = FindParentCanvas(SelectedElement);
-                var currentPos = parentCanvas != null
-                    ? e.GetPosition(parentCanvas)
-                    : e.GetPosition(this);
-
-                var deltaX = currentPos.X - _dragStartCanvasPos.X;
-                var deltaY = currentPos.Y - _dragStartCanvasPos.Y;
-
-                var newLeft = _dragOriginalLeft + deltaX;
-                var newTop = _dragOriginalTop + deltaY;
-
-                // 부모가 CanvasLayer인 경우 bounds 클램핑
-                if (parentCanvas is CanvasLayer parentLayer
-                    && SelectedElement is FrameworkElement fe)
-                {
-                    var maxLeft = parentLayer.Width - fe.ActualWidth;
-                    var maxTop = parentLayer.Height - fe.ActualHeight;
-                    if (!double.IsNaN(maxLeft) && maxLeft > 0)
-                        newLeft = Math.Max(0, Math.Min(newLeft, maxLeft));
-                    if (!double.IsNaN(maxTop) && maxTop > 0)
-                        newTop = Math.Max(0, Math.Min(newTop, maxTop));
-                }
-
-                SetLeft(SelectedElement, newLeft);
-                SetTop(SelectedElement, newTop);
-
-                _currentAdorner?.InvalidateVisual();
-                return;
-            }
 
             if (_isPanning)
             {
@@ -274,23 +156,16 @@ namespace VSMVVM.WPF.Controls
                 _translateTransform.Y += delta.Y;
 
                 _lastMousePosition = currentPosition;
+                UpdateLayeredCanvasSize();
             }
         }
 
         /// <summary>
-        /// 마우스 업: 드래그/팬 종료.
+        /// 마우스 업: 팬 종료.
         /// </summary>
         protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
         {
             base.OnMouseLeftButtonUp(e);
-
-            if (_isDraggingElement)
-            {
-                _isDraggingElement = false;
-                ReleaseMouseCapture();
-                e.Handled = true;
-                return;
-            }
 
             if (_isPanning)
             {
@@ -299,48 +174,9 @@ namespace VSMVVM.WPF.Controls
             }
         }
 
-        // OnMouseLeave/Enter에서 adorner 숨김을 하지 않습니다.
-        // Canvas 자식 요소 경계에서 Leave/Enter가 반복 발생하여 깜빡임을 유발하기 때문입니다.
-        // 대신 부모 Border의 ClipToBounds="True"로 시각적 클리핑을 처리합니다.
-
         #endregion
 
         #region Public Methods
-
-        /// <summary>
-        /// 자식 요소를 선택합니다. 선택 adorner를 부착합니다.
-        /// </summary>
-        public void SelectElement(UIElement element)
-        {
-            if (element == null || element == SelectedElement)
-                return;
-
-            ClearSelection();
-
-            SelectedElement = element;
-
-            var adornerLayer = AdornerLayer.GetAdornerLayer(element);
-            if (adornerLayer != null)
-            {
-                _currentAdorner = new CanvasSelectionAdorner(element);
-                adornerLayer.Add(_currentAdorner);
-            }
-        }
-
-        /// <summary>
-        /// 현재 선택을 해제합니다.
-        /// </summary>
-        public void ClearSelection()
-        {
-            if (_currentAdorner != null && SelectedElement != null)
-            {
-                var adornerLayer = AdornerLayer.GetAdornerLayer(SelectedElement);
-                adornerLayer?.Remove(_currentAdorner);
-                _currentAdorner = null;
-            }
-
-            SelectedElement = null;
-        }
 
         /// <summary>
         /// 모든 자식 요소를 뷰포트에 맞추는 Zoom Fit 기능.
@@ -360,14 +196,13 @@ namespace VSMVVM.WPF.Controls
 
             var scaleX = viewportWidth / bounds.Width;
             var scaleY = viewportHeight / bounds.Height;
-            var zoom = Math.Min(scaleX, scaleY) * 0.9; // 90% fit with margin
+            var zoom = Math.Min(scaleX, scaleY) * 0.9;
 
             zoom = Math.Max(MinZoom, Math.Min(MaxZoom, zoom));
 
             _scaleTransform.ScaleX = zoom;
             _scaleTransform.ScaleY = zoom;
 
-            // 콘텐츠를 뷰포트 중앙에 배치
             var contentCenterX = bounds.X + bounds.Width / 2;
             var contentCenterY = bounds.Y + bounds.Height / 2;
 
@@ -375,7 +210,6 @@ namespace VSMVVM.WPF.Controls
             _translateTransform.Y = viewportHeight / 2 - contentCenterY * zoom;
 
             ZoomLevel = zoom;
-            _currentAdorner?.InvalidateVisual();
         }
 
         /// <summary>
@@ -408,102 +242,12 @@ namespace VSMVVM.WPF.Controls
             _translateTransform.X = 0;
             _translateTransform.Y = 0;
             ZoomLevel = 1.0;
-            ClearSelection();
         }
 
         #endregion
 
         #region Private Methods
 
-        /// <summary>
-        /// 직접 자식 요소만 HitTest합니다 (LayeredCanvas 내부로 드릴다운하지 않음).
-        /// </summary>
-        private UIElement? FindDirectHitChild(Point canvasPoint)
-        {
-            for (int i = Children.Count - 1; i >= 0; i--)
-            {
-                var child = Children[i];
-                if (child.Visibility != Visibility.Visible)
-                    continue;
-
-                var childBounds = GetChildBounds(child);
-                if (!childBounds.IsEmpty && childBounds.Contains(canvasPoint))
-                    return child;
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// LayeredCanvas 내부에서 HitTest를 수행합니다.
-        /// </summary>
-        private UIElement? FindHitInLayeredCanvas(LayeredCanvas layered, Point imageCanvasPoint)
-        {
-            var layeredLeft = GetLeft(layered);
-            var layeredTop = GetTop(layered);
-            if (double.IsNaN(layeredLeft)) layeredLeft = 0;
-            if (double.IsNaN(layeredTop)) layeredTop = 0;
-
-            // ImageCanvas 좌표 → LayeredCanvas 로컬 좌표
-            var localPoint = new Point(
-                imageCanvasPoint.X - layeredLeft,
-                imageCanvasPoint.Y - layeredTop);
-
-            // 각 레이어를 높은 ZOrder부터 탐색
-            // 1차: 내부 도형 hit 검색 (CanvasLayer offset 차감 필요)
-            for (int i = layered.Children.Count - 1; i >= 0; i--)
-            {
-                if (layered.Children[i] is CanvasLayer layer && layer.Visibility == Visibility.Visible)
-                {
-                    var layerLeft = GetLeft(layer);
-                    var layerTop = GetTop(layer);
-                    if (double.IsNaN(layerLeft)) layerLeft = 0;
-                    if (double.IsNaN(layerTop)) layerTop = 0;
-
-                    // LayeredCanvas 좌표 → CanvasLayer 로컬 좌표
-                    var layerLocalPoint = new Point(
-                        localPoint.X - layerLeft,
-                        localPoint.Y - layerTop);
-
-                    var layerHit = FindHitInCanvas(layer, layerLocalPoint);
-                    if (layerHit != null)
-                        return layerHit;
-                }
-            }
-
-            // 2차: 도형 hit 없으면 CanvasLayer 영역 자체를 반환 (레이어 이동/리사이즈 가능)
-            for (int i = layered.Children.Count - 1; i >= 0; i--)
-            {
-                if (layered.Children[i] is CanvasLayer layer && layer.Visibility == Visibility.Visible)
-                {
-                    var layerBounds = GetChildBounds(layer);
-                    if (!layerBounds.IsEmpty && layerBounds.Contains(localPoint))
-                        return layer;
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// 일반 Canvas 내부에서 HitTest를 수행합니다.
-        /// </summary>
-        private static UIElement? FindHitInCanvas(Canvas canvas, Point localPoint)
-        {
-            for (int i = canvas.Children.Count - 1; i >= 0; i--)
-            {
-                var child = canvas.Children[i];
-                if (child.Visibility != Visibility.Visible) continue;
-
-                var bounds = GetChildBounds(child);
-                if (!bounds.IsEmpty && bounds.Contains(localPoint))
-                    return child;
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 자식 요소의 바운딩 Rect를 반환합니다.
-        /// </summary>
         private static Rect GetChildBounds(UIElement child)
         {
             var left = GetLeft(child);
@@ -529,38 +273,6 @@ namespace VSMVVM.WPF.Controls
             return new Rect(left, top, width, height);
         }
 
-        /// <summary>
-        /// 요소의 부모 Canvas를 찾습니다.
-        /// </summary>
-        private static Canvas? FindParentCanvas(UIElement element)
-        {
-            DependencyObject parent = VisualTreeHelper.GetParent(element);
-            while (parent != null)
-            {
-                if (parent is Canvas c) return c;
-                parent = VisualTreeHelper.GetParent(parent);
-            }
-            return null;
-        }
-
-        /// <summary>
-        /// 요소가 특정 LayeredCanvas의 자식(CanvasLayer 포함)인지 확인합니다.
-        /// </summary>
-        private static bool IsChildOfLayered(UIElement? element, LayeredCanvas layered)
-        {
-            if (element == null) return false;
-            DependencyObject? parent = VisualTreeHelper.GetParent(element);
-            while (parent != null)
-            {
-                if (parent == layered) return true;
-                parent = VisualTreeHelper.GetParent(parent);
-            }
-            return false;
-        }
-
-        /// <summary>
-        /// 모든 자식 요소의 전체 바운딩 박스를 계산합니다.
-        /// </summary>
         private Rect GetContentBounds()
         {
             var result = Rect.Empty;
@@ -584,6 +296,30 @@ namespace VSMVVM.WPF.Controls
                 var newZoom = (double)e.NewValue;
                 canvas._scaleTransform.ScaleX = newZoom;
                 canvas._scaleTransform.ScaleY = newZoom;
+            }
+        }
+
+        /// <summary>
+        /// 자식 LayeredCanvas의 위치/크기를 뷰포트에 맞게 갱신합니다.
+        /// 줌/팬 상태에 관계없이 LayeredCanvas가 전체 뷰포트를 채웁니다.
+        /// </summary>
+        private void UpdateLayeredCanvasSize()
+        {
+            if (ActualWidth <= 0 || ActualHeight <= 0) return;
+            var zoom = ZoomLevel > 0 ? ZoomLevel : 1.0;
+
+            foreach (UIElement child in Children)
+            {
+                if (child is LayeredCanvas lc)
+                {
+                    // 뷰포트를 정확히 채우려면:
+                    // 캔버스 좌표에서 뷰포트 좌상단 = (-translate / zoom)
+                    // 캔버스 좌표에서 뷰포트 크기 = (viewport / zoom)
+                    SetLeft(lc, -_translateTransform.X / zoom);
+                    SetTop(lc, -_translateTransform.Y / zoom);
+                    lc.Width = ActualWidth / zoom;
+                    lc.Height = ActualHeight / zoom;
+                }
             }
         }
 

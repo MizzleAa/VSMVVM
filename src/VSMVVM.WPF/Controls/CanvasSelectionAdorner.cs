@@ -63,6 +63,9 @@ namespace VSMVVM.WPF.Controls
 
             if (width <= 0 || height <= 0) return;
 
+            // 뷰포트 클리핑: adorner가 BackgroundCanvas 영역 밖으로 렌더링되지 않도록
+            bool clipped = PushViewportClip(drawingContext);
+
             var zoomCompensation = GetZoomCompensation();
             var handleSize = HandleSize * zoomCompensation;
             var halfHandle = handleSize / 2.0;
@@ -83,6 +86,8 @@ namespace VSMVVM.WPF.Controls
             DrawHandle(drawingContext, width / 2, height, handleSize, halfHandle, handleStroke);
             DrawHandle(drawingContext, 0, height, handleSize, halfHandle, handleStroke);
             DrawHandle(drawingContext, 0, height / 2, handleSize, halfHandle, handleStroke);
+
+            if (clipped) drawingContext.Pop();
         }
 
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
@@ -173,13 +178,52 @@ namespace VSMVVM.WPF.Controls
 
         private double GetZoomCompensation()
         {
-            var canvas = FindCanvas();
-            if (canvas is ImageCanvas imageCanvas)
+            // visual tree를 따라 BackgroundCanvas를 검색
+            DependencyObject parent = VisualTreeHelper.GetParent(AdornedElement);
+            while (parent != null)
             {
-                var zoom = imageCanvas.ZoomLevel;
-                return zoom > 0 ? 1.0 / zoom : 1.0;
+                if (parent is BackgroundCanvas bgCanvas)
+                {
+                    var zoom = bgCanvas.ZoomLevel;
+                    return zoom > 0 ? 1.0 / zoom : 1.0;
+                }
+                parent = VisualTreeHelper.GetParent(parent);
             }
             return 1.0;
+        }
+
+        /// <summary>
+        /// BackgroundCanvas의 부모 뷰포트 영역으로 DrawingContext를 클리핑합니다.
+        /// Adorner가 뷰포트 밖으로 렌더링되는 것을 방지합니다.
+        /// </summary>
+        private bool PushViewportClip(DrawingContext dc)
+        {
+            // BackgroundCanvas 찾기
+            DependencyObject ancestor = VisualTreeHelper.GetParent(AdornedElement);
+            BackgroundCanvas? bgCanvas = null;
+            while (ancestor != null)
+            {
+                if (ancestor is BackgroundCanvas bc) { bgCanvas = bc; break; }
+                ancestor = VisualTreeHelper.GetParent(ancestor);
+            }
+            if (bgCanvas == null) return false;
+
+            var viewport = bgCanvas.Parent as FrameworkElement;
+            if (viewport == null || viewport.ActualWidth <= 0 || viewport.ActualHeight <= 0) return false;
+
+            try
+            {
+                // 뷰포트 바운드를 adorned element 좌표계로 변환
+                var transform = viewport.TransformToDescendant(AdornedElement);
+                var topLeft = transform.Transform(new Point(0, 0));
+                var bottomRight = transform.Transform(new Point(viewport.ActualWidth, viewport.ActualHeight));
+                dc.PushClip(new RectangleGeometry(new Rect(topLeft, bottomRight)));
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private Canvas? FindCanvas()
@@ -314,14 +358,25 @@ namespace VSMVVM.WPF.Controls
                     newTop = _originalRect.Y + _originalRect.Height - MinSize;
             }
 
-            // 부모 bounds 제한 (요소가 CanvasLayer 내부인 경우)
+            // 부모 bounds 제한 — 요소가 부모 영역을 초과하지 않도록
             var parentCanvas = FindCanvas();
-            if (parentCanvas is CanvasLayer parentLayer
-                && VisualTreeHelper.GetParent(parentLayer) is LayeredCanvas parentLayered)
-            {
-                var parentW = !double.IsNaN(parentLayered.Width) ? parentLayered.Width : parentLayered.ActualWidth;
-                var parentH = !double.IsNaN(parentLayered.Height) ? parentLayered.Height : parentLayered.ActualHeight;
+            double parentW = double.NaN, parentH = double.NaN;
 
+            if (parentCanvas is CanvasLayer parentLayer)
+            {
+                // Shape → CanvasLayer 크기 기준
+                parentW = !double.IsNaN(parentLayer.Width) ? parentLayer.Width : parentLayer.ActualWidth;
+                parentH = !double.IsNaN(parentLayer.Height) ? parentLayer.Height : parentLayer.ActualHeight;
+            }
+            else if (parentCanvas is LayeredCanvas layeredParent)
+            {
+                // CanvasLayer → LayeredCanvas 크기 기준
+                parentW = layeredParent.ActualWidth > 0 ? layeredParent.ActualWidth : layeredParent.Width;
+                parentH = layeredParent.ActualHeight > 0 ? layeredParent.ActualHeight : layeredParent.Height;
+            }
+
+            if (!double.IsNaN(parentW) && !double.IsNaN(parentH) && parentW > 0 && parentH > 0)
+            {
                 if (newLeft < 0) { newWidth += newLeft; newLeft = 0; }
                 if (newTop < 0) { newHeight += newTop; newTop = 0; }
                 if (newLeft + newWidth > parentW) newWidth = parentW - newLeft;

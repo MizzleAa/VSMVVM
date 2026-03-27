@@ -60,6 +60,9 @@ namespace VSMVVM.WPF.Sample.ViewModels
         private double _zoomLevel = 1.0;
 
         [Property]
+        private bool _isPanLocked = false;
+
+        [Property]
         private string _canvasInfo = "Zoom: 1.0x";
 
         [Property]

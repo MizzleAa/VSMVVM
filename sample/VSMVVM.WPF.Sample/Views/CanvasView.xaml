@@ -16,7 +16,7 @@
 
         <!-- Header + Toolbar -->
         <StackPanel Grid.Row="0" Margin="{StaticResource P2}">
-            <TextBlock Text="Canvas"
+			<TextBlock Text="Canvas (TODO)"
                        FontSize="{StaticResource Text2xl}" FontWeight="{StaticResource FontBold}"
                        Foreground="{DynamicResource TextPrimary}" Margin="{StaticResource Mb2}"/>
             <TextBlock Text="ImageCanvas demo: Scroll to zoom · Drag empty space to pan · Click element to select · Drag selected element to move · Resize with handles"
@@ -30,7 +30,10 @@
                 <Button Content="+ Layer" Command="{Binding AddLayerCommand}"
                         Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
                 <Button Content="+ Shape" Command="{Binding AddShapeCommand}"
-                        Padding="{StaticResource Px2}"/>
+                        Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
+                <ToggleButton Content="🔒 Pan" IsChecked="{Binding IsPanLocked, Mode=TwoWay}"
+                              Padding="{StaticResource Px2}"
+                              ToolTip="Pan Lock On/Off"/>
             </StackPanel>
         </StackPanel>
 
@@ -42,17 +45,15 @@
             </Grid.ColumnDefinitions>
 
             <!-- Canvas -->
-            <Border Grid.Column="0" Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+            <Border Grid.Column="0" Background="{DynamicResource BgTertiary}" CornerRadius="{StaticResource RoundedMd}"
                     ClipToBounds="True" Margin="{StaticResource Mr2}">
-                <ctrl:ImageCanvas x:Name="DemoCanvas"
-                                  ZoomLevel="{Binding ZoomLevel, Mode=TwoWay}"
-                                  MinZoom="0.1" MaxZoom="10.0"
-                                  IsSelectionEnabled="True"
-                                  Background="{DynamicResource BgTertiary}">
-                    <ctrl:LayeredCanvas x:Name="MainLayeredCanvas" Width="800" Height="600"
-                                         Canvas.Left="0" Canvas.Top="0"
-                                         Background="{DynamicResource BgPrimary}"/>
-                </ctrl:ImageCanvas>
+                <ctrl:BackgroundCanvas x:Name="DemoCanvas"
+                                       ZoomLevel="{Binding ZoomLevel, Mode=TwoWay}"
+                                       IsPanLocked="{Binding IsPanLocked, Mode=TwoWay}"
+                                       MinZoom="0.1" MaxZoom="10.0">
+                    <ctrl:LayeredCanvas x:Name="MainLayeredCanvas"
+                                         Background="{DynamicResource BgSecondary}"/>
+                </ctrl:BackgroundCanvas>
             </Border>
 
             <!-- Layer Panel (포토샵 스타일) -->
@@ -200,12 +201,12 @@
                                     </Grid>
 
                                     <!-- Children List (도형 목록) -->
-                                    <ItemsControl ItemsSource="{Binding Children}" Margin="28,0,0,0">
+                                    <ItemsControl ItemsSource="{Binding Children}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <Button Padding="4,2" Margin="0,1" Cursor="Hand"
                                                         Background="Transparent" BorderThickness="0"
-                                                        HorizontalAlignment="Stretch"
+                                                        HorizontalAlignment="Left"
                                                         HorizontalContentAlignment="Left"
                                                         Command="{Binding DataContext.SelectChildCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                         CommandParameter="{Binding}">

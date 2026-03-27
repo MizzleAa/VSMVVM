@@ -53,13 +53,58 @@ namespace VSMVVM.WPF.Sample.Behaviors
             private readonly FrameworkElement _root;
             private int _layerCounter = 0;
             private int _shapeCounter;
+            private bool _syncingSelection;
 
             public CanvasOperationsHandler(FrameworkElement root)
             {
                 _root = root;
+
+                // Canvas → Panel 선택 동기화
+                var layered = FindLayeredCanvas();
+                if (layered != null)
+                {
+                    layered.SelectionChanged += OnCanvasSelectionChanged;
+                }
             }
 
-            private ImageCanvas? FindCanvas() => _root.FindName("DemoCanvas") as ImageCanvas;
+            /// <summary>
+            /// Canvas에서 요소 선택 시 → ViewModel (오른쪽 패널) 동기화.
+            /// </summary>
+            private void OnCanvasSelectionChanged(object? sender, UIElement? selected)
+            {
+                if (_syncingSelection) return;
+                if (_root.DataContext is not CanvasViewModel vm) return;
+
+                _syncingSelection = true;
+                try
+                {
+                    if (selected is CanvasLayer layer)
+                    {
+                        vm.SelectedLayer = vm.Layers.FirstOrDefault(l => l.Name == layer.LayerName);
+                    }
+                    else if (selected != null)
+                    {
+                        // Shape 선택 → 부모 CanvasLayer 찾아서 해당 레이어 선택
+                        DependencyObject? ancestor = System.Windows.Media.VisualTreeHelper.GetParent(selected);
+                        while (ancestor != null && ancestor is not CanvasLayer)
+                            ancestor = System.Windows.Media.VisualTreeHelper.GetParent(ancestor);
+                        if (ancestor is CanvasLayer parentLayer)
+                        {
+                            vm.SelectedLayer = vm.Layers.FirstOrDefault(l => l.Name == parentLayer.LayerName);
+                        }
+                    }
+                    else
+                    {
+                        vm.SelectedLayer = null;
+                    }
+                }
+                finally
+                {
+                    _syncingSelection = false;
+                }
+            }
+
+            private BackgroundCanvas? FindCanvas() => _root.FindName("DemoCanvas") as BackgroundCanvas;
 
             private LayeredCanvas? FindLayeredCanvas()
             {
@@ -94,16 +139,18 @@ namespace VSMVVM.WPF.Sample.Behaviors
 
                 _layerCounter++;
 
-                var offsetX = 30.0 + (_layerCounter * 40) % 300;
-                var offsetY = 30.0 + (_layerCounter * 30) % 200;
+                var layeredW = layered.ActualWidth > 0 ? layered.ActualWidth : 800;
+                var layeredH = layered.ActualHeight > 0 ? layered.ActualHeight : 600;
+
+                var offsetX = (30.0 + (_layerCounter * 40)) % System.Math.Max(1, layeredW - 200);
+                var offsetY = (30.0 + (_layerCounter * 30)) % System.Math.Max(1, layeredH - 150);
 
                 var layer = new CanvasLayer
                 {
                     LayerName = $"Layer {_layerCounter}",
                     ZOrder = _layerCounter,
                     Width = 200,
-                    Height = 150,
-                    Background = System.Windows.Media.Brushes.Transparent
+                    Height = 150
                 };
                 Canvas.SetLeft(layer, offsetX);
                 Canvas.SetTop(layer, offsetY);
@@ -176,21 +223,27 @@ namespace VSMVVM.WPF.Sample.Behaviors
 
             public void SelectLayerOnCanvas(string layerName)
             {
+                if (_syncingSelection) return;
                 var layered = FindLayeredCanvas();
                 var layer = layered?.FindLayer(layerName);
                 if (layer == null) return;
 
-                FindCanvas()?.SelectElement(layer);
+                _syncingSelection = true;
+                try { layered.SelectElement(layer); }
+                finally { _syncingSelection = false; }
             }
 
             public void SelectChildOnCanvas(string layerName, int childIndex)
             {
+                if (_syncingSelection) return;
                 var layered = FindLayeredCanvas();
                 var layer = layered?.FindLayer(layerName);
                 if (layer == null || childIndex < 0 || childIndex >= layer.Children.Count) return;
 
                 var child = layer.Children[childIndex];
-                FindCanvas()?.SelectElement(child);
+                _syncingSelection = true;
+                try { layered.SelectElement(child); }
+                finally { _syncingSelection = false; }
             }
 
             public void DeleteLayerOnCanvas(string layerName)
@@ -199,10 +252,9 @@ namespace VSMVVM.WPF.Sample.Behaviors
                 var layer = layered?.FindLayer(layerName);
                 if (layer == null) return;
 
-                var canvas = FindCanvas();
-                if (canvas?.SelectedElement == layer)
+                if (layered.SelectedElement == layer)
                 {
-                    canvas.ClearSelection();
+                    layered.ClearSelection();
                 }
 
                 layered!.Children.Remove(layer);

@@ -11,6 +11,7 @@ namespace VSMVVM.WPF.Sample
                 .CreateHost<Bootstrapper, App>(args, "SampleApp")
                 .UseSplash<Views.SplashWindow>()
                 .Build()
+                .ShutdownMode(System.Windows.ShutdownMode.OnMainWindowClose)
                 .RunApp<Views.MainWindow>();
         }
     }

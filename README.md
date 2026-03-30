@@ -6,18 +6,6 @@ Lightweight, modular MVVM framework for WPF with built-in Source Generator, DI C
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────┐
-│                    Application                   │
-├─────────────────────────────────────────────────┤
-│  VSMVVM.WPF.Design   │      VSMVVM.WPF         │
-│  (Styles & Tokens)    │  (Host, Services, Ctrl) │
-├───────────────────────┴─────────────────────────┤
-│                  VSMVVM.Core                     │
-│          (MVVM, DI, Source Generator)            │
-└─────────────────────────────────────────────────┘
-```
-
 | Package | Target | Description |
 |---------|--------|-------------|
 | **VSMVVM.Core** | .NET Standard 2.0 | MVVM base, DI, Source Generator, Messenger, Guard |
@@ -268,7 +256,7 @@ VSMVVMHost
 
 | Control | Description |
 |---------|-------------|
-| **WPFRegion** | ContentControl 기반 Region (Navigation + INavigateAware) |
+| **WPFRegion** | ContentControl 기반 Region (Navigation + INavigateAware + Back/Forward History) |
 | **ImageCanvas** | 줌/팬 캔버스, 자식 선택/리사이즈/드래그 지원 |
 | **LayeredCanvas** | Z-Order 레이어 캔버스 |
 | **CanvasSelectionAdorner** | 8방향 리사이즈 핸들 Adorner |
@@ -294,6 +282,7 @@ XAML에서 이벤트→커맨드 바인딩.
 | **ViewModelLocator** | `AutoWireViewModel="True"` — View-ViewModel 자동 바인딩 |
 | **LocalizeExtension** | `{me:Localize Key=UI_TITLE}` — 다국어 바인딩 |
 | **BindingProxy** | DataContext 프록시 (DataGrid 등 비시각 트리 바인딩) |
+| **EqualityConverter** | 두 바인딩 값 비교 MultiValueConverter (DataTrigger 활성 표시에 사용) |
 
 ### Media
 
@@ -361,25 +350,57 @@ Zinc + Blue 팔레트. `ThemeDark.xaml` / `ThemeLight.xaml` 런타임 전환.
 ### Window Chrome
 
 커스텀 타이틀바 + 최소화/최대화/닫기 버튼. `WindowChrome` + `WindowButtonsBehavior` 기반.
+`WindowChrome.CustomButtons` attached property로 AppBar에 커스텀 버튼(Back/Forward 등) 배치 가능.
+
+### Navigation History (Back / Forward)
+
+IRegionManager가 네비게이션 히스토리 스택을 자동 관리합니다.
+
+```csharp
+// 이전/다음 페이지 이동
+regionManager.GoBack("MainRegion");
+regionManager.GoForward("MainRegion");
+
+// 상태 확인
+bool canBack = regionManager.CanGoBack("MainRegion");
+bool canForward = regionManager.CanGoForward("MainRegion");
+
+// 현재 View 표시 이름 자동 생성 (PascalCase → 공백 분리)
+// "DefaultDesignView" → "Default Design"
+string displayName = regionManager.GetCurrentViewDisplayName("MainRegion");
+```
+
+### Logging
+
+ILoggerService 인터페이스로 로깅 추상화. Trace/Debug/Info/Warn/Error/Fatal 6단계 레벨 지원.
+
+```csharp
+// DI 등록
+sc.AddSingleton<ILoggerService, MyLoggerService>();
+
+// 사용
+logger.Info("App started");
+logger.Error("Failed", exception);
+```
 
 ---
 
 ## Testing
 
-xUnit + FluentAssertions 기반 단위 테스트 (40 tests).
+xUnit + FluentAssertions 기반 단위 테스트. **Warning-free build (0 warning)**.
 
 ```bash
 # 전체 테스트 실행
 dotnet test --verbosity normal
 
 # 개별 프로젝트
-dotnet test test/VSMVVM.Core.Tests/
-dotnet test test/VSMVVM.WPF.Tests/
+dotnet test tests/VSMVVM.Core.Tests/
+dotnet test tests/VSMVVM.WPF.Tests/
 ```
 
 | Suite | Tests | Coverage |
 |-------|-------|----------|
-| **VSMVVM.Core.Tests** | 37 | DI, Guard, Messenger, ViewModelBase, RelayCommand, AsyncRelayCommand, StateStore, ObservableValidator, BatchObservableCollection |
+| **VSMVVM.Core.Tests** | 91 | DI, Guard, Messenger, ViewModelBase, RelayCommand, AsyncRelayCommand, StateStore, ObservableValidator, BatchObservableCollection, Logging (ILoggerService, LogAttribute), **RegionManager (Back/Forward, DisplayName)** |
 | **VSMVVM.WPF.Tests** | 3 | ServiceLocator, DialogResult |
 
 ### CI/CD

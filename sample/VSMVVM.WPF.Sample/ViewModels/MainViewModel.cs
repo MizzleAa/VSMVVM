@@ -5,7 +5,7 @@ using VSMVVM.Core.Attributes;
 namespace VSMVVM.WPF.Sample.ViewModels
 {
     /// <summary>
-    /// 메인 윈도우 ViewModel. 네비게이션 및 AppBar 커스텀 버튼 데모.
+    /// 메인 윈도우 ViewModel. 네비게이션 히스토리(Back/Forward) + 사이드바 활성 상태.
     /// </summary>
     public partial class MainViewModel : ViewModelBase
     {
@@ -15,6 +15,18 @@ namespace VSMVVM.WPF.Sample.ViewModels
 
         [Property]
         private string _title = "VSMVVM Sample App";
+
+        [Property]
+        private string _currentViewName = "Home";
+
+        [Property]
+        private bool _canGoBack;
+
+        [Property]
+        private bool _canGoForward;
+
+        [Property]
+        private string _activeMenu = "Home";
 
         #endregion
 
@@ -44,51 +56,101 @@ namespace VSMVVM.WPF.Sample.ViewModels
                 Title = $"VSMVVM Sample App  [.NET {Environment.Version} | {DateTime.Now:HH:mm:ss}]";
             }
         }
+
+        #endregion
+
+        #region Navigation History
+
+        [RelayCommand]
+        private void NavigateBack()
+        {
+            _regionManager.GoBack("MainRegion");
+            SyncCurrentViewAfterHistoryNav();
+        }
+
+        [RelayCommand]
+        private void NavigateForward()
+        {
+            _regionManager.GoForward("MainRegion");
+            SyncCurrentViewAfterHistoryNav();
+        }
+
+        /// <summary>
+        /// Back/Forward 후 현재 View 이름을 동기화합니다.
+        /// </summary>
+        private void SyncCurrentViewAfterHistoryNav()
+        {
+            var displayName = _regionManager.GetCurrentViewDisplayName("MainRegion");
+            CurrentViewName = displayName;
+            ActiveMenu = displayName;
+            RefreshNavigationState();
+        }
+
+        private void RefreshNavigationState()
+        {
+            CanGoBack = _regionManager.CanGoBack("MainRegion");
+            CanGoForward = _regionManager.CanGoForward("MainRegion");
+            NavigateBackCommand?.RaiseCanExecuteChanged();
+            NavigateForwardCommand?.RaiseCanExecuteChanged();
+        }
+
         #endregion
 
         #region Navigation Commands
 
-        [RelayCommand]
-        private void NavigateHome() => _regionManager.Navigate("MainRegion", "HomeView");
+        private void DoNavigate(string viewName)
+        {
+            _regionManager.Navigate("MainRegion", viewName);
+            var displayName = _regionManager.GetCurrentViewDisplayName("MainRegion");
+            CurrentViewName = displayName;
+            ActiveMenu = displayName;
+            RefreshNavigationState();
+        }
 
         [RelayCommand]
-        private void NavigateControls() => _regionManager.Navigate("MainRegion", "ControlsView");
+        private void NavigateHome() => DoNavigate("HomeView");
 
         [RelayCommand]
-        private void NavigateComponents() => _regionManager.Navigate("MainRegion", "ComponentsView");
+        private void NavigateControls() => DoNavigate("ControlsView");
 
         [RelayCommand]
-        private void NavigateSourceGen() => _regionManager.Navigate("MainRegion", "SourceGenView");
+        private void NavigateComponents() => DoNavigate("ComponentsView");
 
         [RelayCommand]
-        private void NavigateMessenger() => _regionManager.Navigate("MainRegion", "MessengerView");
+        private void NavigateSourceGen() => DoNavigate("SourceGenView");
 
         [RelayCommand]
-        private void NavigateDialog() => _regionManager.Navigate("MainRegion", "DialogView");
+        private void NavigateMessenger() => DoNavigate("MessengerView");
 
         [RelayCommand]
-        private void NavigateNavigation() => _regionManager.Navigate("MainRegion", "NavigationView");
+        private void NavigateDialog() => DoNavigate("DialogView");
 
         [RelayCommand]
-        private void NavigateValidation() => _regionManager.Navigate("MainRegion", "ValidationView");
+        private void NavigateNavigation() => DoNavigate("NavigationView");
 
         [RelayCommand]
-        private void NavigateServices() => _regionManager.Navigate("MainRegion", "ServicesView");
+        private void NavigateValidation() => DoNavigate("ValidationView");
 
         [RelayCommand]
-        private void NavigateLifetime() => _regionManager.Navigate("MainRegion", "LifetimeView");
+        private void NavigateServices() => DoNavigate("ServicesView");
 
         [RelayCommand]
-        private void NavigateDefaultDesign() => _regionManager.Navigate("MainRegion", "DefaultDesignView");
+        private void NavigateLifetime() => DoNavigate("LifetimeView");
 
         [RelayCommand]
-        private void NavigateLocalization() => _regionManager.Navigate("MainRegion", "LocalizationView");
+        private void NavigateDefaultDesign() => DoNavigate("DefaultDesignView");
 
         [RelayCommand]
-        private void NavigateMultiWindow() => _regionManager.Navigate("MainRegion", "MultiWindowView");
+        private void NavigateLocalization() => DoNavigate("LocalizationView");
 
         [RelayCommand]
-        private void NavigateCanvas() => _regionManager.Navigate("MainRegion", "CanvasView");
+        private void NavigateMultiWindow() => DoNavigate("MultiWindowView");
+
+        [RelayCommand]
+        private void NavigateCanvas() => DoNavigate("CanvasView");
+
+        [RelayCommand]
+        private void NavigateLogging() => DoNavigate("LoggingView");
 
         #endregion
     }

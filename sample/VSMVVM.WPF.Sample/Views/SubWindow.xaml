@@ -4,37 +4,82 @@
         xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
         me:ViewModelLocator.AutoWireViewModel="True"
         Style="{StaticResource VSMVVMWindowStyle}"
-        Title="Sub Window" Width="400" Height="300"
+        Title="Sub Window" Width="460" Height="560"
         WindowStartupLocation="CenterOwner">
 
-    <Grid Margin="{StaticResource P4}">
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{StaticResource P2}">
+        <StackPanel Margin="{StaticResource P4}">
+            <!-- Header -->
             <TextBlock Text="Sub Window"
                        FontSize="{StaticResource Text2xl}" FontWeight="{StaticResource FontBold}"
                        Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center"/>
             <TextBlock Text="{Binding WindowId}"
                        FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}"
-                       HorizontalAlignment="Center" Margin="{StaticResource Mt2}"/>
+                       HorizontalAlignment="Center" Margin="{StaticResource Mt1}"/>
             <TextBlock Text="{Binding CreatedAt}"
                        FontSize="{StaticResource TextXs}" Foreground="{DynamicResource TextMuted}"
                        HorizontalAlignment="Center" Margin="{StaticResource Mt1}"/>
 
-            <!-- Shared Counter -->
+            <!-- Shared Counter (Messenger<int>) -->
             <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
                     Padding="{StaticResource P3}" Margin="{StaticResource Mt4}">
-                <StackPanel HorizontalAlignment="Center">
-                    <TextBlock Text="Shared Counter" FontSize="{StaticResource TextXs}"
-                               Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center"/>
+                <StackPanel>
+                    <TextBlock Text="Shared Counter (Messenger)" FontSize="{StaticResource TextXs}"
+                               Foreground="{DynamicResource TextMuted}" FontWeight="{StaticResource FontSemibold}"/>
                     <TextBlock Text="{Binding SharedCount}" FontSize="{StaticResource Text2xl}"
                                FontWeight="{StaticResource FontBold}" Foreground="{DynamicResource AccentPrimary}"
-                               HorizontalAlignment="Center" FontFamily="Consolas"/>
+                               FontFamily="Consolas"/>
                     <Button Content="Increment from Sub" Command="{Binding IncrementCommand}"
-                            HorizontalAlignment="Center" Margin="{StaticResource Mt2}"/>
+                            Margin="{StaticResource Mt2}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Cross-Window Messages (Messenger<string>) -->
+            <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                    Padding="{StaticResource P3}" Margin="{StaticResource Mt3}">
+                <StackPanel>
+                    <TextBlock Text="Cross-Window Messages" FontSize="{StaticResource TextXs}"
+                               Foreground="{DynamicResource TextMuted}" FontWeight="{StaticResource FontSemibold}"
+                               Margin="{StaticResource Mb2}"/>
+                    <TextBox Text="{Binding MessageLog, Mode=OneWay}" IsReadOnly="True"
+                             Height="{StaticResource H20}" AcceptsReturn="True"
+                             VerticalScrollBarVisibility="Auto"
+                             FontSize="{StaticResource TextXs}"
+                             Foreground="{DynamicResource TextSecondary}"/>
+                    <DockPanel Margin="{StaticResource Mt2}">
+                        <Button DockPanel.Dock="Right" Content="Send" Command="{Binding SendMessageCommand}"
+                                Width="{StaticResource W16}" Margin="4,0,0,0"/>
+                        <TextBox Text="{Binding MessageInput, UpdateSourceTrigger=PropertyChanged}"/>
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- StateStore (Redux) -->
+            <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
+                    Padding="{StaticResource P3}" Margin="{StaticResource Mt3}">
+                <StackPanel>
+                    <TextBlock Text="StateStore (Redux)" FontSize="{StaticResource TextXs}"
+                               Foreground="{DynamicResource TextMuted}" FontWeight="{StaticResource FontSemibold}"/>
+                    <StackPanel Orientation="Horizontal" Margin="{StaticResource Mt2}">
+                        <TextBlock Text="Counter:" Foreground="{DynamicResource TextSecondary}"
+                                   FontSize="{StaticResource TextSm}" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding StoreCounter}" FontSize="{StaticResource TextLg}"
+                                   FontWeight="{StaticResource FontBold}" Foreground="{DynamicResource AccentPrimary}"
+                                   FontFamily="Consolas" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock Foreground="{DynamicResource TextMuted}" FontSize="{StaticResource TextXs}"
+                               Margin="{StaticResource Mt1}">
+                        <Run Text="Last Action: "/><Run Text="{Binding StoreLastAction, Mode=OneWay}"/>
+                    </TextBlock>
+                    <StackPanel Orientation="Horizontal" Margin="{StaticResource Mt2}">
+                        <Button Content="+" Command="{Binding StoreIncrementCommand}" Width="{StaticResource W10}" Margin="0,0,4,0"/>
+                        <Button Content="−" Command="{Binding StoreDecrementCommand}" Width="{StaticResource W10}"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
             <Button Content="Close" Command="{Binding CloseCommand}"
                     HorizontalAlignment="Center" Margin="{StaticResource Mt4}"/>
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </Window>

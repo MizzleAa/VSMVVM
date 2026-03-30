@@ -10,11 +10,18 @@
                        FontSize="{StaticResource Text2xl}"
                        FontWeight="{StaticResource FontBold}"
                        Foreground="{DynamicResource TextPrimary}"
-                       Margin="{StaticResource Mb4}"/>
+                       Margin="{StaticResource Mb2}"/>
             <TextBlock Text="IMessenger send/receive demo with Message&lt;T&gt;."
                        FontSize="{StaticResource TextSm}"
-                       Foreground="{DynamicResource TextSecondary}"
-                       Margin="{StaticResource Mb6}"/>
+                       Foreground="{DynamicResource TextSecondary}"/>
+            <TextBlock Text="Open a SubWindow to see cross-window messaging in real time."
+                       FontSize="{StaticResource TextSm}"
+                       Foreground="{DynamicResource TextMuted}"
+                       Margin="{StaticResource Mb4}"/>
+
+            <!-- Open SubWindow -->
+            <Button Content="🪟 Open SubWindow" Command="{Binding OpenSubWindowCommand}"
+                    HorizontalAlignment="Left" Margin="{StaticResource Mb6}"/>
 
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -48,6 +55,9 @@
                     <StackPanel>
                         <TextBlock Text="Received Messages" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
                                    Foreground="{DynamicResource AccentPrimary}" Margin="{StaticResource Mb3}"/>
+                        <TextBlock Text="Messages from this page AND SubWindows appear here."
+                                   FontSize="{StaticResource TextXs}" Foreground="{DynamicResource TextMuted}"
+                                   TextWrapping="Wrap" Margin="{StaticResource Mb3}"/>
                         <TextBox Text="{Binding ReceiveLog, Mode=OneWay}" IsReadOnly="True"
                                  Height="{StaticResource H40}" AcceptsReturn="True"
                                  VerticalScrollBarVisibility="Auto"

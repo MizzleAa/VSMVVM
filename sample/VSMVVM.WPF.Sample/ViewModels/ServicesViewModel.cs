@@ -16,6 +16,7 @@ namespace VSMVVM.WPF.Sample.ViewModels
     public partial class ServicesViewModel : ViewModelBase
     {
         private readonly IDispatcherService _dispatcher;
+        private readonly IServiceContainer _container;
         private readonly AppStateStore _store;
 
         /// <summary>
@@ -44,9 +45,10 @@ namespace VSMVVM.WPF.Sample.ViewModels
         [Property]
         private string _storeLog = "";
 
-        public ServicesViewModel(IDispatcherService dispatcher, AppStateStore store)
+        public ServicesViewModel(IDispatcherService dispatcher, IServiceContainer container, AppStateStore store)
         {
             _dispatcher = dispatcher;
+            _container = container;
             _store = store;
 
             _onStateChanged = OnStateChanged;
@@ -142,6 +144,13 @@ namespace VSMVVM.WPF.Sample.ViewModels
 
         [RelayCommand]
         private void StoreReset() => _store.Reset();
+
+        [RelayCommand]
+        private void OpenSubWindow()
+        {
+            var window = _container.GetService<Views.SubWindow>();
+            window.Show();
+        }
 
         #endregion
     }

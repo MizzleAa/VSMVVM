@@ -12,19 +12,76 @@
         Icon="/Assets/app.ico"
         WindowStartupLocation="CenterScreen">
 
-    <!-- AppBar Custom Button (최소화 왼쪽에 표시) -->
+    <Window.Resources>
+        <!-- Active menu item style: highlights when ActiveMenu matches Content -->
+        <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Margin" Value="{StaticResource Mt1}"/>
+            <Style.Triggers>
+                <DataTrigger Value="True">
+                    <DataTrigger.Binding>
+                        <MultiBinding Converter="{x:Static me:EqualityConverter.Instance}">
+                            <Binding Path="ActiveMenu"/>
+                            <Binding Path="Tag" RelativeSource="{RelativeSource Self}"/>
+                        </MultiBinding>
+                    </DataTrigger.Binding>
+                    <Setter Property="Background" Value="{DynamicResource AccentPrimary}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource BgPrimary}"/>
+                    <Setter Property="FontWeight" Value="{StaticResource FontSemibold}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <!-- AppBar Custom Buttons (최소화 왼쪽에 표시) -->
     <ctrl:WindowChrome.CustomButtons>
-        <Button Command="{Binding ToggleInfoCommand}"
-                Style="{StaticResource BtnIcon}"
-                Width="{StaticResource W9}"
-                Height="{StaticResource H9}"
-                ToolTip="App Info"
-                Focusable="False"
-                shell:WindowChrome.IsHitTestVisibleInChrome="True">
-            <Image Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/info_24.svg, Fill={StaticResource AccentPrimary}}"
-                   Width="{StaticResource W4}"
-                   Height="{StaticResource H4}"/>
-        </Button>
+        <StackPanel Orientation="Horizontal">
+            <!-- Back Button -->
+            <Button Command="{Binding NavigateBackCommand}"
+                    Style="{StaticResource BtnIcon}"
+                    Width="{StaticResource W9}"
+                    Height="{StaticResource H9}"
+                    ToolTip="Back"
+                    Focusable="False"
+                    IsEnabled="{Binding CanGoBack}"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                <Path Data="M15 19l-7-7 7-7" Stroke="{DynamicResource TextPrimary}"
+                      StrokeThickness="2" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Width="16" Height="16" Stretch="Uniform"/>
+            </Button>
+            <!-- Forward Button -->
+            <Button Command="{Binding NavigateForwardCommand}"
+                    Style="{StaticResource BtnIcon}"
+                    Width="{StaticResource W9}"
+                    Height="{StaticResource H9}"
+                    ToolTip="Forward"
+                    Focusable="False"
+                    IsEnabled="{Binding CanGoForward}"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                <Path Data="M9 5l7 7-7 7" Stroke="{DynamicResource TextPrimary}"
+                      StrokeThickness="2" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                      Width="16" Height="16" Stretch="Uniform"/>
+            </Button>
+            <!-- Current Page Name -->
+            <TextBlock Text="{Binding CurrentViewName}" VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextSecondary}"
+                       FontSize="{StaticResource TextSm}"
+                       Margin="8,0,0,0"/>
+            <!-- Separator -->
+            <Border Width="1" Height="16" Background="{DynamicResource BorderDefault}" Margin="12,0,4,0" VerticalAlignment="Center"/>
+            <!-- Info Button -->
+            <Button Command="{Binding ToggleInfoCommand}"
+                    Style="{StaticResource BtnIcon}"
+                    Width="{StaticResource W9}"
+                    Height="{StaticResource H9}"
+                    ToolTip="App Info"
+                    Focusable="False"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                <Image Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/info_24.svg, Fill={StaticResource AccentPrimary}}"
+                       Width="{StaticResource W4}"
+                       Height="{StaticResource H4}"/>
+            </Button>
+        </StackPanel>
     </ctrl:WindowChrome.CustomButtons>
 
     <Grid>
@@ -62,61 +119,21 @@
                 <!-- Navigation -->
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="{StaticResource M2}">
-                        <Button Content="Home"
-                                Command="{Binding NavigateHomeCommand}"
-                                HorizontalContentAlignment="Left"/>
-                        <Button Content="Controls"
-                                Command="{Binding NavigateControlsCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
-                        <Button Content="Components"
-                                Command="{Binding NavigateComponentsCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
-                        <Button Content="Source Gen"
-                                Command="{Binding NavigateSourceGenCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
-                        <Button Content="Messenger"
-                                Command="{Binding NavigateMessengerCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
-                        <Button Content="Dialog"
-                                Command="{Binding NavigateDialogCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
-                        <Button Content="Navigation"
-                                Command="{Binding NavigateNavigationCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
-                        <Button Content="Validation"
-                                Command="{Binding NavigateValidationCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
-                        <Button Content="Services"
-                                Command="{Binding NavigateServicesCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
-                        <Button Content="DI Lifetime"
-                                Command="{Binding NavigateLifetimeCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
-                        <Button Content="Default Design"
-                                Command="{Binding NavigateDefaultDesignCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
-                        <Button Content="Localization"
-                                Command="{Binding NavigateLocalizationCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
-                        <Button Content="Multi Window"
-                                Command="{Binding NavigateMultiWindowCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
-                        <Button Content="Canvas (TODO)"
-                                Command="{Binding NavigateCanvasCommand}"
-                                HorizontalContentAlignment="Left"
-                                Margin="{StaticResource Mt1}"/>
+                        <Button Content="Home" Tag="Home" Command="{Binding NavigateHomeCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Controls" Tag="Controls" Command="{Binding NavigateControlsCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Components" Tag="Components" Command="{Binding NavigateComponentsCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Source Gen" Tag="Source Gen" Command="{Binding NavigateSourceGenCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Messenger" Tag="Messenger" Command="{Binding NavigateMessengerCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Dialog" Tag="Dialog" Command="{Binding NavigateDialogCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Navigation" Tag="Navigation" Command="{Binding NavigateNavigationCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Validation" Tag="Validation" Command="{Binding NavigateValidationCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Services" Tag="Services" Command="{Binding NavigateServicesCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Lifetime" Tag="Lifetime" Command="{Binding NavigateLifetimeCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Default Design" Tag="Default Design" Command="{Binding NavigateDefaultDesignCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Localization" Tag="Localization" Command="{Binding NavigateLocalizationCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Multi Window" Tag="Multi Window" Command="{Binding NavigateMultiWindowCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Logging" Tag="Logging" Command="{Binding NavigateLoggingCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Canvas" Tag="Canvas" Command="{Binding NavigateCanvasCommand}" Style="{StaticResource NavButton}"/>
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>

@@ -35,6 +35,7 @@ namespace VSMVVM.WPF.Sample
             serviceCollection.AddTransient<LocalizationView>();
             serviceCollection.AddTransient<MultiWindowView>();
             serviceCollection.AddTransient<CanvasView>();
+            serviceCollection.AddTransient<LoggingView>();
             serviceCollection.AddTransient<SubWindow>();
 
             serviceCollection.AddTransient<MainViewModel>();
@@ -52,6 +53,7 @@ namespace VSMVVM.WPF.Sample
             serviceCollection.AddTransient<LocalizationViewModel>();
             serviceCollection.AddTransient<MultiWindowViewModel>();
             serviceCollection.AddTransient<CanvasViewModel>();
+            serviceCollection.AddTransient<LoggingViewModel>();
             serviceCollection.AddTransient<SubWindowViewModel>();
 
             // DI Lifetime demo services
@@ -61,6 +63,9 @@ namespace VSMVVM.WPF.Sample
 
             // Shared module for multi-window demo
             serviceCollection.AddSingleton<SharedCounterService>();
+
+            // Logger service
+            serviceCollection.AddSingleton<ILoggerService, SampleLoggerService>();
 
             // Startup demo services
             serviceCollection.AddSingleton<StartupServiceA>();
@@ -87,6 +92,7 @@ namespace VSMVVM.WPF.Sample
             viewModelMapper.Register<LocalizationView, LocalizationViewModel>();
             viewModelMapper.Register<MultiWindowView, MultiWindowViewModel>();
             viewModelMapper.Register<CanvasView, CanvasViewModel>();
+            viewModelMapper.Register<LoggingView, LoggingViewModel>();
             viewModelMapper.Register<SubWindow, SubWindowViewModel>();
         }
 

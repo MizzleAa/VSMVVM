@@ -168,10 +168,7 @@
                                                 CornerRadius="3" BorderThickness="1"
                                                 BorderBrush="{DynamicResource BorderMuted}"
                                                 VerticalAlignment="Center">
-                                            <Border CornerRadius="2">
-                                                <Border.Background>
-                                                    <SolidColorBrush Color="{Binding ThumbColor}"/>
-                                                </Border.Background>
+                                            <Border CornerRadius="2" Background="{Binding ThumbColor}">
                                                 <Grid>
                                                     <Rectangle Opacity="0.15" Fill="White" RadiusX="2" RadiusY="2"/>
                                                 </Grid>
@@ -216,10 +213,8 @@
                                                             <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
                                                         <Border Width="12" Height="12" CornerRadius="2" Margin="0,0,6,0"
-                                                                VerticalAlignment="Center">
-                                                            <Border.Background>
-                                                                <SolidColorBrush Color="{Binding Color}"/>
-                                                            </Border.Background>
+                                                                VerticalAlignment="Center"
+                                                                Background="{Binding Color}">
                                                         </Border>
                                                         <TextBlock Grid.Column="1" Text="{Binding DisplayName}"
                                                                    FontSize="11" Foreground="{DynamicResource TextSecondary}"

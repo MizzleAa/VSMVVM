@@ -229,7 +229,7 @@ namespace VSMVVM.WPF.Sample.Behaviors
                 if (layer == null) return;
 
                 _syncingSelection = true;
-                try { layered.SelectElement(layer); }
+                try { layered!.SelectElement(layer); }
                 finally { _syncingSelection = false; }
             }
 
@@ -242,7 +242,7 @@ namespace VSMVVM.WPF.Sample.Behaviors
 
                 var child = layer.Children[childIndex];
                 _syncingSelection = true;
-                try { layered.SelectElement(child); }
+                try { layered!.SelectElement(child); }
                 finally { _syncingSelection = false; }
             }
 
@@ -252,7 +252,7 @@ namespace VSMVVM.WPF.Sample.Behaviors
                 var layer = layered?.FindLayer(layerName);
                 if (layer == null) return;
 
-                if (layered.SelectedElement == layer)
+                if (layered!.SelectedElement == layer)
                 {
                     layered.ClearSelection();
                 }

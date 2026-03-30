@@ -211,7 +211,7 @@ namespace VSMVVM.Core.CodeGen
                             : string.Empty;
 
                         commandCode.AppendLine($@"
-        private VSMVVM.Core.MVVM.RelayCommand<{method.ParameterType}> {backingField};
+        private VSMVVM.Core.MVVM.RelayCommand<{method.ParameterType}>? {backingField};
         public VSMVVM.Core.MVVM.RelayCommand<{method.ParameterType}> {commandName} => {backingField} ?? ({backingField} = new VSMVVM.Core.MVVM.RelayCommand<{method.ParameterType}>({method.MethodName}{canExecutePart}));");
                     }
                     else
@@ -222,7 +222,7 @@ namespace VSMVVM.Core.CodeGen
                             : string.Empty;
 
                         commandCode.AppendLine($@"
-        private VSMVVM.Core.MVVM.RelayCommand {backingField};
+        private VSMVVM.Core.MVVM.RelayCommand? {backingField};
         public VSMVVM.Core.MVVM.RelayCommand {commandName} => {backingField} ?? ({backingField} = new VSMVVM.Core.MVVM.RelayCommand({method.MethodName}{canExecutePart}));");
                     }
                 }

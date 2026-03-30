@@ -87,6 +87,18 @@ namespace VSMVVM.Core.MVVM
         /// </summary>
         bool CanGoForward(string regionName);
 
+        /// <summary>
+        /// 현재 Region에 표시 중인 View의 Type 이름을 반환합니다.
+        /// </summary>
+        string GetCurrentViewTypeName(string regionName);
+
+        /// <summary>
+        /// 현재 Region에 표시 중인 View의 표시 이름을 반환합니다.
+        /// "View" 접미사 제거 후 PascalCase를 공백으로 분리합니다.
+        /// 예: "DefaultDesignView" → "Default Design"
+        /// </summary>
+        string GetCurrentViewDisplayName(string regionName);
+
         #endregion
     }
 }

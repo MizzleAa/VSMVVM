@@ -253,6 +253,46 @@ namespace VSMVVM.Core.MVVM
             return false;
         }
 
+        public string GetCurrentViewTypeName(string regionName)
+        {
+            if (_regionStates.TryGetValue(regionName, out var state) && state.CurrentViewType != null)
+            {
+                return state.CurrentViewType.Name;
+            }
+
+            return string.Empty;
+        }
+
+        public string GetCurrentViewDisplayName(string regionName)
+        {
+            var typeName = GetCurrentViewTypeName(regionName);
+            return PascalCaseToDisplayName(typeName);
+        }
+
+        /// <summary>
+        /// View Type 이름을 사용자 친화적 표시 이름으로 변환합니다.
+        /// "View" 접미사 제거 후 PascalCase를 공백 분리합니다.
+        /// </summary>
+        internal static string PascalCaseToDisplayName(string typeName)
+        {
+            if (string.IsNullOrEmpty(typeName))
+                return string.Empty;
+
+            // "View" 접미사 제거
+            if (typeName.EndsWith("View"))
+                typeName = typeName.Substring(0, typeName.Length - 4);
+
+            // PascalCase → 공백 분리
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < typeName.Length; i++)
+            {
+                if (i > 0 && char.IsUpper(typeName[i]))
+                    sb.Append(' ');
+                sb.Append(typeName[i]);
+            }
+            return sb.ToString();
+        }
+
         #endregion
 
         #region Private Methods

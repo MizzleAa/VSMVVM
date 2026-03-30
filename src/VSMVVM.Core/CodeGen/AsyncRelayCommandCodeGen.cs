@@ -211,7 +211,7 @@ namespace VSMVVM.Core.CodeGen
                             : string.Empty;
 
                         commandCode.AppendLine($@"
-        private VSMVVM.Core.MVVM.AsyncRelayCommand<{method.ParameterType}> {backingField};
+        private VSMVVM.Core.MVVM.AsyncRelayCommand<{method.ParameterType}>? {backingField};
         public VSMVVM.Core.MVVM.AsyncRelayCommand<{method.ParameterType}> {commandName} => {backingField} ?? ({backingField} = new VSMVVM.Core.MVVM.AsyncRelayCommand<{method.ParameterType}>({method.MethodName}{canExecutePart}));");
                     }
                     else
@@ -222,7 +222,7 @@ namespace VSMVVM.Core.CodeGen
                             : string.Empty;
 
                         commandCode.AppendLine($@"
-        private VSMVVM.Core.MVVM.AsyncRelayCommand {backingField};
+        private VSMVVM.Core.MVVM.AsyncRelayCommand? {backingField};
         public VSMVVM.Core.MVVM.AsyncRelayCommand {commandName} => {backingField} ?? ({backingField} = new VSMVVM.Core.MVVM.AsyncRelayCommand({method.MethodName}{canExecutePart}));");
                     }
                 }

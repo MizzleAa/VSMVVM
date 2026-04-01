@@ -20,7 +20,7 @@
                        Margin="{StaticResource Mb4}"/>
 
             <!-- Open SubWindow -->
-            <Button Content="🪟 Open SubWindow" Command="{Binding OpenSubWindowCommand}"
+            <Button Content="Open SubWindow" Command="{Binding OpenSubWindowCommand}"
                     HorizontalAlignment="Left" Margin="{StaticResource Mb6}"/>
 
             <Grid>

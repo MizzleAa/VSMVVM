@@ -7,9 +7,7 @@ using VSMVVM.WPF.Sample.Services;
 namespace VSMVVM.WPF.Sample.ViewModels
 {
     /// <summary>
-
     /// ViewModel for multi-window management and cross-window state sync demo.
-
     /// </summary>
 
     public partial class MultiWindowViewModel : ViewModelBase

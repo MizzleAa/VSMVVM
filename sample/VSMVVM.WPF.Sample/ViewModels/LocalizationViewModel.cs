@@ -5,11 +5,8 @@ using VSMVVM.Core.Attributes;
 namespace VSMVVM.WPF.Sample.ViewModels
 {
     /// <summary>
-
     /// ViewModel for ILocalizeService locale switching demo.
-
     /// </summary>
-
     public partial class LocalizationViewModel : ViewModelBase
     {
         private readonly ILocalizeService _localize;

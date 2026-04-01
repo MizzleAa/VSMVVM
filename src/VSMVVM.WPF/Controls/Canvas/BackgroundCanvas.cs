@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using VSMVVM.WPF.Controls.Tools;
 
 #nullable enable
 namespace VSMVVM.WPF.Controls
@@ -81,6 +82,30 @@ namespace VSMVVM.WPF.Controls
             set => SetValue(IsPanLockedProperty, value);
         }
 
+        /// <summary>
+        /// 현재 활성 도구. LayeredCanvas와 동일한 Tool 인스턴스를 바인딩.
+        /// </summary>
+        public static readonly DependencyProperty CurrentToolProperty =
+            DependencyProperty.Register(
+                nameof(CurrentTool),
+                typeof(ICanvasTool),
+                typeof(BackgroundCanvas),
+                new PropertyMetadata(null, OnCurrentToolChanged));
+
+        public ICanvasTool? CurrentTool
+        {
+            get => (ICanvasTool?)GetValue(CurrentToolProperty);
+            set => SetValue(CurrentToolProperty, value);
+        }
+
+        private static void OnCurrentToolChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is BackgroundCanvas canvas && e.NewValue is ICanvasTool tool)
+            {
+                canvas.Cursor = tool.ToolCursor;
+            }
+        }
+
         #endregion
 
         #region Constructor
@@ -139,6 +164,16 @@ namespace VSMVVM.WPF.Controls
         {
             base.OnMouseLeftButtonDown(e);
             if (e.Handled || IsPanLocked) return;
+
+            var tool = CurrentTool;
+            var isDrawingMode = tool != null && tool.Mode != CanvasToolMode.Select;
+
+            // 그리기 모드에서는 Ctrl+드래그만 Pan 허용
+            if (isDrawingMode)
+            {
+                bool isCtrl = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+                if (!isCtrl) return;
+            }
 
             _isPanning = true;
             _panStart = e.GetPosition(this.Parent as IInputElement);

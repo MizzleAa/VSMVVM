@@ -13,10 +13,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="Assets\arrow_back_ios_24.svg" />
+	  <None Remove="Assets\arrow_forward_ios_24.svg" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<!-- Source Generator (Analyzer) + Runtime -->
-		<ProjectReference Include="..\..\src\VSMVVM.Core\VSMVVM.Core.csproj"
-						  OutputItemType="Analyzer"
-						  ReferenceOutputAssembly="true" />
+		<ProjectReference Include="..\..\src\VSMVVM.Core\VSMVVM.Core.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
 		<!-- WPF Controls -->
 		<ProjectReference Include="..\..\src\VSMVVM.WPF\VSMVVM.WPF.csproj" />
 		<!-- Design System -->
@@ -24,6 +27,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Resource Include="Assets\arrow_back_ios_24.svg" />
+		<Resource Include="Assets\arrow_forward_ios_24.svg" />
 		<Resource Include="Assets\info_24.svg" />
 		<Resource Include="Assets\app.ico" />
 	</ItemGroup>

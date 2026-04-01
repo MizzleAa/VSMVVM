@@ -36,7 +36,13 @@
     <!-- AppBar Custom Buttons (최소화 왼쪽에 표시) -->
     <ctrl:WindowChrome.CustomButtons>
         <StackPanel Orientation="Horizontal">
-            <!-- Back Button -->
+			<!-- Current Page Name -->
+			<TextBlock Text="{Binding CurrentViewName}" VerticalAlignment="Center"
+                       Foreground="{DynamicResource TextSecondary}"
+                       FontSize="{StaticResource TextSm}"
+                       Margin="{StaticResource Mr2_5}"/>
+			
+			<!-- Back Button -->
             <Button Command="{Binding NavigateBackCommand}"
                     Style="{StaticResource BtnIcon}"
                     Width="{StaticResource W9}"
@@ -45,10 +51,11 @@
                     Focusable="False"
                     IsEnabled="{Binding CanGoBack}"
                     shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                <Path Data="M15 19l-7-7 7-7" Stroke="{DynamicResource TextPrimary}"
-                      StrokeThickness="2" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                      Width="16" Height="16" Stretch="Uniform"/>
-            </Button>
+				<Image Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/arrow_back_ios_24.svg, Fill={StaticResource AccentPrimary}}"
+                       Width="{StaticResource W4}"
+                       Height="{StaticResource H4}"/>
+			</Button>
+			
             <!-- Forward Button -->
             <Button Command="{Binding NavigateForwardCommand}"
                     Style="{StaticResource BtnIcon}"
@@ -58,17 +65,12 @@
                     Focusable="False"
                     IsEnabled="{Binding CanGoForward}"
                     shell:WindowChrome.IsHitTestVisibleInChrome="True">
-                <Path Data="M9 5l7 7-7 7" Stroke="{DynamicResource TextPrimary}"
-                      StrokeThickness="2" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                      Width="16" Height="16" Stretch="Uniform"/>
-            </Button>
-            <!-- Current Page Name -->
-            <TextBlock Text="{Binding CurrentViewName}" VerticalAlignment="Center"
-                       Foreground="{DynamicResource TextSecondary}"
-                       FontSize="{StaticResource TextSm}"
-                       Margin="8,0,0,0"/>
-            <!-- Separator -->
-            <Border Width="1" Height="16" Background="{DynamicResource BorderDefault}" Margin="12,0,4,0" VerticalAlignment="Center"/>
+				<Image Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/arrow_forward_ios_24.svg, Fill={StaticResource AccentPrimary}}"
+                       Width="{StaticResource W4}"
+                       Height="{StaticResource H4}"/>
+			</Button>
+			
+
             <!-- Info Button -->
             <Button Command="{Binding ToggleInfoCommand}"
                     Style="{StaticResource BtnIcon}"

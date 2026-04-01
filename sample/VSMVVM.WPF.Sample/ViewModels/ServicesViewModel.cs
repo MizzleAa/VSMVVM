@@ -8,11 +8,8 @@ using VSMVVM.WPF.Sample.Services;
 namespace VSMVVM.WPF.Sample.ViewModels
 {
     /// <summary>
-
     /// ViewModel for Guard, DispatcherService, and StateStore demo.
-
     /// </summary>
-
     public partial class ServicesViewModel : ViewModelBase
     {
         private readonly IDispatcherService _dispatcher;

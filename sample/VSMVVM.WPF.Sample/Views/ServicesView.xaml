@@ -49,7 +49,7 @@
                        Foreground="{DynamicResource AccentPrimary}" Margin="{StaticResource Mb2}"/>
             <TextBlock Text="StateStoreBase&lt;AppState&gt;: Subscribe for reactive state, UpdateState for immutable updates."
                        FontSize="{StaticResource TextXs}" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mb2}"/>
-            <Button Content="🪟 Open SubWindow (compare state)" Command="{Binding OpenSubWindowCommand}"
+            <Button Content="Open SubWindow (compare state)" Command="{Binding OpenSubWindowCommand}"
                     HorizontalAlignment="Left" Margin="{StaticResource Mb3}"/>
             <Border Background="{DynamicResource BgSecondary}" CornerRadius="{StaticResource RoundedMd}"
                     Padding="{StaticResource P4}" Width="{StaticResource W96}" HorizontalAlignment="Left" Margin="{StaticResource Mb6}">

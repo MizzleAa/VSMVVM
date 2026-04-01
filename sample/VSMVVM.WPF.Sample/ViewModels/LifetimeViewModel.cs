@@ -6,9 +6,7 @@ using VSMVVM.WPF.Sample.Services;
 namespace VSMVVM.WPF.Sample.ViewModels
 {
     /// <summary>
-
     /// ViewModel for DI lifetime comparison demo (Singleton/Scoped/Transient).
-
     /// </summary>
 
     public partial class LifetimeViewModel : ViewModelBase

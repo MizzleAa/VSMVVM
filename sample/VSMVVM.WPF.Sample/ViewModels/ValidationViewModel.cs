@@ -6,9 +6,7 @@ using VSMVVM.Core.Attributes;
 namespace VSMVVM.WPF.Sample.ViewModels
 {
     /// <summary>
-
     /// ViewModel for DataAnnotation validation with Property source gen.
-
     /// </summary>
 
     public partial class ValidationViewModel : ObservableValidator

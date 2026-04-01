@@ -16,22 +16,167 @@
 
         <!-- Header + Toolbar -->
         <StackPanel Grid.Row="0" Margin="{StaticResource P2}">
-			<TextBlock Text="Canvas (TODO)"
+			<TextBlock Text="Canvas"
                        FontSize="{StaticResource Text2xl}" FontWeight="{StaticResource FontBold}"
                        Foreground="{DynamicResource TextPrimary}" Margin="{StaticResource Mb2}"/>
-            <TextBlock Text="ImageCanvas demo: Scroll to zoom · Drag empty space to pan · Click element to select · Drag selected element to move · Resize with handles"
+            <TextBlock Text="Scroll=Zoom · Select=Click/Drag · Drawing=Drag · Shift=Constrain · Ctrl+Drag=Pan"
                        FontSize="{StaticResource TextSm}" Foreground="{DynamicResource TextSecondary}" Margin="{StaticResource Mb2}"
                        TextWrapping="Wrap"/>
 
-            <!-- Toolbar -->
+            <!-- Tool Selection -->
+            <StackPanel Orientation="Horizontal" Margin="{StaticResource Mb1}">
+                <StackPanel.Resources>
+                    <ctrl:ToolModeToBoolConverter x:Key="ToolModeToBool"/>
+                </StackPanel.Resources>
+                <RadioButton Content="Select" GroupName="Tool"
+                             IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=Select, Mode=OneWay}"
+                             Command="{Binding SetToolSelectCommand}" Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
+                <RadioButton Content="Pen" GroupName="Tool"
+                             IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=Pen, Mode=OneWay}"
+                             Command="{Binding SetToolPenCommand}" Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
+                <RadioButton Content="Rect" GroupName="Tool"
+                             IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=Rectangle, Mode=OneWay}"
+                             Command="{Binding SetToolRectangleCommand}" Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
+                <RadioButton Content="Rounded" GroupName="Tool"
+                             IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=RoundedRectangle, Mode=OneWay}"
+                             Command="{Binding SetToolRoundedRectCommand}" Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
+                <RadioButton Content="Ellipse" GroupName="Tool"
+                             IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=Ellipse, Mode=OneWay}"
+                             Command="{Binding SetToolEllipseCommand}" Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
+                <RadioButton Content="Image" GroupName="Tool"
+                             IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=Image, Mode=OneWay}"
+                             Command="{Binding SetToolImageCommand}" Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
+            </StackPanel>
+
+            <!-- Tool Properties (그리기 도구일 때만 표시) -->
+            <Border Margin="{StaticResource Mb1}" Padding="6,4"
+                    Background="{DynamicResource BgTertiary}" CornerRadius="{StaticResource RoundedSm}"
+                    Visibility="{Binding CurrentTool, Converter={x:Static ctrl:ToolToVisibilityConverter.Instance}}">
+                <StackPanel Orientation="Horizontal">
+                    <!-- Stroke Color -->
+                    <TextBlock Text="Stroke:" VerticalAlignment="Center" Margin="0,0,4,0"
+                               FontSize="{StaticResource TextXs}" Foreground="{DynamicResource TextSecondary}"/>
+                    <ItemsControl ItemsSource="{Binding StrokeColorPresets}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Width="18" Height="18" Margin="1" Padding="0"
+                                        Background="{Binding}" BorderThickness="1"
+                                        BorderBrush="{DynamicResource BorderDefault}"
+                                        ToolTip="{Binding}"
+                                        Command="{Binding DataContext.SetStrokeColorCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="3" Cursor="Hand"/>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Rectangle Width="1" Fill="{DynamicResource BorderMuted}" Margin="6,2"/>
+
+                    <!-- Fill Color -->
+                    <TextBlock Text="Fill:" VerticalAlignment="Center" Margin="0,0,4,0"
+                               FontSize="{StaticResource TextXs}" Foreground="{DynamicResource TextSecondary}"/>
+                    <ItemsControl ItemsSource="{Binding StrokeColorPresets}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Width="18" Height="18" Margin="1" Padding="0"
+                                        Background="{Binding}" BorderThickness="1"
+                                        BorderBrush="{DynamicResource BorderDefault}"
+                                        ToolTip="{Binding}"
+                                        Command="{Binding DataContext.SetFillColorCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="3" Cursor="Hand"/>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- No Fill Button -->
+                    <Button Content="∅" Width="18" Height="18" Margin="1" Padding="0"
+                            ToolTip="No Fill" FontSize="10"
+                            Command="{Binding SetFillColorCommand}" CommandParameter="Transparent">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{DynamicResource BgSecondary}"
+                                        BorderBrush="{DynamicResource BorderDefault}" BorderThickness="1"
+                                        CornerRadius="3" Cursor="Hand">
+                                    <TextBlock Text="∅" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               FontSize="10" Foreground="{DynamicResource TextMuted}"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+
+                    <Rectangle Width="1" Fill="{DynamicResource BorderMuted}" Margin="6,2"/>
+
+                    <!-- Stroke Thickness -->
+                    <TextBlock Text="Width:" VerticalAlignment="Center" Margin="0,0,4,0"
+                               FontSize="{StaticResource TextXs}" Foreground="{DynamicResource TextSecondary}"/>
+                    <ItemsControl ItemsSource="{Binding StrokeThicknessPresets}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Width="22" Height="18" Margin="1" Padding="0"
+                                        ToolTip="{Binding StringFormat={}{0}px}"
+                                        Command="{Binding DataContext.SetStrokeThicknessCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="{DynamicResource BgSecondary}"
+                                                    BorderBrush="{DynamicResource BorderDefault}" BorderThickness="1"
+                                                    CornerRadius="3" Cursor="Hand">
+                                                <TextBlock Text="{Binding}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                           FontSize="10" Foreground="{DynamicResource TextPrimary}"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- CornerRadius (RoundedRectangle만) -->
+                    <StackPanel Orientation="Horizontal" Margin="6,0,0,0"
+                                Visibility="{Binding CurrentTool, Converter={x:Static ctrl:ToolModeToVisibilityConverter.Instance}, ConverterParameter=RoundedRectangle}">
+                        <Rectangle Width="1" Fill="{DynamicResource BorderMuted}" Margin="0,2,6,2"/>
+                        <TextBlock Text="Radius:" VerticalAlignment="Center" Margin="0,0,4,0"
+                                   FontSize="{StaticResource TextXs}" Foreground="{DynamicResource TextSecondary}"/>
+                        <TextBox Width="40" Text="{Binding RoundedRectangleTool.CornerRadius, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                 FontSize="{StaticResource TextXs}" Padding="3,2"
+                                 VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Canvas Actions -->
             <StackPanel Orientation="Horizontal" Margin="{StaticResource Mb2}">
                 <Button Content="Zoom Fit" Command="{Binding FitToContentCommand}"
                         Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
                 <Button Content="+ Layer" Command="{Binding AddLayerCommand}"
                         Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
-                <Button Content="+ Shape" Command="{Binding AddShapeCommand}"
-                        Margin="{StaticResource Mr1}" Padding="{StaticResource Px2}"/>
-                <ToggleButton Content="🔒 Pan" IsChecked="{Binding IsPanLocked, Mode=TwoWay}"
+                <ToggleButton Content="Pan Lock" IsChecked="{Binding IsPanLocked, Mode=TwoWay}"
                               Padding="{StaticResource Px2}"
                               ToolTip="Pan Lock On/Off"/>
             </StackPanel>
@@ -50,8 +195,10 @@
                 <ctrl:BackgroundCanvas x:Name="DemoCanvas"
                                        ZoomLevel="{Binding ZoomLevel, Mode=TwoWay}"
                                        IsPanLocked="{Binding IsPanLocked, Mode=TwoWay}"
+                                       CurrentTool="{Binding CurrentTool}"
                                        MinZoom="0.1" MaxZoom="10.0">
                     <ctrl:LayeredCanvas x:Name="MainLayeredCanvas"
+                                         CurrentTool="{Binding CurrentTool}"
                                          Background="{DynamicResource BgSecondary}"/>
                 </ctrl:BackgroundCanvas>
             </Border>

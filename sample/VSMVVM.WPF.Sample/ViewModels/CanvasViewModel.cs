@@ -1,7 +1,10 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using VSMVVM.Core.MVVM;
 using VSMVVM.Core.Attributes;
+using VSMVVM.WPF.Controls;
+using VSMVVM.WPF.Controls.Tools;
 
 #nullable enable
 namespace VSMVVM.WPF.Sample.ViewModels
@@ -56,6 +59,14 @@ namespace VSMVVM.WPF.Sample.ViewModels
     {
         private ICanvasOperations? _canvasOps;
 
+        // ── Tool 인스턴스 (각자 독립 속성 보유) ──
+        public SelectTool SelectTool { get; } = new();
+        public PenTool PenTool { get; } = new();
+        public RectangleTool RectangleTool { get; } = new();
+        public RoundedRectangleTool RoundedRectangleTool { get; } = new();
+        public EllipseTool EllipseTool { get; } = new();
+        public ImageTool ImageTool { get; } = new();
+
         [Property]
         private double _zoomLevel = 1.0;
 
@@ -68,10 +79,24 @@ namespace VSMVVM.WPF.Sample.ViewModels
         [Property]
         private LayerInfo? _selectedLayer;
 
+        // ── 현재 활성 Tool ──
+        [Property]
+        private ICanvasTool _currentTool = null!;
+
         /// <summary>
         /// 레이어 목록.
         /// </summary>
         public ObservableCollection<LayerInfo> Layers { get; } = new();
+
+        // ── 색상/두께 프리셋 (모든 Tool이 공유하는 UI 프리셋) ──
+        public List<string> StrokeColorPresets { get; } = new()
+            { "#89B4FA", "#F38BA8", "#A6E3A1", "#FAB387", "#CBA6F7" };
+        public List<double> StrokeThicknessPresets { get; } = new() { 1, 2, 3, 5, 8 };
+
+        public CanvasViewModel()
+        {
+            _currentTool = SelectTool;
+        }
 
         /// <summary>
         /// View에서 Canvas 조작 인터페이스를 등록합니다.
@@ -84,7 +109,19 @@ namespace VSMVVM.WPF.Sample.ViewModels
 
         partial void OnZoomLevelChanged(double value)
         {
-            CanvasInfo = $"Zoom: {value:F2}x";
+            UpdateCanvasInfo();
+        }
+
+        partial void OnCurrentToolChanged(ICanvasTool value)
+        {
+            UpdateCanvasInfo();
+        }
+
+        private void UpdateCanvasInfo()
+        {
+            var toolName = CurrentTool?.Mode.ToString() ?? "Select";
+            var hint = CurrentTool?.Mode != CanvasToolMode.Select ? " | Ctrl+Drag = Pan" : "";
+            CanvasInfo = $"Zoom: {ZoomLevel:F2}x | {toolName}{hint}";
         }
 
         partial void OnSelectedLayerChanged(LayerInfo? value)
@@ -93,6 +130,57 @@ namespace VSMVVM.WPF.Sample.ViewModels
             {
                 _canvasOps?.SelectLayerOnCanvas(value.Name);
             }
+        }
+
+        // ── 도구 전환 커맨드 ──
+        [RelayCommand] private void SetToolSelect()       => CurrentTool = SelectTool;
+        [RelayCommand] private void SetToolPen()           => CurrentTool = PenTool;
+        [RelayCommand] private void SetToolRectangle()     => CurrentTool = RectangleTool;
+        [RelayCommand] private void SetToolRoundedRect()   => CurrentTool = RoundedRectangleTool;
+        [RelayCommand] private void SetToolEllipse()       => CurrentTool = EllipseTool;
+        [RelayCommand] private void SetToolImage()         => CurrentTool = ImageTool;
+
+        // ── 도구 속성 변경 커맨드 ──
+        [RelayCommand]
+        private void SetStrokeColor(string? colorHex)
+        {
+            if (colorHex == null || CurrentTool is not Controls.Tools.CanvasToolBase tool) return;
+            try
+            {
+                var brush = new System.Windows.Media.SolidColorBrush(
+                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHex));
+                brush.Freeze();
+                tool.StrokeColor = brush;
+            }
+            catch { }
+        }
+
+        [RelayCommand]
+        private void SetFillColor(string? colorHex)
+        {
+            if (CurrentTool is not Controls.Tools.CanvasToolBase tool) return;
+            if (colorHex == "Transparent" || string.IsNullOrEmpty(colorHex))
+            {
+                tool.FillColor = System.Windows.Media.Brushes.Transparent;
+                return;
+            }
+            try
+            {
+                var brush = new System.Windows.Media.SolidColorBrush(
+                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHex));
+                brush.Freeze();
+                tool.FillColor = brush;
+            }
+            catch { }
+        }
+
+        [RelayCommand]
+        private void SetStrokeThickness(object? value)
+        {
+            if (CurrentTool is not Controls.Tools.CanvasToolBase tool) return;
+            if (value is double d) tool.StrokeThickness = d;
+            else if (value is int i) tool.StrokeThickness = i;
+            else if (double.TryParse(value?.ToString(), out var parsed)) tool.StrokeThickness = parsed;
         }
 
         [RelayCommand]

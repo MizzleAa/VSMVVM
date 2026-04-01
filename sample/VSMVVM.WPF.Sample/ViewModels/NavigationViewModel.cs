@@ -5,9 +5,7 @@ using VSMVVM.Core.Attributes;
 namespace VSMVVM.WPF.Sample.ViewModels
 {
     /// <summary>
-
     /// ViewModel for INavigateAware navigation lifecycle demo.
-
     /// </summary>
 
     public partial class NavigationViewModel : ViewModelBase, INavigateAware

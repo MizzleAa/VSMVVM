@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using VSMVVM.WPF.Controls.Tools;
 
 #nullable enable
 namespace VSMVVM.WPF.Controls
@@ -77,6 +78,9 @@ namespace VSMVVM.WPF.Controls
         private double _dragOriginalTop;
         private CanvasSelectionAdorner? _currentAdorner;
 
+        // 그리기 세션 동안 유지되는 컨텍스트 (MouseDown → MouseUp)
+        private CanvasToolContext? _currentToolContext;
+
         /// <summary>
         /// 현재 드래그 진행 중인지 여부. ImageCanvas에서 panning 차단 용도.
         /// </summary>
@@ -115,6 +119,32 @@ namespace VSMVVM.WPF.Controls
             set => SetValue(SelectedElementProperty, value);
         }
 
+        /// <summary>
+        /// 현재 활성 도구.
+        /// </summary>
+        public static readonly DependencyProperty CurrentToolProperty =
+            DependencyProperty.Register(
+                nameof(CurrentTool),
+                typeof(ICanvasTool),
+                typeof(LayeredCanvas),
+                new PropertyMetadata(null));
+
+        public ICanvasTool? CurrentTool
+        {
+            get => (ICanvasTool?)GetValue(CurrentToolProperty);
+            set => SetValue(CurrentToolProperty, value);
+        }
+
+        /// <summary>
+        /// 그리기 완료 시 발생하는 이벤트.
+        /// </summary>
+        public event EventHandler? DrawingCompleted;
+
+        internal void RaiseDrawingCompleted()
+        {
+            DrawingCompleted?.Invoke(this, EventArgs.Empty);
+        }
+
         #endregion
 
         #region Constructor
@@ -134,19 +164,48 @@ namespace VSMVVM.WPF.Controls
         {
             base.OnMouseLeftButtonDown(e);
 
-            var localPoint = e.GetPosition(this);
-            var hitElement = FindHitElement(localPoint);
+            var tool = CurrentTool;
 
-            if (hitElement != null)
+            // Select 모드 또는 Tool 없음 → 기존 선택/드래그 로직
+            if (tool == null || tool.Mode == CanvasToolMode.Select)
             {
-                SelectElement(hitElement);
-                StartDrag(hitElement, e);
-                e.Handled = true; // ImageCanvas panning 차단
+                var localPoint = e.GetPosition(this);
+                var hitElement = FindHitElement(localPoint);
+
+                if (hitElement != null)
+                {
+                    SelectElement(hitElement);
+                    StartDrag(hitElement, e);
+                    e.Handled = true;
+                }
+                else
+                {
+                    ClearSelection();
+                }
+                return;
             }
-            else
+
+            // Ctrl 누름 → Pan 패스스루
+            if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                return;
+
+            // Context를 MouseDown 시점에 캐시 (세션 동안 TargetLayer 고정)
+            _currentToolContext = CreateToolContext(e);
+            var pos = e.GetPosition(this);
+            bool handled = tool.OnMouseDown(_currentToolContext, pos, e);
+            if (handled)
             {
-                ClearSelection();
-                // e.Handled = false → ImageCanvas가 panning 시작
+                // 도구가 OnMouseDown 내에서 전환된 경우 (예: ImageTool → Select)
+                // CaptureMouse 하지 않음 — Move/Up 세션이 필요 없음
+                if (CurrentTool == tool)
+                {
+                    CaptureMouse();
+                }
+                else
+                {
+                    _currentToolContext = null;
+                }
+                e.Handled = true;
             }
         }
 
@@ -154,40 +213,52 @@ namespace VSMVVM.WPF.Controls
         {
             base.OnMouseMove(e);
 
-            if (_isDraggingElement && SelectedElement != null)
+            var tool = CurrentTool;
+
+            // Select 모드: 기존 드래그 로직
+            if (tool == null || tool.Mode == CanvasToolMode.Select)
             {
-                var parentCanvas = FindParentCanvas(SelectedElement);
-                var currentPos = parentCanvas != null
-                    ? e.GetPosition(parentCanvas)
-                    : e.GetPosition(this);
-
-                var deltaX = currentPos.X - _dragStartCanvasPos.X;
-                var deltaY = currentPos.Y - _dragStartCanvasPos.Y;
-
-                var newLeft = _dragOriginalLeft + deltaX;
-                var newTop = _dragOriginalTop + deltaY;
-
-                // 클램핑: Shape → CanvasLayer 영역 내로만 제한
-                // CanvasLayer → LayeredCanvas는 자유 이동 (ClipToBounds가 시각적 클리핑)
-                if (SelectedElement is FrameworkElement fe
-                    && parentCanvas is CanvasLayer parentLayer)
+                if (_isDraggingElement && SelectedElement != null)
                 {
-                    var parentW = !double.IsNaN(parentLayer.Width) ? parentLayer.Width : parentLayer.ActualWidth;
-                    var parentH = !double.IsNaN(parentLayer.Height) ? parentLayer.Height : parentLayer.ActualHeight;
+                    var parentCanvas = FindParentCanvas(SelectedElement);
+                    var currentPos = parentCanvas != null
+                        ? e.GetPosition(parentCanvas)
+                        : e.GetPosition(this);
 
-                    if (!double.IsNaN(parentW) && !double.IsNaN(parentH))
+                    var deltaX = currentPos.X - _dragStartCanvasPos.X;
+                    var deltaY = currentPos.Y - _dragStartCanvasPos.Y;
+
+                    var newLeft = _dragOriginalLeft + deltaX;
+                    var newTop = _dragOriginalTop + deltaY;
+
+                    if (SelectedElement is FrameworkElement fe
+                        && parentCanvas is CanvasLayer parentLayer)
                     {
-                        var maxLeft = parentW - fe.ActualWidth;
-                        var maxTop = parentH - fe.ActualHeight;
-                        if (maxLeft > 0) newLeft = Math.Max(0, Math.Min(newLeft, maxLeft));
-                        if (maxTop > 0) newTop = Math.Max(0, Math.Min(newTop, maxTop));
+                        var parentW = !double.IsNaN(parentLayer.Width) ? parentLayer.Width : parentLayer.ActualWidth;
+                        var parentH = !double.IsNaN(parentLayer.Height) ? parentLayer.Height : parentLayer.ActualHeight;
+
+                        if (!double.IsNaN(parentW) && !double.IsNaN(parentH))
+                        {
+                            var maxLeft = parentW - fe.ActualWidth;
+                            var maxTop = parentH - fe.ActualHeight;
+                            if (maxLeft > 0) newLeft = Math.Max(0, Math.Min(newLeft, maxLeft));
+                            if (maxTop > 0) newTop = Math.Max(0, Math.Min(newTop, maxTop));
+                        }
                     }
+
+                    SetLeft(SelectedElement, newLeft);
+                    SetTop(SelectedElement, newTop);
+
+                    _currentAdorner?.InvalidateVisual();
+                    e.Handled = true;
                 }
+                return;
+            }
 
-                SetLeft(SelectedElement, newLeft);
-                SetTop(SelectedElement, newTop);
-
-                _currentAdorner?.InvalidateVisual();
+            // 그리기 도구 위임 (캐시된 컨텍스트 사용)
+            if (IsMouseCaptured && _currentToolContext != null)
+            {
+                tool.OnMouseMove(_currentToolContext, e.GetPosition(this), e);
                 e.Handled = true;
             }
         }
@@ -196,9 +267,25 @@ namespace VSMVVM.WPF.Controls
         {
             base.OnMouseLeftButtonUp(e);
 
-            if (_isDraggingElement)
+            var tool = CurrentTool;
+
+            // Select 모드: 기존 로직
+            if (tool == null || tool.Mode == CanvasToolMode.Select)
             {
-                _isDraggingElement = false;
+                if (_isDraggingElement)
+                {
+                    _isDraggingElement = false;
+                    ReleaseMouseCapture();
+                    e.Handled = true;
+                }
+                return;
+            }
+
+            // 그리기 도구 위임 (캐시된 컨텍스트 사용)
+            if (IsMouseCaptured && _currentToolContext != null)
+            {
+                tool.OnMouseUp(_currentToolContext, e.GetPosition(this), e);
+                _currentToolContext = null; // 세션 종료
                 ReleaseMouseCapture();
                 e.Handled = true;
             }
@@ -437,6 +524,31 @@ namespace VSMVVM.WPF.Controls
             {
                 if (parent is Canvas c) return c;
                 parent = VisualTreeHelper.GetParent(parent);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Tool에 전달할 컨텍스트를 생성합니다.
+        /// </summary>
+        private CanvasToolContext CreateToolContext(MouseEventArgs e)
+        {
+            return new CanvasToolContext(this, GetTargetLayer(), e);
+        }
+
+        /// <summary>
+        /// 그리기 대상 레이어를 반환합니다. 선택된 레이어 우선, 없으면 마지막 레이어.
+        /// </summary>
+        private CanvasLayer? GetTargetLayer()
+        {
+            if (SelectedElement is CanvasLayer selected)
+                return selected;
+
+            // 마지막 레이어
+            for (int i = Children.Count - 1; i >= 0; i--)
+            {
+                if (Children[i] is CanvasLayer layer)
+                    return layer;
             }
             return null;
         }

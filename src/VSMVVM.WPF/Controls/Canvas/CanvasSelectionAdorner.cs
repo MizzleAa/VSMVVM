@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Shapes;
 
 #nullable enable
 namespace VSMVVM.WPF.Controls
@@ -31,6 +32,8 @@ namespace VSMVVM.WPF.Controls
 
         // 원본 스냅샷: LayeredCanvas 리사이즈 시 자식의 초기 상태 보존
         private Dictionary<UIElement, Rect>? _originalChildStates;
+        // Polyline용 원본 Points 스냅샷
+        private Dictionary<Polyline, PointCollection>? _originalPolylinePoints;
 
         #endregion
 
@@ -162,6 +165,7 @@ namespace VSMVVM.WPF.Controls
                 _isResizing = false;
                 _activeHandle = HandlePosition.None;
                 _originalChildStates = null;
+                _originalPolylinePoints = null;
                 ReleaseMouseCapture();
                 e.Handled = true;
             }
@@ -244,6 +248,7 @@ namespace VSMVVM.WPF.Controls
         private void CaptureChildStates(FrameworkElement element)
         {
             _originalChildStates = null;
+            _originalPolylinePoints = null;
 
             if (element is LayeredCanvas layered)
             {
@@ -252,25 +257,53 @@ namespace VSMVVM.WPF.Controls
                 {
                     if (child is CanvasLayer layer)
                     {
-                        // 레이어 자체 저장
                         _originalChildStates[layer] = new Rect(0, 0,
                             !double.IsNaN(layer.Width) ? layer.Width : layer.ActualWidth,
                             !double.IsNaN(layer.Height) ? layer.Height : layer.ActualHeight);
 
-                        // 레이어 내부 자식 저장
-                        foreach (UIElement layerChild in layer.Children)
-                        {
-                            if (layerChild is FrameworkElement fe)
-                            {
-                                var l = Canvas.GetLeft(fe);
-                                var t = Canvas.GetTop(fe);
-                                _originalChildStates[fe] = new Rect(
-                                    double.IsNaN(l) ? 0 : l,
-                                    double.IsNaN(t) ? 0 : t,
-                                    !double.IsNaN(fe.Width) ? fe.Width : fe.ActualWidth,
-                                    !double.IsNaN(fe.Height) ? fe.Height : fe.ActualHeight);
-                            }
-                        }
+                        CaptureLayerChildren(layer);
+                    }
+                }
+            }
+            else if (element is CanvasLayer singleLayer)
+            {
+                _originalChildStates = new Dictionary<UIElement, Rect>();
+                CaptureLayerChildren(singleLayer);
+            }
+            else if (element is Polyline poly && poly.Points.Count > 0)
+            {
+                // Polyline 개별 선택 → Points 스냅샷
+                _originalPolylinePoints = new Dictionary<Polyline, PointCollection>
+                {
+                    [poly] = poly.Points.Clone()
+                };
+            }
+        }
+
+        /// <summary>
+        /// 레이어 내부 자식의 원본 상태를 스냅샷. Polyline은 Points도 별도 저장.
+        /// </summary>
+        private void CaptureLayerChildren(CanvasLayer layer)
+        {
+            _originalChildStates ??= new Dictionary<UIElement, Rect>();
+
+            foreach (UIElement child in layer.Children)
+            {
+                if (child is FrameworkElement fe)
+                {
+                    var l = Canvas.GetLeft(fe);
+                    var t = Canvas.GetTop(fe);
+                    _originalChildStates[fe] = new Rect(
+                        double.IsNaN(l) ? 0 : l,
+                        double.IsNaN(t) ? 0 : t,
+                        !double.IsNaN(fe.Width) ? fe.Width : fe.ActualWidth,
+                        !double.IsNaN(fe.Height) ? fe.Height : fe.ActualHeight);
+
+                    // Polyline Points 별도 스냅샷
+                    if (fe is Polyline poly && poly.Points.Count > 0)
+                    {
+                        _originalPolylinePoints ??= new Dictionary<Polyline, PointCollection>();
+                        _originalPolylinePoints[poly] = poly.Points.Clone();
                     }
                 }
             }
@@ -388,8 +421,30 @@ namespace VSMVVM.WPF.Controls
 
             Canvas.SetLeft(element, newLeft);
             Canvas.SetTop(element, newTop);
-            element.Width = newWidth;
-            element.Height = newHeight;
+
+            // Polyline 개별 리사이즈: Points를 비례 스케일
+            if (element is Polyline resizedPoly
+                && _originalPolylinePoints != null
+                && _originalPolylinePoints.TryGetValue(resizedPoly, out var origPts)
+                && _originalRect.Width > 0 && _originalRect.Height > 0)
+            {
+                var scaleX = newWidth / _originalRect.Width;
+                var scaleY = newHeight / _originalRect.Height;
+                var scaled = new PointCollection(origPts.Count);
+                foreach (var pt in origPts)
+                {
+                    scaled.Add(new Point(pt.X * scaleX, pt.Y * scaleY));
+                }
+                resizedPoly.Points = scaled;
+                // Width/Height는 설정하지 않음 (Points에서 자동 계산)
+                resizedPoly.ClearValue(FrameworkElement.WidthProperty);
+                resizedPoly.ClearValue(FrameworkElement.HeightProperty);
+            }
+            else
+            {
+                element.Width = newWidth;
+                element.Height = newHeight;
+            }
 
             // LayeredCanvas 자식 비례 스케일링 (원본 스냅샷 기준)
             if (_originalChildStates != null
@@ -411,14 +466,60 @@ namespace VSMVVM.WPF.Controls
                             if (layerChild is FrameworkElement fe
                                 && _originalChildStates.TryGetValue(fe, out var childOriginal))
                             {
-                                Canvas.SetLeft(fe, childOriginal.X * scaleX);
-                                Canvas.SetTop(fe, childOriginal.Y * scaleY);
-                                fe.Width = childOriginal.Width * scaleX;
-                                fe.Height = childOriginal.Height * scaleY;
+                                ScaleChild(fe, childOriginal, scaleX, scaleY);
                             }
                         }
                     }
                 }
+            }
+
+            // CanvasLayer 자식 비례 스케일링 (원본 스냅샷 기준)
+            if (_originalChildStates != null
+                && element is CanvasLayer resizedLayer
+                && _originalRect.Width > 0 && _originalRect.Height > 0)
+            {
+                var scaleX = newWidth / _originalRect.Width;
+                var scaleY = newHeight / _originalRect.Height;
+
+                foreach (UIElement child in resizedLayer.Children)
+                {
+                    if (child is FrameworkElement fe
+                        && _originalChildStates.TryGetValue(fe, out var childOriginal))
+                    {
+                        ScaleChild(fe, childOriginal, scaleX, scaleY);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 자식 요소를 비례 스케일링. Polyline은 Points를 직접 스케일.
+        /// </summary>
+        private void ScaleChild(FrameworkElement fe, Rect originalRect, double scaleX, double scaleY)
+        {
+            Canvas.SetLeft(fe, originalRect.X * scaleX);
+            Canvas.SetTop(fe, originalRect.Y * scaleY);
+
+            if (fe is Polyline poly
+                && _originalPolylinePoints != null
+                && _originalPolylinePoints.TryGetValue(poly, out var originalPoints))
+            {
+                // Points 직접 스케일 (명시적 Width/Height 설정 안 함)
+                var scaled = new PointCollection(originalPoints.Count);
+                foreach (var pt in originalPoints)
+                {
+                    scaled.Add(new Point(pt.X * scaleX, pt.Y * scaleY));
+                }
+                poly.Points = scaled;
+
+                // Polyline은 Width/Height 설정 시 클리핑됨
+                if (!double.IsNaN(poly.Width)) poly.ClearValue(FrameworkElement.WidthProperty);
+                if (!double.IsNaN(poly.Height)) poly.ClearValue(FrameworkElement.HeightProperty);
+            }
+            else
+            {
+                fe.Width = originalRect.Width * scaleX;
+                fe.Height = originalRect.Height * scaleY;
             }
         }
 

@@ -64,6 +64,35 @@ namespace VSMVVM.WPF.Sample.Behaviors
                 if (layered != null)
                 {
                     layered.SelectionChanged += OnCanvasSelectionChanged;
+
+                    // 그리기 완료 시 레이어 패널 갱신 + ImageTool 자동 복귀
+                    layered.DrawingCompleted += (_, __) =>
+                    {
+                        if (_root.DataContext is CanvasViewModel vm)
+                        {
+                            RefreshLayers(vm);
+
+                            // ImageTool은 배치 후 Select 모드로 복귀 (RadioButton UI 동기화)
+                            if (vm.CurrentTool is VSMVVM.WPF.Controls.Tools.ImageTool)
+                            {
+                                vm.CurrentTool = vm.SelectTool;
+                            }
+                        }
+                    };
+                }
+            }
+
+            private void RefreshLayers(CanvasViewModel vm)
+            {
+                var selectedName = vm.SelectedLayer?.Name;
+                vm.Layers.Clear();
+                foreach (var info in GetCurrentLayers())
+                {
+                    vm.Layers.Add(info);
+                }
+                if (selectedName != null)
+                {
+                    vm.SelectedLayer = vm.Layers.FirstOrDefault(l => l.Name == selectedName);
                 }
             }
 

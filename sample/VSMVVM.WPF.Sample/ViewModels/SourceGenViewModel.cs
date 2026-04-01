@@ -24,7 +24,7 @@ namespace VSMVVM.WPF.Sample.ViewModels
 
         #endregion
 
-        #region [RelayCommand] + CanExecute
+        #region [RelayCommand] + [CanExecute]
 
         [Property]
         [NotifyCanExecuteChangedFor(nameof(DecrementCommand))]
@@ -46,7 +46,7 @@ namespace VSMVVM.WPF.Sample.ViewModels
 
         #endregion
 
-        #region [AsyncRelayCommand] + CanExecute
+        #region [AsyncRelayCommand] + [CanExecute]
 
         [Property]
         private bool _isBusy;

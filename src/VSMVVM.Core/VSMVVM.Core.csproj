@@ -5,14 +5,16 @@
 		<LangVersion>12</LangVersion>
 		<Nullable>disable</Nullable>
 		<Platforms>AnyCPU;x64;x86</Platforms>
-		<Version>1.0.0</Version>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<EnforceExtendedAnalyzerRules>True</EnforceExtendedAnalyzerRules>
 		<IncludePackageReferencesDuringMarkupCompilation>True</IncludePackageReferencesDuringMarkupCompilation>
 		<CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
-		<PackageTags>mvvm,wpf,ioc,vsmvvm</PackageTags>
 		<RootNamespace>VSMVVM.Core</RootNamespace>
 		<AssemblyName>VSMVVM.Core</AssemblyName>
+		<PackageId>VSMVVM.Core</PackageId>
+		<Title>VSMVVM.Core</Title>
+		<Description>Lightweight MVVM core framework with built-in Source Generator, DI container, Messenger, and Guard utilities. Targets .NET Standard 2.0.</Description>
+		<PackageTags>mvvm;ioc;di;source-generator;messenger;vsmvvm</PackageTags>
 	</PropertyGroup>
 
 	<ItemGroup>

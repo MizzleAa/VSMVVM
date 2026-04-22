@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<UseWindowsForms>true</UseWindowsForms>
+		<LangVersion>12</LangVersion>
+		<Nullable>disable</Nullable>
+		<RootNamespace>VSMVVM.WinForms</RootNamespace>
+		<AssemblyName>VSMVVM.WinForms</AssemblyName>
+		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VSMVVM.Core\VSMVVM.Core.csproj" />
+		<ProjectReference Include="..\VSMVVM.WinForms.Design\VSMVVM.WinForms.Design.csproj" />
+	</ItemGroup>
+
+</Project>

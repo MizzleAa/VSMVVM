@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<UseWindowsForms>true</UseWindowsForms>
+		<LangVersion>12</LangVersion>
+		<Nullable>disable</Nullable>
+		<RootNamespace>VSMVVM.WinForms.Design</RootNamespace>
+		<AssemblyName>VSMVVM.WinForms.Design</AssemblyName>
+		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+</Project>

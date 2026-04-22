@@ -7,9 +7,11 @@
 		<Nullable>disable</Nullable>
 		<RootNamespace>VSMVVM.WPF.Design</RootNamespace>
 		<AssemblyName>VSMVVM.WPF.Design</AssemblyName>
-		<Version>1.0.0</Version>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-		<PackageTags>wpf,design,theme,vsmvvm</PackageTags>
+		<PackageId>VSMVVM.WPF.Design</PackageId>
+		<Title>VSMVVM.WPF.Design</Title>
+		<Description>Tailwind-inspired design system for WPF. Ships design tokens, color palettes, themed controls, and reusable components for VSMVVM-based applications.</Description>
+		<PackageTags>wpf;design-system;tokens;theme;tailwind;vsmvvm</PackageTags>
 	</PropertyGroup>
 
 	<ItemGroup>

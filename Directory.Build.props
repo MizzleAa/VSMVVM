@@ -1,0 +1,23 @@
+<Project>
+
+	<PropertyGroup>
+		<Version>1.0.0</Version>
+		<Authors>ca-cy</Authors>
+		<Copyright>© 2026 ca-cy</Copyright>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/MizzleAa/VSMVVM</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/MizzleAa/VSMVVM</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+	</PropertyGroup>
+
+	<ItemGroup Condition="'$(GeneratePackageOnBuild)' == 'True' Or '$(IsPackable)' == 'true'">
+		<None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\" Visible="false" />
+	</ItemGroup>
+
+</Project>

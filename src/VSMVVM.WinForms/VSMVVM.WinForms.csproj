@@ -7,9 +7,8 @@
 		<Nullable>disable</Nullable>
 		<RootNamespace>VSMVVM.WinForms</RootNamespace>
 		<AssemblyName>VSMVVM.WinForms</AssemblyName>
-		<Version>1.0.0</Version>
-		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-		<PackageTags>mvvm,winforms,ioc,vsmvvm</PackageTags>
+		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+		<IsPackable>false</IsPackable>
 	</PropertyGroup>
 
 	<ItemGroup>

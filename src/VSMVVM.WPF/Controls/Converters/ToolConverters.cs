@@ -71,4 +71,16 @@ namespace VSMVVM.WPF.Controls
             return Binding.DoNothing;
         }
     }
+
+    /// <summary>값이 null 이 아니면 true, null 이면 false. 버튼 IsEnabled 바인딩용.</summary>
+    public sealed class NotNullToBoolConverter : IValueConverter
+    {
+        public static readonly NotNullToBoolConverter Instance = new();
+
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            => value != null;
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => Binding.DoNothing;
+    }
 }

@@ -150,6 +150,9 @@ namespace VSMVVM.WPF.Sample.ViewModels
         private void NavigateCanvas() => DoNavigate("CanvasView");
 
         [RelayCommand]
+        private void NavigateImageViewer() => DoNavigate("ImageViewerDemoView");
+
+        [RelayCommand]
         private void NavigateLogging() => DoNavigate("LoggingView");
 
         #endregion

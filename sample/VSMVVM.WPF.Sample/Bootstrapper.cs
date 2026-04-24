@@ -19,6 +19,8 @@ namespace VSMVVM.WPF.Sample
         {
             serviceCollection.AddSingleton<IDialogService, DialogService>();
             serviceCollection.AddSingleton<IDispatcherService, WPFDispatcherService>();
+            serviceCollection.AddSingleton<IUndoRedoService, UndoRedoService>();
+            serviceCollection.AddSingleton<IFileDialogService, WpfFileDialogService>();
 
             serviceCollection.AddTransient<MainWindow>();
             serviceCollection.AddTransient<HomeView>();
@@ -35,6 +37,7 @@ namespace VSMVVM.WPF.Sample
             serviceCollection.AddTransient<LocalizationView>();
             serviceCollection.AddTransient<MultiWindowView>();
             serviceCollection.AddTransient<CanvasView>();
+            serviceCollection.AddTransient<ImageViewerDemoView>();
             serviceCollection.AddTransient<LoggingView>();
             serviceCollection.AddTransient<SubWindow>();
 
@@ -53,6 +56,7 @@ namespace VSMVVM.WPF.Sample
             serviceCollection.AddTransient<LocalizationViewModel>();
             serviceCollection.AddTransient<MultiWindowViewModel>();
             serviceCollection.AddTransient<CanvasViewModel>();
+            serviceCollection.AddTransient<ImageViewerDemoViewModel>();
             serviceCollection.AddTransient<LoggingViewModel>();
             serviceCollection.AddTransient<SubWindowViewModel>();
 
@@ -92,6 +96,7 @@ namespace VSMVVM.WPF.Sample
             viewModelMapper.Register<LocalizationView, LocalizationViewModel>();
             viewModelMapper.Register<MultiWindowView, MultiWindowViewModel>();
             viewModelMapper.Register<CanvasView, CanvasViewModel>();
+            viewModelMapper.Register<ImageViewerDemoView, ImageViewerDemoViewModel>();
             viewModelMapper.Register<LoggingView, LoggingViewModel>();
             viewModelMapper.Register<SubWindow, SubWindowViewModel>();
         }

@@ -6,13 +6,24 @@ namespace VSMVVM.WPF.Controls
     public enum CanvasToolMode
     {
         Select,
+        Arrow,
         Pen,
         Rectangle,
         RoundedRectangle,
         Ellipse,
         Image,
-        // Phase 2
-        // PixelPen,
-        // Eraser,
+        // 마스크 기반
+        Brush,
+        Eraser,
+        Fill,
+        RectangleMask,
+        EllipseMask,
+        PolygonMask,
+        // 측정 도구
+        LengthMeasurement,
+        AngleMeasurement,
+        // 자동 선택 도구
+        MagicWand,
+        MagneticLasso,
     }
 }

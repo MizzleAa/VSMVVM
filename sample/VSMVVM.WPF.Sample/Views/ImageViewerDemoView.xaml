@@ -1,0 +1,794 @@
+<UserControl x:Class="VSMVVM.WPF.Sample.Views.ImageViewerDemoView"
+             x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctrl="clr-namespace:VSMVVM.WPF.Controls;assembly=VSMVVM.WPF"
+             xmlns:beh="clr-namespace:VSMVVM.WPF.Controls.Behaviors;assembly=VSMVVM.WPF"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
+             xmlns:media="clr-namespace:VSMVVM.WPF.Media;assembly=VSMVVM.WPF"
+             xmlns:views="clr-namespace:VSMVVM.WPF.Sample.Views"
+             me:ViewModelLocator.AutoWireViewModel="True"
+             Focusable="True">
+    <UserControl.Resources>
+        <ctrl:ToolModeToBoolConverter x:Key="ToolModeToBool"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+
+        <Style x:Key="IconActionButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="{StaticResource P1}"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="0"/>
+            <Setter Property="ToolTipService.BetweenShowDelay" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="{StaticResource RoundedSm}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BgTertiary}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="IconToolButton" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="{StaticResource P1}"/>
+            <Setter Property="Margin" Value="{StaticResource Mb1}"/>
+            <Setter Property="ToolTipService.InitialShowDelay" Value="0"/>
+            <Setter Property="ToolTipService.BetweenShowDelay" Value="0"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="{StaticResource RoundedSm}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BgTertiary}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentPrimaryMuted}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <UserControl.InputBindings>
+        <KeyBinding Key="Z" Modifiers="Ctrl" Command="{Binding UndoCommand}"/>
+        <KeyBinding Key="Y" Modifiers="Ctrl" Command="{Binding RedoCommand}"/>
+        <KeyBinding Key="B" Command="{Binding SetToolBrushCommand}"/>
+        <KeyBinding Key="E" Command="{Binding SetToolEraserCommand}"/>
+        <KeyBinding Key="G" Command="{Binding SetToolFillCommand}"/>
+        <KeyBinding Key="V" Command="{Binding SetToolSelectCommand}"/>
+        <KeyBinding Key="H" Command="{Binding SetToolArrowCommand}"/>
+        <KeyBinding Key="R" Command="{Binding ToggleRulerCommand}"/>
+        <KeyBinding Key="Escape" Command="{Binding ExitVertexEditCommand}"/>
+    </UserControl.InputBindings>
+
+    <Grid>
+        <i:Interaction.Behaviors>
+            <views:LabelEditDialogBehavior MaskLayer="{Binding ElementName=MainMask}"
+                                           DialogPlacementTarget="{Binding ElementName=LabelPanelRoot}"/>
+        </i:Interaction.Behaviors>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Toolbar -->
+        <Border Grid.Row="0" Padding="{StaticResource P2}"
+                Background="{DynamicResource BgSecondary}"
+                CornerRadius="{StaticResource RoundedMd}"
+                Margin="{StaticResource Mb2}">
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource IconActionButton}"
+                        ToolTip="Open Image"
+                        Command="{Binding OpenImageCommand}"
+                        Margin="{StaticResource Mr1}">
+                    <Image Width="16" Height="16"
+                           Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/folder_open_24.svg, Fill={StaticResource TextPrimary}}"/>
+                </Button>
+                <Button Style="{StaticResource IconActionButton}"
+                        ToolTip="Save Mask"
+                        Command="{Binding SaveMaskCommand}"
+                        IsEnabled="{Binding HasImage}"
+                        Margin="{StaticResource Mr1}">
+                    <Image Width="16" Height="16"
+                           Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/save_24.svg, Fill={StaticResource TextPrimary}}"/>
+                </Button>
+                <Button Style="{StaticResource IconActionButton}"
+                        ToolTip="Load Mask"
+                        Command="{Binding LoadMaskCommand}"
+                        IsEnabled="{Binding HasImage}"
+                        Margin="{StaticResource Mr1}">
+                    <Image Width="16" Height="16"
+                           Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/download_24.svg, Fill={StaticResource TextPrimary}}"/>
+                </Button>
+                <Border Width="1" Background="{DynamicResource BorderDefault}" Margin="{StaticResource Mx2}"/>
+                <Button Style="{StaticResource IconActionButton}"
+                        ToolTip="Undo (Ctrl+Z)"
+                        Command="{Binding UndoCommand}"
+                        IsEnabled="{Binding CanUndo}"
+                        Margin="{StaticResource Mr1}">
+                    <Image Width="16" Height="16"
+                           Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/arrow_left_24.svg, Fill={StaticResource TextPrimary}}"/>
+                </Button>
+                <Button Style="{StaticResource IconActionButton}"
+                        ToolTip="Redo (Ctrl+Y)"
+                        Command="{Binding RedoCommand}"
+                        IsEnabled="{Binding CanRedo}"
+                        Margin="{StaticResource Mr1}">
+                    <Image Width="16" Height="16"
+                           Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/arrow_right_24.svg, Fill={StaticResource TextPrimary}}"/>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Layout -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Tool Panel -->
+			<Border Grid.Column="0" Width="{StaticResource W10}"
+                    Background="{DynamicResource BgSecondary}"
+                    CornerRadius="{StaticResource RoundedMd}"
+                    Margin="{StaticResource Mr2}">
+                <StackPanel Margin="{StaticResource M2}">
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Pan image (H)" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=Arrow, Mode=OneWay}"
+                                 Command="{Binding SetToolArrowCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/cursor_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Select (V) — Ctrl+Click for multi-select" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=Select, Mode=OneWay}"
+                                 Command="{Binding SetToolSelectCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/selection_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Brush (B)" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=Brush, Mode=OneWay}"
+                                 Command="{Binding SetToolBrushCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/brush_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Eraser (E)" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=Eraser, Mode=OneWay}"
+                                 Command="{Binding SetToolEraserCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/erase_brush_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Fill (G)" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=Fill, Mode=OneWay}"
+                                 Command="{Binding SetToolFillCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/b_circle_fill_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Rectangle mask" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=RectangleMask, Mode=OneWay}"
+                                 Command="{Binding SetToolRectangleMaskCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/box_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Ellipse mask" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=EllipseMask, Mode=OneWay}"
+                                 Command="{Binding SetToolEllipseMaskCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/circle_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Polygon mask (Enter/dbl-click to close, Esc to cancel)" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=PolygonMask, Mode=OneWay}"
+                                 Command="{Binding SetToolPolygonMaskCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/polygon_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Length measurement" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=LengthMeasurement, Mode=OneWay}"
+                                 Command="{Binding SetToolLengthMeasurementCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/straighten_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Angle measurement (3 clicks, middle = vertex)" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=AngleMeasurement, Mode=OneWay}"
+                                 Command="{Binding SetToolAngleMeasurementCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/square_foot_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Click to select RGB-similar area" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=MagicWand, Mode=OneWay}"
+                                 Command="{Binding SetToolMagicWandCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/special_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Magnetic lasso (click anchors, dbl/Enter to close, Esc to cancel)" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=MagneticLasso, Mode=OneWay}"
+                                 Command="{Binding SetToolMagneticLassoCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/stroke_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
+                </StackPanel>
+            </Border>
+
+            <!-- Center Canvas -->
+            <Border Grid.Column="1"
+                    Background="{DynamicResource BgTertiary}"
+                    CornerRadius="{StaticResource RoundedMd}"
+                    ClipToBounds="True">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="20"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Tool Options Row — 현재 도구의 옵션만 표시 -->
+                    <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+                            Padding="{StaticResource P2}"
+                            Background="{DynamicResource BgSecondary}"
+                            CornerRadius="{StaticResource RoundedMd}">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <!-- 높이 보존용 invisible placeholder -->
+                            <Slider Width="0" Visibility="Hidden" IsEnabled="False"/>
+
+                            <!-- Brush 옵션 -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                        Visibility="{Binding CurrentTool, Converter={x:Static ctrl:ToolModeToVisibilityConverter.Instance}, ConverterParameter=Brush}">
+                                <TextBlock Text="Brush:" VerticalAlignment="Center" Margin="{StaticResource Mr2}"
+                                           Foreground="{DynamicResource TextSecondary}"/>
+                                <Slider Minimum="1" Maximum="64" Width="120"
+                                        Value="{Binding BrushRadius, Mode=TwoWay}"
+                                        VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding BrushRadius, StringFormat={}{0}px}"
+                                           VerticalAlignment="Center" Margin="{StaticResource Ml2}"
+                                           Foreground="{DynamicResource TextPrimary}"/>
+                            </StackPanel>
+
+                            <!-- Eraser 옵션 (BrushRadius 공유) -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                        Visibility="{Binding CurrentTool, Converter={x:Static ctrl:ToolModeToVisibilityConverter.Instance}, ConverterParameter=Eraser}">
+                                <TextBlock Text="Eraser:" VerticalAlignment="Center" Margin="{StaticResource Mr2}"
+                                           Foreground="{DynamicResource TextSecondary}"/>
+                                <Slider Minimum="1" Maximum="64" Width="120"
+                                        Value="{Binding BrushRadius, Mode=TwoWay}"
+                                        VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding BrushRadius, StringFormat={}{0}px}"
+                                           VerticalAlignment="Center" Margin="{StaticResource Ml2}"
+                                           Foreground="{DynamicResource TextPrimary}"/>
+                            </StackPanel>
+
+                            <!-- Magic Wand 옵션 -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                        Visibility="{Binding CurrentTool, Converter={x:Static ctrl:ToolModeToVisibilityConverter.Instance}, ConverterParameter=MagicWand}">
+                                <TextBlock Text="Wand Tol:" VerticalAlignment="Center" Margin="{StaticResource Mr2}"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           ToolTip="Magic Wand color tolerance (0-128)"/>
+                                <Slider Minimum="0" Maximum="128" Width="100"
+                                        Value="{Binding MagicWandTool.Tolerance, Mode=TwoWay}"
+                                        VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding MagicWandTool.Tolerance}"
+                                           VerticalAlignment="Center" Margin="{StaticResource Ml2}"
+                                           Foreground="{DynamicResource TextPrimary}"/>
+                            </StackPanel>
+
+                            <!-- Magnetic Lasso 옵션 -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                        Visibility="{Binding CurrentTool, Converter={x:Static ctrl:ToolModeToVisibilityConverter.Instance}, ConverterParameter=MagneticLasso}">
+                                <TextBlock Text="Lasso Edge:" VerticalAlignment="Center" Margin="{StaticResource Mr2}"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           ToolTip="Magnetic Lasso edge-contrast cutoff (0-0.8)"/>
+                                <Slider Minimum="0" Maximum="0.8" TickFrequency="0.05" Width="100"
+                                        Value="{Binding MagneticLassoTool.EdgeContrast, Mode=TwoWay}"
+                                        VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding MagneticLassoTool.EdgeContrast, StringFormat={}{0:F2}}"
+                                           VerticalAlignment="Center" Margin="{StaticResource Ml2}"
+                                           Foreground="{DynamicResource TextPrimary}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Rulers -->
+                    <!-- 가로·세로 눈금자가 만나는 좌상단 빈 corner 채움 -->
+
+                    <ctrl:RulerControl Grid.Row="1" Grid.Column="1"
+                                       Orientation="Horizontal"
+                                       TargetCanvas="{Binding ElementName=MainLayered}"
+                                       MouseTrackElement="{Binding ElementName=MainLayered}"
+                                       Visibility="{Binding ShowRuler, Converter={StaticResource BoolToVisibility}}"/>
+                    <ctrl:RulerControl Grid.Row="2" Grid.Column="0"
+                                       Orientation="Vertical"
+                                       TargetCanvas="{Binding ElementName=MainLayered}"
+                                       MouseTrackElement="{Binding ElementName=MainLayered}"
+                                       Visibility="{Binding ShowRuler, Converter={StaticResource BoolToVisibility}}"/>
+
+					<AdornerDecorator Grid.Row="2" Grid.Column="1" ClipToBounds="True">
+						
+    					<ctrl:LayeredCanvas x:Name="MainLayered"
+                                        CurrentTool="{Binding CurrentTool}"
+                                        ZoomLevel="{Binding ZoomLevel, Mode=TwoWay}"
+                                        MinZoom="0.01" MaxZoom="50.0">
+						<i:Interaction.Behaviors>
+							<beh:FitToContentBehavior FitTrigger="{Binding FitTrigger}"
+                                                      ZoomToBoundsTrigger="{Binding ZoomToBoundsTrigger}"/>
+							<beh:MaskBehavior MaskLayer="{Binding ElementName=MainMask}"
+                                              StrokeCompletedCommand="{Binding StrokeCompletedCommand}"
+                                              SavePngRequest="{Binding SaveMaskRequest}"
+                                              LoadPngRequest="{Binding LoadMaskRequest}"
+                                              SplitInstanceRequest="{Binding SplitInstanceRequest}"
+                                              DeleteInstanceRequest="{Binding DeleteInstanceRequest}"
+                                              DeleteInstancesRequest="{Binding DeleteInstancesRequest}"
+                                              MergeInstancesRequest="{Binding MergeInstancesRequest}"/>
+								<beh:PixelInfoBehavior MaskLayer="{Binding ElementName=MainMask}"
+                                                       MouseImageX="{Binding MouseImageX, Mode=OneWayToSource}"
+                                                       MouseImageY="{Binding MouseImageY, Mode=OneWayToSource}"
+                                                       MouseRgb="{Binding MouseRgb, Mode=OneWayToSource}"
+                                                       IsMouseInImage="{Binding IsMouseInImage, Mode=OneWayToSource}"/>
+						</i:Interaction.Behaviors>
+						<Image Source="{Binding BackgroundImageSource}"
+                               Canvas.Left="0" Canvas.Top="0"
+                               Width="{Binding ImagePixelWidth}"
+                               Height="{Binding ImagePixelHeight}"
+                               Stretch="Fill"
+                               RenderOptions.BitmapScalingMode="NearestNeighbor"/>
+						<ctrl:MaskLayer x:Name="MainMask"
+                                        Canvas.Left="0" Canvas.Top="0"
+                                        ClipToBounds="True"
+                                        Width="{Binding ImagePixelWidth}"
+                                        Height="{Binding ImagePixelHeight}"
+                                        MaskWidth="{Binding ImagePixelWidth}"
+                                        MaskHeight="{Binding ImagePixelHeight}"
+                                        Labels="{Binding Labels}"
+                                        CurrentLabelIndex="{Binding CurrentLabelIndex}"
+                                        SourceImage="{Binding BackgroundImageSource}"
+                                        SelectedInstance="{Binding SelectedInstance, Mode=TwoWay}"
+                                        IsVertexEditMode="{Binding IsVertexEditMode, Mode=TwoWay}"/>
+						<ctrl:MeasurementLayer x:Name="MainMeasurements"
+                                               Canvas.Left="0" Canvas.Top="0"
+                                               Width="{Binding ImagePixelWidth}"
+                                               Height="{Binding ImagePixelHeight}"
+                                               Measurements="{Binding Measurements}"
+                                               SelectedMeasurement="{Binding SelectedMeasurement, Mode=TwoWay}"/>
+						<ctrl:ShapePreviewLayer x:Name="MainShapePreview"
+                                                Canvas.Left="0" Canvas.Top="0"
+                                                Width="{Binding ImagePixelWidth}"
+                                                Height="{Binding ImagePixelHeight}"
+                                                Tool="{Binding CurrentTool}"
+                                                Mask="{Binding ElementName=MainMask}"
+                                                MouseTrackElement="{Binding ElementName=MainLayered}"/>
+                        <ctrl:PixelGridLayer x:Name="MainPixelGrid"
+                                             Canvas.Left="0" Canvas.Top="0"
+                                             Width="{Binding ImagePixelWidth}"
+                                             Height="{Binding ImagePixelHeight}"
+                                             TargetCanvas="{Binding ElementName=MainLayered}"/>
+					</ctrl:LayeredCanvas>
+					</AdornerDecorator>
+
+                    <!-- Status Bar — 캔버스 아래, ruler 컬럼 포함 전체 폭 -->
+                    <Border Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2"
+                            Padding="{StaticResource P2}"
+                            Background="{DynamicResource BgSecondary}"
+                            CornerRadius="{StaticResource RoundedMd}">
+                        <DockPanel>
+                            <ToggleButton DockPanel.Dock="Right"
+                                          x:Name="MiniMapToggle"
+                                          Content="MiniMap"
+                                          IsEnabled="{Binding HasImage}"
+                                          Padding="{StaticResource Px2}"
+                                          Margin="{StaticResource Ml2}"
+                                          VerticalAlignment="Center"/>
+                            <Popup PlacementTarget="{Binding ElementName=MiniMapToggle}"
+                                   Placement="Top"
+                                   HorizontalOffset="{Binding ElementName=MiniMapToggle, Path=ActualWidth, Converter={x:Static ctrl:RightAlignOffsetConverter.Instance}, ConverterParameter=220}"
+                                   IsOpen="{Binding IsChecked, ElementName=MiniMapToggle, Mode=TwoWay}"
+                                   StaysOpen="True"
+                                   AllowsTransparency="True">
+                                <Border Background="{DynamicResource BgSecondary}"
+                                        BorderBrush="{DynamicResource BorderDefault}"
+                                        BorderThickness="1"
+                                        CornerRadius="{StaticResource RoundedMd}"
+                                        Padding="{StaticResource P2}"
+                                        Margin="{StaticResource Mb1}"
+                                        Width="220">
+                                    <StackPanel>
+                                        <TextBlock Text="MiniMap"
+                                                   FontSize="{StaticResource TextSm}"
+                                                   FontWeight="{StaticResource FontSemibold}"
+                                                   Foreground="{DynamicResource TextPrimary}"
+                                                   Margin="{StaticResource Mb1}"/>
+                                        <ctrl:MiniMapControl TargetCanvas="{x:Reference MainLayered}"
+                                                             ImageSource="{Binding BackgroundImageSource}"
+                                                             MaskOverlay="{x:Reference MainMask}"/>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+                            <ToggleButton DockPanel.Dock="Right"
+                                          x:Name="PixelInfoToggle"
+                                          Content="Image Information"
+                                          IsEnabled="{Binding HasImage}"
+                                          Padding="{StaticResource Px2}"
+                                          VerticalAlignment="Center"/>
+                            <Popup PlacementTarget="{Binding ElementName=PixelInfoToggle}"
+                                   Placement="Top"
+                                   IsOpen="{Binding IsChecked, ElementName=PixelInfoToggle, Mode=TwoWay}"
+                                   StaysOpen="True"
+                                   AllowsTransparency="True">
+                                <Border Background="{DynamicResource BgSecondary}"
+                                        BorderBrush="{DynamicResource BorderDefault}"
+                                        BorderThickness="1"
+                                        CornerRadius="{StaticResource RoundedMd}"
+                                        Padding="{StaticResource P3}"
+                                        Margin="{StaticResource Mb1}">
+                                    <StackPanel MinWidth="200">
+                                        <TextBlock Text="이미지 정보"
+                                                   FontWeight="{StaticResource FontSemibold}"
+                                                   Foreground="{DynamicResource TextPrimary}"
+                                                   Margin="{StaticResource Mb2}"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="확대" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mr2}"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ZoomLevel, StringFormat='×{0:F2}'}" Foreground="{DynamicResource TextPrimary}"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="위치" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mr2}"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding MousePositionText}" Foreground="{DynamicResource TextPrimary}"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="크기" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mr2}"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ImageSizeText}" Foreground="{DynamicResource TextPrimary}"/>
+                                            <TextBlock Grid.Row="3" Grid.Column="0" Text="RGB" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mr2}"/>
+                                            <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
+                                                <Border Width="14" Height="14" CornerRadius="{StaticResource RoundedSm}"
+                                                        BorderBrush="{DynamicResource BorderDefault}" BorderThickness="1"
+                                                        Background="{Binding MouseRgb, Converter={x:Static ctrl:ColorToBrushConverter.Instance}, FallbackValue=Transparent}"
+                                                        VerticalAlignment="Center" Margin="{StaticResource Mr1}"/>
+                                                <TextBlock Text="{Binding MouseRgbText}" Foreground="{DynamicResource TextPrimary}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+                            <Button DockPanel.Dock="Right"
+                                    Content="Fit"
+                                    Command="{Binding FitToContentCommand}"
+                                    IsEnabled="{Binding HasImage}"
+                                    Padding="{StaticResource Px2}"
+                                    Margin="{StaticResource Mr2}"
+                                    VerticalAlignment="Center"/>
+                            <Button DockPanel.Dock="Right"
+                                    Content="Ruler"
+                                    Command="{Binding ToggleRulerCommand}"
+                                    ToolTip="Toggle ruler (R)"
+                                    IsEnabled="{Binding HasImage}"
+                                    Padding="{StaticResource Px2}"
+                                    Margin="{StaticResource Mr2}"
+                                    VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding StatusText}"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       FontSize="{StaticResource TextXs}"
+                                       VerticalAlignment="Center"/>
+                        </DockPanel>
+                    </Border>
+				</Grid>
+            </Border>
+
+            <!-- Right Panel: Labels + Instances + Measurements (MiniMap moved to status bar popup) -->
+            <Grid Grid.Column="2" Width="220" Margin="{StaticResource Ml2}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Labels -->
+                <Border Grid.Row="0"
+                        x:Name="LabelPanelRoot"
+                        Background="{DynamicResource BgSecondary}"
+                        CornerRadius="{StaticResource RoundedMd}">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Padding="{StaticResource P2}"
+                                BorderBrush="{DynamicResource BorderMuted}"
+                                BorderThickness="{StaticResource BorderB}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Labels"
+                                           FontSize="{StaticResource TextSm}"
+                                           FontWeight="{StaticResource FontSemibold}"
+                                           Foreground="{DynamicResource TextPrimary}"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Style="{StaticResource IconActionButton}"
+                                            ToolTip="Add label"
+                                            Command="{Binding AddLabelCommand}"
+                                            Margin="{StaticResource Mr1}">
+                                        <Image Width="16" Height="16"
+                                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/add_24.svg, Fill={StaticResource TextPrimary}}"/>
+                                    </Button>
+                                    <Button Style="{StaticResource IconActionButton}"
+                                            ToolTip="Remove selected label"
+                                            Command="{Binding RemoveSelectedLabelCommand}">
+                                        <Image Width="16" Height="16"
+                                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/delete_24.svg, Fill={StaticResource TextPrimary}}"/>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <ListBox ItemsSource="{Binding Labels}"
+                                 SelectedItem="{Binding SelectedLabel, Mode=TwoWay}"
+                                 Background="Transparent" BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0"
+                                                  IsChecked="{Binding IsVisible, Mode=TwoWay}"
+                                                  VerticalAlignment="Center"/>
+                                        <Border Grid.Column="1" Width="16" Height="16"
+                                                Margin="{StaticResource Mx2}" CornerRadius="2"
+                                                Cursor="Hand"
+                                                IsHitTestVisible="{Binding Index, Converter={x:Static ctrl:NotZeroIndexConverter.Instance}}"
+                                                Background="{Binding Color, Converter={x:Static ctrl:ColorToBrushConverter.Instance}}"
+                                                ToolTip="Edit color">
+                                            <Border.InputBindings>
+                                                <MouseBinding MouseAction="LeftClick"
+                                                              Command="{Binding DataContext.BeginEditLabelColorCommand, ElementName=Root}"
+                                                              CommandParameter="{Binding}"/>
+                                            </Border.InputBindings>
+                                        </Border>
+                                        <TextBlock Grid.Column="2" Text="{Binding Name}"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding Index}"
+                                                   VerticalAlignment="Center"
+                                                   Margin="{StaticResource Ml2}"
+                                                   Foreground="{DynamicResource TextMuted}"/>
+                                        <Button Grid.Column="4"
+                                                Style="{StaticResource IconActionButton}"
+                                                Margin="{StaticResource Ml2}"
+                                                Visibility="{Binding Index, Converter={x:Static ctrl:ZeroIndexToCollapsedConverter.Instance}}"
+                                                Command="{Binding DataContext.BeginEditLabelNameCommand, ElementName=Root}"
+                                                CommandParameter="{Binding}"
+                                                ToolTip="Edit name">
+                                            <Image Width="14" Height="14"
+                                                   Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/brush_24.svg, Fill={StaticResource TextPrimary}}"/>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+
+                <!-- Instances -->
+                <Border Grid.Row="1"
+                        Margin="{StaticResource Mt2}"
+                        Background="{DynamicResource BgSecondary}"
+                        CornerRadius="{StaticResource RoundedMd}">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Padding="{StaticResource P2}"
+                                BorderBrush="{DynamicResource BorderMuted}"
+                                BorderThickness="{StaticResource BorderB}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Instances"
+                                           FontSize="{StaticResource TextSm}"
+                                           FontWeight="{StaticResource FontSemibold}"
+                                           Foreground="{DynamicResource TextPrimary}"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Style="{StaticResource IconActionButton}"
+                                            ToolTip="Show selected instance region (fit to selection)"
+                                            Command="{Binding ZoomToSelectedInstancesCommand}"
+                                            IsEnabled="{Binding SelectedInstance, Converter={x:Static ctrl:NotNullToBoolConverter.Instance}}"
+                                            Margin="{StaticResource Mr1}">
+                                        <Image Width="16" Height="16"
+                                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/selection_24.svg, Fill={StaticResource TextPrimary}}"/>
+                                    </Button>
+                                    <Button Style="{StaticResource IconActionButton}"
+                                            ToolTip="Merge selected instances (same label)"
+                                            Command="{Binding MergeSelectedInstancesCommand}"
+                                            IsEnabled="{Binding SelectedInstanceCount, Converter={x:Static ctrl:GreaterThanOneConverter.Instance}}"
+                                            Margin="{StaticResource Mr1}">
+                                        <Image Width="16" Height="16"
+                                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/merge_24.svg, Fill={StaticResource TextPrimary}}"/>
+                                    </Button>
+                                    <Button Style="{StaticResource IconActionButton}"
+                                            ToolTip="Split selected instance by connected components"
+                                            Command="{Binding SplitSelectedInstanceCommand}"
+                                            IsEnabled="{Binding SelectedInstance, Converter={x:Static ctrl:NotNullToBoolConverter.Instance}}"
+                                            Margin="{StaticResource Mr1}">
+                                        <Image Width="16" Height="16"
+                                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/split_24.svg, Fill={StaticResource TextPrimary}}"/>
+                                    </Button>
+                                    <Button Style="{StaticResource IconActionButton}"
+                                            ToolTip="Delete selected instance"
+                                            Command="{Binding DeleteSelectedInstanceCommand}"
+                                            IsEnabled="{Binding SelectedInstance, Converter={x:Static ctrl:NotNullToBoolConverter.Instance}}">
+                                        <Image Width="16" Height="16"
+                                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/delete_24.svg, Fill={StaticResource TextPrimary}}"/>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <ListBox ItemsSource="{Binding MaskLayer.Instances}"
+                                 SelectionMode="Extended"
+                                 Background="Transparent" BorderThickness="0">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0"
+                                                  IsChecked="{Binding IsVisible, Mode=TwoWay}"
+                                                  VerticalAlignment="Center"/>
+                                        <Border Grid.Column="1" Width="12" Height="12"
+                                                Margin="{StaticResource Mx2}" CornerRadius="2"
+                                                VerticalAlignment="Center"
+                                                Background="{Binding Label.Color, Converter={x:Static ctrl:ColorToBrushConverter.Instance}, FallbackValue=Transparent}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Label.Name, FallbackValue='(none)'}"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding Id, StringFormat='#{0}'}"
+                                                   VerticalAlignment="Center" Margin="{StaticResource Mx2}"
+                                                   Foreground="{DynamicResource TextSecondary}"/>
+                                        <TextBlock Grid.Column="4" Text="{Binding PixelCount, StringFormat='{}{0}px'}"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextMuted}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+
+                <!-- Measurements -->
+                <Border Grid.Row="2"
+                        Margin="{StaticResource Mt2}"
+                        Background="{DynamicResource BgSecondary}"
+                        CornerRadius="{StaticResource RoundedMd}">
+                    <DockPanel>
+                        <Border DockPanel.Dock="Top" Padding="{StaticResource P2}"
+                                BorderBrush="{DynamicResource BorderMuted}"
+                                BorderThickness="{StaticResource BorderB}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Measurements"
+                                           FontSize="{StaticResource TextSm}"
+                                           FontWeight="{StaticResource FontSemibold}"
+                                           Foreground="{DynamicResource TextPrimary}"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                    <Button Style="{StaticResource IconActionButton}"
+                                            ToolTip="Delete selected measurement"
+                                            Command="{Binding DeleteSelectedMeasurementCommand}"
+                                            Margin="{StaticResource Mr1}">
+                                        <Image Width="16" Height="16"
+                                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/delete_24.svg, Fill={StaticResource TextPrimary}}"/>
+                                    </Button>
+                                    <Button Style="{StaticResource IconActionButton}"
+                                            ToolTip="Clear all measurements"
+                                            Command="{Binding ClearMeasurementsCommand}">
+                                        <Image Width="16" Height="16"
+                                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/cancel_circle_24.svg, Fill={StaticResource TextPrimary}}"/>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <ListBox ItemsSource="{Binding Measurements}"
+                                 SelectedItem="{Binding SelectedMeasurement, Mode=TwoWay}"
+                                 Background="Transparent" BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0"
+                                                  IsChecked="{Binding IsVisible, Mode=TwoWay}"
+                                                  VerticalAlignment="Center"/>
+                                        <!-- 타입별 아이콘: 길이(px)면 자, 각도(°)면 각도기 -->
+                                        <Grid Grid.Column="1" Width="16" Height="16"
+                                              Margin="{StaticResource Mx2}">
+                                            <Image Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/straighten_24.svg, Fill={StaticResource TextPrimary}}"
+                                                   Visibility="{Binding Unit, Converter={x:Static ctrl:StringEqualsToVisibilityConverter.Instance}, ConverterParameter=px}"
+                                                   ToolTip="Length"/>
+                                            <Image Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/square_foot_24.svg, Fill={StaticResource TextPrimary}}"
+                                                   Visibility="{Binding Unit, Converter={x:Static ctrl:StringEqualsToVisibilityConverter.Instance}, ConverterParameter=°}"
+                                                   ToolTip="Angle"/>
+                                        </Grid>
+                                        <TextBlock Grid.Column="2" Text="{Binding Value, StringFormat='{}{0:F1}'}"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextPrimary}"/>
+                                        <TextBlock Grid.Column="3" Text="{Binding Unit}"
+                                                   VerticalAlignment="Center" Margin="{StaticResource Ml1}"
+                                                   Foreground="{DynamicResource TextMuted}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+
+            </Grid>
+        </Grid>
+
+    </Grid>
+</UserControl>

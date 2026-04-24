@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
+#nullable enable
 namespace VSMVVM.WPF.Controls.Tools
 {
     /// <summary>
@@ -14,15 +15,22 @@ namespace VSMVVM.WPF.Controls.Tools
         private readonly LayeredCanvas _canvas;
 
         public CanvasToolContext(LayeredCanvas canvas, CanvasLayer? targetLayer, MouseEventArgs e)
+            : this(canvas, targetLayer, null, e) { }
+
+        public CanvasToolContext(LayeredCanvas canvas, CanvasLayer? targetLayer, MaskLayer? targetMaskLayer, MouseEventArgs e)
         {
             _canvas = canvas;
             TargetLayer = targetLayer;
+            TargetMaskLayer = targetMaskLayer;
             IsShiftDown = Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift);
             IsCtrlDown = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
         }
 
         /// <summary>현재 활성 레이어.</summary>
         public CanvasLayer? TargetLayer { get; }
+
+        /// <summary>마스크 툴이 그릴 대상 MaskLayer. 없으면 null.</summary>
+        public MaskLayer? TargetMaskLayer { get; }
 
         /// <summary>Shift 키 상태.</summary>
         public bool IsShiftDown { get; }

@@ -129,6 +129,7 @@ namespace VSMVVM.WPF.Controls
                 case RectangleMaskTool rm: rm.PreviewChanged += self.OnPreviewChanged; break;
                 case PolygonMaskTool pm: pm.PreviewChanged += self.OnPreviewChanged; break;
                 case MagneticLassoTool ml: ml.PreviewChanged += self.OnPreviewChanged; break;
+                case PointPromptFillTool pp: pp.PreviewChanged += self.OnPreviewChanged; break;
             }
         }
 
@@ -139,6 +140,7 @@ namespace VSMVVM.WPF.Controls
                 case RectangleMaskTool rm: rm.PreviewChanged -= self.OnPreviewChanged; break;
                 case PolygonMaskTool pm: pm.PreviewChanged -= self.OnPreviewChanged; break;
                 case MagneticLassoTool ml: ml.PreviewChanged -= self.OnPreviewChanged; break;
+                case PointPromptFillTool pp: pp.PreviewChanged -= self.OnPreviewChanged; break;
             }
         }
 
@@ -229,6 +231,22 @@ namespace VSMVVM.WPF.Controls
                         for (int i = 0; i + 1 < pp.Count; i++) dc.DrawLine(dashPen, pp[i], pp[i + 1]);
                     // anchor 표시.
                     foreach (var p in cp) dc.DrawEllipse(fill, pen, p, anchorR, anchorR);
+                    break;
+
+                case PointPromptFillTool ppf:
+                    // positive: 라벨 색 채운 원, negative: 빨간 X.
+                    var posBrush = new SolidColorBrush(color); posBrush.Freeze();
+                    foreach (var p in ppf.PositivePoints)
+                        dc.DrawEllipse(posBrush, pen, p, anchorR, anchorR);
+                    var negColor = Color.FromArgb(255, 230, 50, 50);
+                    var negBrush = new SolidColorBrush(negColor); negBrush.Freeze();
+                    var negPen = new Pen(negBrush, 2.0 / z); negPen.Freeze();
+                    foreach (var p in ppf.NegativePoints)
+                    {
+                        double r = anchorR * 1.2;
+                        dc.DrawLine(negPen, new Point(p.X - r, p.Y - r), new Point(p.X + r, p.Y + r));
+                        dc.DrawLine(negPen, new Point(p.X - r, p.Y + r), new Point(p.X + r, p.Y - r));
+                    }
                     break;
             }
         }

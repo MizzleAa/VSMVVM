@@ -47,7 +47,7 @@ namespace VSMVVM.WPF.Controls
             IsHitTestVisible = true;
             // 실루엣 프리뷰는 픽셀 단위 nearest-neighbor 로 확대되도록.
             RenderOptions.SetBitmapScalingMode(this, BitmapScalingMode.NearestNeighbor);
-            _silhouette = mask.GetInstanceSilhouette(instance.Id);
+            // _silhouette 는 드래그 시작 시점에만 lazy 로 만든다 (큰 마스크에서 단순 선택 lag 회피).
             instance.PropertyChanged += OnInstancePropertyChanged;
         }
 
@@ -59,7 +59,7 @@ namespace VSMVVM.WPF.Controls
                 if (_instance != null) _instance.PropertyChanged -= OnInstancePropertyChanged;
                 _instance = value;
                 _previewBBox = ClampBBox(value.BoundingBox);
-                _silhouette = _mask.GetInstanceSilhouette(value.Id);
+                _silhouette = null; // 새 인스턴스는 드래그 시작 시점에 다시 만듦.
                 if (_instance != null) _instance.PropertyChanged += OnInstancePropertyChanged;
                 InvalidateVisual();
             }
@@ -170,12 +170,16 @@ namespace VSMVVM.WPF.Controls
             base.OnMouseLeftButtonDown(e);
             if (_instance == null) return;
 
-            // 더블클릭 + PolygonPoints 보유 → vertex 편집 모드로 전환 (Adorner 가 교체됨).
-            if (e.ClickCount == 2 && _instance.PolygonPoints != null && _instance.PolygonPoints.Count >= 3)
+            // 더블클릭 → vertex 편집 모드로 전환. PolygonPoints 가 없으면 마스크 픽셀에서 외곽을 lazy 추출.
+            if (e.ClickCount == 2)
             {
-                _mask.IsVertexEditMode = true;
-                e.Handled = true;
-                return;
+                _mask.EnsurePolygonPoints(_instance.Id);
+                if (_instance.PolygonPoints != null && _instance.PolygonPoints.Count >= 3)
+                {
+                    _mask.IsVertexEditMode = true;
+                    e.Handled = true;
+                    return;
+                }
             }
 
             var pos = e.GetPosition(this);

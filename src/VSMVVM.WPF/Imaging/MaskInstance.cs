@@ -63,11 +63,40 @@ namespace VSMVVM.WPF.Imaging
             set { _isVisible = value; OnPropertyChanged(); }
         }
 
+        private IList<IList<Point>>? _polygonContours;
+
         /// <summary>
-        /// Polygon/MagneticLasso 로 생성된 경우 원본 꼭짓점(마스크 픽셀 좌표).
-        /// Brush/Erase 등 비벡터 편집으로 마스크가 바뀌면 실제 마스크와 불일치 가능 —
-        /// vertex 편집 진입 시에만 참조된다. null 이면 vertex 편집 불가.
+        /// 다중 contour. 인덱스 0 = 외곽, ≥1 = hole 들. 더블클릭 vertex 편집 진입 시 마스크 픽셀에서 즉석 추출.
+        /// even-odd rasterize 가 hole 을 자동 처리하므로 winding 방향 강제 불필요.
         /// </summary>
-        public IList<Point>? PolygonPoints { get; set; }
+        public IList<IList<Point>>? PolygonContours
+        {
+            get => _polygonContours;
+            set { _polygonContours = value; OnPropertyChanged(); OnPropertyChanged(nameof(PolygonPoints)); }
+        }
+
+        /// <summary>
+        /// 외곽 contour (PolygonContours[0]) 의 호환 wrapper. 기존 호출자(PolygonMaskTool / MagneticLassoTool / Snapshot 등)
+        /// 가 외곽만 다룬다는 가정으로 set 시 PolygonContours[0] 만 교체하고 hole 은 유지.
+        /// </summary>
+        public IList<Point>? PolygonPoints
+        {
+            get => (_polygonContours != null && _polygonContours.Count > 0) ? _polygonContours[0] : null;
+            set
+            {
+                if (value == null)
+                {
+                    _polygonContours = null;
+                }
+                else
+                {
+                    if (_polygonContours == null) _polygonContours = new List<IList<Point>>();
+                    if (_polygonContours.Count == 0) _polygonContours.Add(value);
+                    else _polygonContours[0] = value;
+                }
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(PolygonContours));
+            }
+        }
     }
 }

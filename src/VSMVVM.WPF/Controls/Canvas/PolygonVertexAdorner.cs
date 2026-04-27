@@ -10,16 +10,17 @@ using VSMVVM.WPF.Imaging;
 namespace VSMVVM.WPF.Controls
 {
     /// <summary>
-    /// <see cref="MaskInstance.PolygonPoints"/> 가 있는 인스턴스의 꼭짓점 편집 Adorner.
-    /// 드래그 = 점 이동, edge 중앙 핸들 클릭/드래그 = 점 삽입, 우클릭/Del = 점 삭제 (≥3 점 유지).
+    /// <see cref="MaskInstance.PolygonContours"/> 가 있는 인스턴스의 꼭짓점 편집 Adorner. 외곽 + hole 다중 contour 지원.
+    /// 드래그 = 점 이동, edge 중앙 핸들 클릭/드래그 = 점 삽입, 우클릭/Del = 점 삭제 (contour 별 ≥3 점 유지).
     /// MouseUp 마다 <see cref="CommitRequested"/> 발화 → MaskBehavior 가 MaskLayer.RepaintPolygon + Undo push.
     /// </summary>
     public sealed class PolygonVertexAdorner : Adorner
     {
         private readonly MaskLayer _mask;
         private MaskInstance _instance;
-        private readonly List<Point> _points; // 픽셀 좌표. 편집 세션 내 현재 상태.
-        private int _dragVertexIndex = -1;
+        private readonly List<List<Point>> _contours; // 인덱스 0 = 외곽, ≥1 = hole. 편집 세션 내 현재 상태.
+        private int _dragContourIdx = -1;
+        private int _dragVertexIdx = -1;
         private const double HandleSize = 8.0;
         private const double EdgeHandleSize = 6.0;
         private const double EdgeHitTolerance = 4.0;
@@ -28,16 +29,23 @@ namespace VSMVVM.WPF.Controls
         {
             _mask = mask;
             _instance = instance;
-            _points = instance.PolygonPoints != null
-                ? new List<Point>(instance.PolygonPoints)
-                : new List<Point>();
+            _contours = new List<List<Point>>();
+            if (instance.PolygonContours != null)
+            {
+                foreach (var c in instance.PolygonContours)
+                    if (c != null && c.Count >= 3) _contours.Add(new List<Point>(c));
+            }
+            else if (instance.PolygonPoints != null && instance.PolygonPoints.Count >= 3)
+            {
+                _contours.Add(new List<Point>(instance.PolygonPoints));
+            }
             IsHitTestVisible = true;
             Focusable = true;
         }
 
         public MaskInstance Instance => _instance;
 
-        /// <summary>마우스 Up 시 발화. 편집된 점 리스트 전달.</summary>
+        /// <summary>마우스 Up 시 발화. 편집된 모든 contour 전달.</summary>
         public event EventHandler<PolygonVertexCommitEventArgs>? CommitRequested;
 
         private double GetZoom()
@@ -73,7 +81,7 @@ namespace VSMVVM.WPF.Controls
         protected override void OnRender(DrawingContext dc)
         {
             base.OnRender(dc);
-            if (_points.Count < 3) return;
+            if (_contours.Count == 0 || _contours[0].Count < 3) return;
 
             // AdornerLayer clip.
             var clipBounds = new Rect(0, 0,
@@ -86,34 +94,49 @@ namespace VSMVVM.WPF.Controls
                 double h = HandleSize / z;
                 double eh = EdgeHandleSize / z;
 
-                // 노란 실선 외곽선.
-                var pen = new Pen(Brushes.Yellow, 1.5 / z);
-                pen.Freeze();
-                var figure = new PathFigure { StartPoint = PixelToLocal(_points[0]), IsClosed = true };
-                for (int i = 1; i < _points.Count; i++)
-                    figure.Segments.Add(new LineSegment(PixelToLocal(_points[i]), true));
-                var geo = new PathGeometry();
-                geo.Figures.Add(figure);
-                geo.Freeze();
-                dc.DrawGeometry(null, pen, geo);
+                var outerPen = new Pen(Brushes.Yellow, 1.5 / z);
+                outerPen.Freeze();
+                var holePen = new Pen(Brushes.Yellow, 1.5 / z) { DashStyle = new DashStyle(new double[] { 4, 3 }, 0) };
+                holePen.Freeze();
+
+                // Contour 마다 별도 PathFigure 로 polyline (외곽-hole 사이 가짜 선 방지).
+                for (int ci = 0; ci < _contours.Count; ci++)
+                {
+                    var pts = _contours[ci];
+                    if (pts.Count < 3) continue;
+                    var figure = new PathFigure { StartPoint = PixelToLocal(pts[0]), IsClosed = true };
+                    for (int i = 1; i < pts.Count; i++)
+                        figure.Segments.Add(new LineSegment(PixelToLocal(pts[i]), true));
+                    var geo = new PathGeometry();
+                    geo.Figures.Add(figure);
+                    geo.Freeze();
+                    dc.DrawGeometry(null, ci == 0 ? outerPen : holePen, geo);
+                }
 
                 // Edge 중앙 핸들 (새 점 삽입용) — 작고 반투명.
                 var edgeFill = new SolidColorBrush(Color.FromArgb(120, 255, 255, 255)); edgeFill.Freeze();
                 var edgeBorder = new Pen(Brushes.DarkGray, 1.0 / z); edgeBorder.Freeze();
-                for (int i = 0; i < _points.Count; i++)
+                foreach (var pts in _contours)
                 {
-                    int j = (i + 1) % _points.Count;
-                    var mid = new Point((_points[i].X + _points[j].X) / 2, (_points[i].Y + _points[j].Y) / 2);
-                    var l = PixelToLocal(mid);
-                    dc.DrawRectangle(edgeFill, edgeBorder, new Rect(l.X - eh / 2, l.Y - eh / 2, eh, eh));
+                    if (pts.Count < 3) continue;
+                    for (int i = 0; i < pts.Count; i++)
+                    {
+                        int j = (i + 1) % pts.Count;
+                        var mid = new Point((pts[i].X + pts[j].X) / 2, (pts[i].Y + pts[j].Y) / 2);
+                        var l = PixelToLocal(mid);
+                        dc.DrawRectangle(edgeFill, edgeBorder, new Rect(l.X - eh / 2, l.Y - eh / 2, eh, eh));
+                    }
                 }
 
                 // Vertex 핸들 — 흰색 사각.
                 var vertBorder = new Pen(Brushes.Black, 1.0 / z); vertBorder.Freeze();
-                foreach (var p in _points)
+                foreach (var pts in _contours)
                 {
-                    var l = PixelToLocal(p);
-                    dc.DrawRectangle(Brushes.White, vertBorder, new Rect(l.X - h / 2, l.Y - h / 2, h, h));
+                    foreach (var p in pts)
+                    {
+                        var l = PixelToLocal(p);
+                        dc.DrawRectangle(Brushes.White, vertBorder, new Rect(l.X - h / 2, l.Y - h / 2, h, h));
+                    }
                 }
             }
             finally
@@ -122,51 +145,65 @@ namespace VSMVVM.WPF.Controls
             }
         }
 
-        /// <summary>Local 점 p 가 특정 vertex 핸들 위인지. true 면 index 반환, 아니면 -1.</summary>
-        private int HitTestVertex(Point p)
+        /// <summary>Local 점 p 가 vertex 핸들 위인지. true 면 (contourIdx, vertexIdx), 아니면 (-1, -1).</summary>
+        private (int ci, int vi) HitTestVertex(Point p)
         {
             double z = GetZoom();
             double r = HandleSize / z;
-            for (int i = 0; i < _points.Count; i++)
+            for (int ci = 0; ci < _contours.Count; ci++)
             {
-                var l = PixelToLocal(_points[i]);
-                if (Math.Abs(p.X - l.X) <= r && Math.Abs(p.Y - l.Y) <= r) return i;
+                var pts = _contours[ci];
+                for (int i = 0; i < pts.Count; i++)
+                {
+                    var l = PixelToLocal(pts[i]);
+                    if (Math.Abs(p.X - l.X) <= r && Math.Abs(p.Y - l.Y) <= r) return (ci, i);
+                }
             }
-            return -1;
+            return (-1, -1);
         }
 
-        /// <summary>Edge 중앙 핸들 hit. 삽입 후 인덱스 반환, 아니면 -1 (_points 수정 전).</summary>
-        private int HitTestEdgeMidpoint(Point p)
+        /// <summary>Edge 중앙 핸들 hit. (contourIdx, edgeStartIdx) 반환, 없으면 (-1,-1).</summary>
+        private (int ci, int ei) HitTestEdgeMidpoint(Point p)
         {
             double z = GetZoom();
             double r = EdgeHandleSize / z;
-            for (int i = 0; i < _points.Count; i++)
+            for (int ci = 0; ci < _contours.Count; ci++)
             {
-                int j = (i + 1) % _points.Count;
-                var mid = new Point((_points[i].X + _points[j].X) / 2, (_points[i].Y + _points[j].Y) / 2);
-                var l = PixelToLocal(mid);
-                if (Math.Abs(p.X - l.X) <= r && Math.Abs(p.Y - l.Y) <= r) return i;
+                var pts = _contours[ci];
+                if (pts.Count < 3) continue;
+                for (int i = 0; i < pts.Count; i++)
+                {
+                    int j = (i + 1) % pts.Count;
+                    var mid = new Point((pts[i].X + pts[j].X) / 2, (pts[i].Y + pts[j].Y) / 2);
+                    var l = PixelToLocal(mid);
+                    if (Math.Abs(p.X - l.X) <= r && Math.Abs(p.Y - l.Y) <= r) return (ci, i);
+                }
             }
-            return -1;
+            return (-1, -1);
         }
 
-        /// <summary>edge 선분 근처 hit. 삽입 후 새 꼭짓점 인덱스 반환, 아니면 -1.</summary>
-        private int HitTestEdgeLine(Point p)
+        /// <summary>edge 선분 근처 hit. (contourIdx, edgeStartIdx) 반환, 없으면 (-1,-1).</summary>
+        private (int ci, int ei) HitTestEdgeLine(Point p)
         {
             double z = GetZoom();
             double tol = EdgeHitTolerance / z;
             double tol2 = tol * tol;
-            int bestI = -1;
+            int bestCi = -1, bestI = -1;
             double bestD2 = tol2;
-            for (int i = 0; i < _points.Count; i++)
+            for (int ci = 0; ci < _contours.Count; ci++)
             {
-                int j = (i + 1) % _points.Count;
-                var a = PixelToLocal(_points[i]);
-                var b = PixelToLocal(_points[j]);
-                double d2 = DistanceSquaredToSegment(p, a, b);
-                if (d2 <= bestD2) { bestD2 = d2; bestI = i; }
+                var pts = _contours[ci];
+                if (pts.Count < 3) continue;
+                for (int i = 0; i < pts.Count; i++)
+                {
+                    int j = (i + 1) % pts.Count;
+                    var a = PixelToLocal(pts[i]);
+                    var b = PixelToLocal(pts[j]);
+                    double d2 = DistanceSquaredToSegment(p, a, b);
+                    if (d2 <= bestD2) { bestD2 = d2; bestCi = ci; bestI = i; }
+                }
             }
-            return bestI;
+            return (bestCi, bestI);
         }
 
         private static double DistanceSquaredToSegment(Point p, Point a, Point b)
@@ -183,10 +220,9 @@ namespace VSMVVM.WPF.Controls
         protected override HitTestResult? HitTestCore(PointHitTestParameters hitTestParameters)
         {
             var p = hitTestParameters.HitPoint;
-            // Vertex / edge midpoint / edge line 중 하나라도 맞으면 hit.
-            if (HitTestVertex(p) >= 0) return new PointHitTestResult(this, p);
-            if (HitTestEdgeMidpoint(p) >= 0) return new PointHitTestResult(this, p);
-            if (HitTestEdgeLine(p) >= 0) return new PointHitTestResult(this, p);
+            if (HitTestVertex(p).ci >= 0) return new PointHitTestResult(this, p);
+            if (HitTestEdgeMidpoint(p).ci >= 0) return new PointHitTestResult(this, p);
+            if (HitTestEdgeLine(p).ci >= 0) return new PointHitTestResult(this, p);
             return null;
         }
 
@@ -197,35 +233,38 @@ namespace VSMVVM.WPF.Controls
             Focus();
 
             // 1) vertex hit → 드래그.
-            int vi = HitTestVertex(local);
-            if (vi >= 0)
+            var (vci, vi) = HitTestVertex(local);
+            if (vci >= 0)
             {
-                _dragVertexIndex = vi;
+                _dragContourIdx = vci;
+                _dragVertexIdx = vi;
                 CaptureMouse();
                 e.Handled = true;
                 return;
             }
             // 2) edge midpoint hit → 새 점 삽입 후 드래그.
-            int emi = HitTestEdgeMidpoint(local);
-            if (emi >= 0)
+            var (mci, mi) = HitTestEdgeMidpoint(local);
+            if (mci >= 0)
             {
-                int insertAt = emi + 1;
+                int insertAt = mi + 1;
                 var px = ClampPixel(LocalToPixel(local));
-                _points.Insert(insertAt, px);
-                _dragVertexIndex = insertAt;
+                _contours[mci].Insert(insertAt, px);
+                _dragContourIdx = mci;
+                _dragVertexIdx = insertAt;
                 CaptureMouse();
                 InvalidateVisual();
                 e.Handled = true;
                 return;
             }
             // 3) edge line 근처 hit → 새 점 삽입 후 드래그.
-            int eli = HitTestEdgeLine(local);
-            if (eli >= 0)
+            var (lci, li) = HitTestEdgeLine(local);
+            if (lci >= 0)
             {
-                int insertAt = eli + 1;
+                int insertAt = li + 1;
                 var px = ClampPixel(LocalToPixel(local));
-                _points.Insert(insertAt, px);
-                _dragVertexIndex = insertAt;
+                _contours[lci].Insert(insertAt, px);
+                _dragContourIdx = lci;
+                _dragVertexIdx = insertAt;
                 CaptureMouse();
                 InvalidateVisual();
                 e.Handled = true;
@@ -236,18 +275,19 @@ namespace VSMVVM.WPF.Controls
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
-            if (_dragVertexIndex < 0) return;
+            if (_dragContourIdx < 0 || _dragVertexIdx < 0) return;
             var local = e.GetPosition(this);
             var px = ClampPixel(LocalToPixel(local));
-            _points[_dragVertexIndex] = px;
+            _contours[_dragContourIdx][_dragVertexIdx] = px;
             InvalidateVisual();
         }
 
         protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
         {
             base.OnMouseLeftButtonUp(e);
-            if (_dragVertexIndex < 0) return;
-            _dragVertexIndex = -1;
+            if (_dragContourIdx < 0) return;
+            _dragContourIdx = -1;
+            _dragVertexIdx = -1;
             ReleaseMouseCapture();
             RaiseCommit();
             e.Handled = true;
@@ -257,10 +297,10 @@ namespace VSMVVM.WPF.Controls
         {
             base.OnMouseRightButtonDown(e);
             var local = e.GetPosition(this);
-            int vi = HitTestVertex(local);
-            if (vi >= 0 && _points.Count > 3)
+            var (vci, vi) = HitTestVertex(local);
+            if (vci < 0) return;
+            if (DeleteVertex(vci, vi))
             {
-                _points.RemoveAt(vi);
                 InvalidateVisual();
                 RaiseCommit();
                 e.Handled = true;
@@ -273,10 +313,10 @@ namespace VSMVVM.WPF.Controls
             if (e.Key == Key.Delete || e.Key == Key.Back)
             {
                 var mousePos = Mouse.GetPosition(this);
-                int vi = HitTestVertex(mousePos);
-                if (vi >= 0 && _points.Count > 3)
+                var (vci, vi) = HitTestVertex(mousePos);
+                if (vci < 0) return;
+                if (DeleteVertex(vci, vi))
                 {
-                    _points.RemoveAt(vi);
                     InvalidateVisual();
                     RaiseCommit();
                     e.Handled = true;
@@ -284,21 +324,45 @@ namespace VSMVVM.WPF.Controls
             }
         }
 
+        /// <summary>vertex 삭제. 외곽이 3 점 미만 되면 거부, hole 이 3 점 미만 되면 hole 자체 제거.</summary>
+        private bool DeleteVertex(int ci, int vi)
+        {
+            var pts = _contours[ci];
+            if (ci == 0)
+            {
+                // 외곽: 3 점 미만 되면 삭제 차단.
+                if (pts.Count <= 3) return false;
+                pts.RemoveAt(vi);
+                return true;
+            }
+            // Hole: 3 점 미만 되면 hole 자체 제거.
+            if (pts.Count <= 3)
+            {
+                _contours.RemoveAt(ci);
+                return true;
+            }
+            pts.RemoveAt(vi);
+            return true;
+        }
+
         private void RaiseCommit()
         {
-            CommitRequested?.Invoke(this,
-                new PolygonVertexCommitEventArgs(_instance.Id, new List<Point>(_points)));
+            var snapshot = new List<IReadOnlyList<Point>>(_contours.Count);
+            foreach (var c in _contours)
+                snapshot.Add(new List<Point>(c));
+            CommitRequested?.Invoke(this, new PolygonVertexCommitEventArgs(_instance.Id, snapshot));
         }
     }
 
     public sealed class PolygonVertexCommitEventArgs : EventArgs
     {
-        public PolygonVertexCommitEventArgs(uint instanceId, IReadOnlyList<Point> points)
+        public PolygonVertexCommitEventArgs(uint instanceId, IReadOnlyList<IReadOnlyList<Point>> contours)
         {
             InstanceId = instanceId;
-            Points = points;
+            Contours = contours;
         }
         public uint InstanceId { get; }
-        public IReadOnlyList<Point> Points { get; }
+        /// <summary>인덱스 0 = 외곽, ≥1 = hole.</summary>
+        public IReadOnlyList<IReadOnlyList<Point>> Contours { get; }
     }
 }

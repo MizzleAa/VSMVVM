@@ -25,7 +25,7 @@ namespace VSMVVM.WPF.Controls
         #region Fields
 
         // 라벨 인덱스 → instanceMask (width*height, 0 = not in this label)
-        private readonly Dictionary<int, uint[]> _layers = new();
+        private readonly Dictionary<int, SparseTileLayer> _layers = new();
 
         private readonly MaskInstanceCollection _instances = new();
 
@@ -36,7 +36,7 @@ namespace VSMVVM.WPF.Controls
         // 활성 stroke 상태.
         private uint _activeStrokeId;
         private int _activeStrokeLabel;
-        private Dictionary<int, uint[]>? _strokePreLayers; // stroke 시작 시점 레이어 스냅샷
+        private Dictionary<int, SparseTileLayer>? _strokePreLayers; // stroke 시작 시점 레이어 스냅샷 (sparse — 빈 타일 자동 skip)
 
         // stroke 에서 실제로 쓰인 픽셀의 bbox.
         private int _strokeMinX, _strokeMinY, _strokeMaxX, _strokeMaxY;
@@ -46,6 +46,20 @@ namespace VSMVVM.WPF.Controls
         private byte[]? _sourcePixels;
         // Gradient magnitude (Sobel) 캐시 — Magnetic Lasso 용.
         private double[]? _sourceGradient;
+
+        // Diff 기록 모드 — Undo/Redo 메모리 절감용. SnapshotFull (200MB × N labels) 대신 변경 픽셀만 추적.
+        private List<MaskLayerDiff.PixelEntry>? _diffEntries;
+        private List<MaskLayerSnapshot.InstanceRecord>? _diffInstancesBefore;
+        private uint _diffNextIdBefore;
+        private int _diffMinX, _diffMinY, _diffMaxX, _diffMaxY;
+
+        // UpdateDisplayRect 의 임시 버퍼 — 매 호출마다 새 alloc 하면 8K BBox 시 200MB byte[] + 50MB bool[] 이
+        // LOH 에 누적되어 working set 폭증. 멤버 필드로 1회 alloc + 재사용 (size 변경 시만 재alloc).
+        private byte[]? _displayPixelsBuffer;
+        private bool[]? _displayFilledBuffer;
+
+        // ResampleInstance 의 sourceBits 임시 버퍼 — 큰 인스턴스 (예: 4000×3000=12MB) 시 LOH alloc 회피.
+        private bool[]? _resampleSourceBitsBuffer;
 
         #endregion
 
@@ -77,7 +91,9 @@ namespace VSMVVM.WPF.Controls
 
         public static readonly DependencyProperty SelectedInstanceIdProperty =
             DependencyProperty.Register(nameof(SelectedInstanceId), typeof(uint), typeof(MaskLayer),
-                new PropertyMetadata(MaskInstanceCollection.BackgroundId, (d, _) => ((MaskLayer)d).RefreshAll()));
+                // SelectedInstanceId 변경은 픽셀 색에 영향 안 줌 — OnRender 가 다중 선택 BBox 점선만 다시 그리면 됨.
+                // RefreshAll() 은 8K 이미지 전체 픽셀 합성 (50M iter) 으로 ~2.7초 lag 원인이었음.
+                new PropertyMetadata(MaskInstanceCollection.BackgroundId, (d, _) => ((MaskLayer)d).InvalidateVisual()));
 
         public static readonly DependencyProperty SelectedInstanceProperty =
             DependencyProperty.Register(nameof(SelectedInstance), typeof(MaskInstance), typeof(MaskLayer),
@@ -93,6 +109,21 @@ namespace VSMVVM.WPF.Controls
         }
 
         public event EventHandler? SelectedInstanceChanged;
+
+        public static readonly DependencyProperty IsInstanceHitTestEnabledProperty =
+            DependencyProperty.Register(nameof(IsInstanceHitTestEnabled), typeof(bool), typeof(MaskLayer),
+                new PropertyMetadata(true));
+
+        /// <summary>
+        /// false 이면 OnMouseLeftButtonDown 에서 인스턴스 hit / rubber band 처리를 skip 하고 클릭이 부모로 bubble.
+        /// 마스크 mutating 도구 (Brush, Eraser, Fill, MagicWand, PointPromptFill 등) 활성 시 false 로 set 해서
+        /// 도구가 클릭을 받게 함. SelectTool 등 인스턴스 선택 도구일 때만 true.
+        /// </summary>
+        public bool IsInstanceHitTestEnabled
+        {
+            get => (bool)GetValue(IsInstanceHitTestEnabledProperty);
+            set => SetValue(IsInstanceHitTestEnabledProperty, value);
+        }
 
         public static readonly DependencyProperty IsVertexEditModeProperty =
             DependencyProperty.Register(nameof(IsVertexEditMode), typeof(bool), typeof(MaskLayer),
@@ -150,11 +181,16 @@ namespace VSMVVM.WPF.Controls
 
         private void OnInstancePropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName == nameof(MaskInstance.IsVisible)
-                || e.PropertyName == nameof(MaskInstance.IsSelected))
+            // IsVisible 은 픽셀 색이 바뀌므로 BBox 영역 재합성 필요.
+            if (e.PropertyName == nameof(MaskInstance.IsVisible))
             {
                 if (sender is MaskInstance inst) RefreshInstanceRegion(inst);
-                // 다중 선택 BBox 점선은 OnRender 에서 그리므로 전체 InvalidateVisual.
+                InvalidateVisual();
+                return;
+            }
+            // IsSelected 는 픽셀 색에 영향 안 줌. 다중 선택 BBox 점선만 OnRender 에서 다시 그림.
+            if (e.PropertyName == nameof(MaskInstance.IsSelected))
+            {
                 InvalidateVisual();
             }
         }
@@ -186,6 +222,8 @@ namespace VSMVVM.WPF.Controls
         {
             base.OnMouseLeftButtonDown(e);
             if (_width == 0 || _height == 0) return;
+            // mutating 도구가 활성 중이면 인스턴스 hit / rubber band 를 가로채지 않고 클릭을 부모로 bubble.
+            if (!IsInstanceHitTestEnabled) return;
 
             var pos = e.GetPosition(this);
             var displayW = ActualWidth > 0 ? ActualWidth : _width;
@@ -207,15 +245,19 @@ namespace VSMVVM.WPF.Controls
                 var inst = _instances.GetById(id);
                 if (inst == null) continue;
 
-                // 더블클릭 + PolygonPoints 존재 → vertex 편집 모드 진입.
-                if (e.ClickCount == 2 && inst.PolygonPoints != null && inst.PolygonPoints.Count >= 3)
+                // 더블클릭 → vertex 편집 모드 진입. PolygonPoints 가 없으면 마스크 픽셀에서 외곽을 lazy 추출.
+                if (e.ClickCount == 2)
                 {
-                    ClearAllSelected();
-                    inst.IsSelected = true;
-                    SelectedInstance = inst;
-                    IsVertexEditMode = true;
-                    e.Handled = true;
-                    return;
+                    EnsurePolygonPoints(inst.Id);
+                    if (inst.PolygonPoints != null && inst.PolygonPoints.Count >= 3)
+                    {
+                        ClearAllSelected();
+                        inst.IsSelected = true;
+                        SelectedInstance = inst;
+                        IsVertexEditMode = true;
+                        e.Handled = true;
+                        return;
+                    }
                 }
 
                 if (ctrl)
@@ -328,14 +370,18 @@ namespace VSMVVM.WPF.Controls
             if (_width == 0 || _height == 0) return;
             _layers.Clear();
             _instances.Clear();
+            // 선택/편집 상태 DP 도 함께 초기화 — 새 이미지 로드 시 옛 인스턴스 ID 가 남으면 Adorner/렌더링 혼란.
+            SelectedInstance = null;
+            SelectedInstanceId = MaskInstanceCollection.BackgroundId;
+            IsVertexEditMode = false;
             RefreshAll();
         }
 
-        private uint[] GetOrCreateLayer(int labelIndex)
+        private SparseTileLayer GetOrCreateLayer(int labelIndex)
         {
             if (!_layers.TryGetValue(labelIndex, out var mask))
             {
-                mask = new uint[_width * _height];
+                mask = new SparseTileLayer(_width, _height);
                 _layers[labelIndex] = mask;
             }
             return mask;
@@ -362,23 +408,21 @@ namespace VSMVVM.WPF.Controls
             ResetStrokeBounds();
         }
 
+        private Dictionary<int, SparseTileLayer> CloneLayers()
+        {
+            var clone = new Dictionary<int, SparseTileLayer>(_layers.Count);
+            foreach (var kv in _layers)
+            {
+                clone[kv.Key] = kv.Value.Clone(); // 빈 타일 자동 skip — 면적 비례 alloc.
+            }
+            return clone;
+        }
+
         private void ResetStrokeBounds()
         {
             _strokeMinX = int.MaxValue; _strokeMinY = int.MaxValue;
             _strokeMaxX = int.MinValue; _strokeMaxY = int.MinValue;
             _strokeAnyPixel = false;
-        }
-
-        private Dictionary<int, uint[]> CloneLayers()
-        {
-            var clone = new Dictionary<int, uint[]>(_layers.Count);
-            foreach (var kv in _layers)
-            {
-                var copy = new uint[kv.Value.Length];
-                Buffer.BlockCopy(kv.Value, 0, copy, 0, kv.Value.Length * sizeof(uint));
-                clone[kv.Key] = copy;
-            }
-            return clone;
         }
 
         public void EndStroke(int labelIndex)
@@ -397,18 +441,18 @@ namespace VSMVVM.WPF.Controls
             }
 
             // 해당 라벨 레이어에서 stroke 영역 내 이전 ID 수집 (같은 라벨 내 merge 대상).
+            // (x, y) 직접 호출 — Get(idx) 의 modulo/division 회피. tile cache 가 같은 타일 연속 access 시 효과.
             var layer = GetOrCreateLayer(labelIndex);
             _strokePreLayers.TryGetValue(labelIndex, out var pre);
             var sameLabelReplaced = new HashSet<uint>();
             for (int y = _strokeMinY; y <= _strokeMaxY; y++)
             {
-                int rowStart = y * _width;
                 for (int x = _strokeMinX; x <= _strokeMaxX; x++)
                 {
-                    int idx = rowStart + x;
-                    uint newId = layer[idx];
-                    uint oldId = pre != null ? pre[idx] : 0;
-                    if (newId == tentativeId && oldId != 0 && oldId != tentativeId)
+                    uint newId = layer.Get(x, y);
+                    if (newId != tentativeId) continue;
+                    uint oldId = pre != null ? pre.Get(x, y) : 0;
+                    if (oldId != 0 && oldId != tentativeId)
                         sameLabelReplaced.Add(oldId);
                 }
             }
@@ -440,6 +484,9 @@ namespace VSMVVM.WPF.Controls
             {
                 finalInst.LabelIndex = labelIndex;
                 AssignLabelRef(finalInst);
+                // 기존 인스턴스에 stroke 픽셀 추가/병합 — PolygonContours 가 마스크와 어긋나므로 무효화.
+                // 다음 더블클릭 시 EnsurePolygonPoints 가 새 contour 추출.
+                finalInst.PolygonContours = null;
             }
             RecomputeInstanceMetadata(finalId);
 
@@ -461,6 +508,7 @@ namespace VSMVVM.WPF.Controls
             }
 
             // 지우개는 모든 레이어에 영향 가능. 변경된 인스턴스 수집 → CCL 재분석.
+            // (x, y) 직접 호출 — Get(idx) 의 modulo/division 회피. tile cache 효과.
             var touched = new HashSet<uint>();
             foreach (var (lblIdx, mask) in _layers)
             {
@@ -468,12 +516,11 @@ namespace VSMVVM.WPF.Controls
                 if (pre == null) continue;
                 for (int y = _strokeMinY; y <= _strokeMaxY; y++)
                 {
-                    int rowStart = y * _width;
                     for (int x = _strokeMinX; x <= _strokeMaxX; x++)
                     {
-                        int idx = rowStart + x;
-                        uint oldId = pre[idx];
-                        if (oldId != 0 && mask[idx] != oldId) touched.Add(oldId);
+                        uint oldId = pre.Get(x, y);
+                        if (oldId == 0) continue;
+                        if (mask.Get(x, y) != oldId) touched.Add(oldId);
                     }
                 }
             }
@@ -484,6 +531,8 @@ namespace VSMVVM.WPF.Controls
                 var inst = _instances.GetById(id);
                 if (inst == null) continue;
                 if (inst.PixelCount == 0) { _instances.Remove(inst); continue; }
+                // 지우개로 픽셀 변경 — PolygonContours 가 마스크와 어긋나므로 무효화.
+                inst.PolygonContours = null;
                 SplitIfDisconnected(id);
             }
 
@@ -506,25 +555,38 @@ namespace VSMVVM.WPF.Controls
                 return;
             }
 
+            int labelIdx = inst.LabelIndex;
             int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
-            for (int y = 0; y < _height; y++)
+            // Sparse 타일 enumerate — 빈 타일 skip, inner loop dense.
+            foreach (var (tileX, tileY, tile) in mask.EnumerateAllocatedTiles())
             {
-                int rowStart = y * _width;
-                for (int x = 0; x < _width; x++)
+                int tileBaseX = tileX * SparseTileLayer.TileSize;
+                int tileBaseY = tileY * SparseTileLayer.TileSize;
+                int yEnd = Math.Min(SparseTileLayer.TileSize, _height - tileBaseY);
+                int xEnd = Math.Min(SparseTileLayer.TileSize, _width - tileBaseX);
+                for (int ly = 0; ly < yEnd; ly++)
                 {
-                    int idx = rowStart + x;
-                    if (mask[idx] == id)
+                    int tileRowBase = ly * SparseTileLayer.TileSize;
+                    int gy = tileBaseY + ly;
+                    int gRow = gy * _width;
+                    for (int lx = 0; lx < xEnd; lx++)
                     {
-                        mask[idx] = 0;
-                        if (x < minX) minX = x;
-                        if (x > maxX) maxX = x;
-                        if (y < minY) minY = y;
-                        if (y > maxY) maxY = y;
+                        if (tile[tileRowBase + lx] != id) continue;
+                        int gx = tileBaseX + lx;
+                        RecordPixelChange(labelIdx, gRow + gx, id, 0);
+                        tile[tileRowBase + lx] = 0;
+                        if (gx < minX) minX = gx;
+                        if (gx > maxX) maxX = gx;
+                        if (gy < minY) minY = gy;
+                        if (gy > maxY) maxY = gy;
                     }
                 }
             }
             _instances.Remove(inst);
             if (minX <= maxX) UpdateDisplayRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+
+            // 큰 인스턴스 삭제 후 LOH 회수.
+            MemoryHelper.CompactAndCollect();
         }
 
         /// <summary>여러 인스턴스를 한 번에 삭제. RefreshAll 단일 호출로 최적화.</summary>
@@ -535,9 +597,30 @@ namespace VSMVVM.WPF.Controls
 
             foreach (var kv in _layers)
             {
+                int labelIdx = kv.Key;
                 var m = kv.Value;
-                for (int i = 0; i < m.Length; i++)
-                    if (idSet.Contains(m[i])) m[i] = 0;
+                // Sparse 타일 enumerate — 빈 타일 skip, inner loop dense.
+                foreach (var (tileX, tileY, tile) in m.EnumerateAllocatedTiles())
+                {
+                    int tileBaseX = tileX * SparseTileLayer.TileSize;
+                    int tileBaseY = tileY * SparseTileLayer.TileSize;
+                    int yEnd = Math.Min(SparseTileLayer.TileSize, _height - tileBaseY);
+                    int xEnd = Math.Min(SparseTileLayer.TileSize, _width - tileBaseX);
+                    for (int ly = 0; ly < yEnd; ly++)
+                    {
+                        int tileRowBase = ly * SparseTileLayer.TileSize;
+                        int gy = tileBaseY + ly;
+                        int gRow = gy * _width;
+                        for (int lx = 0; lx < xEnd; lx++)
+                        {
+                            uint old = tile[tileRowBase + lx];
+                            if (!idSet.Contains(old)) continue;
+                            int gx = tileBaseX + lx;
+                            RecordPixelChange(labelIdx, gRow + gx, old, 0);
+                            tile[tileRowBase + lx] = 0;
+                        }
+                    }
+                }
             }
 
             var toRemove = new System.Collections.Generic.List<MaskInstance>();
@@ -546,6 +629,9 @@ namespace VSMVVM.WPF.Controls
             foreach (var r in toRemove) _instances.Remove(r);
 
             RefreshAll();
+
+            // 다중 인스턴스 삭제 후 LOH 회수.
+            MemoryHelper.CompactAndCollect();
         }
 
         /// <summary>
@@ -591,10 +677,17 @@ namespace VSMVVM.WPF.Controls
                     if (victim != null) _instances.Remove(victim);
                 }
                 RecomputeInstanceMetadata(finalId);
+                // 병합 — finalId 의 PolygonContours 는 부분만 표현. 무효화 → 다음 더블클릭 시 재추출.
+                var finalInst = _instances.GetById(finalId);
+                if (finalInst != null) finalInst.PolygonContours = null;
                 anyMerged = true;
             }
 
-            if (anyMerged) RefreshAll();
+            if (anyMerged)
+            {
+                RefreshAll();
+                MemoryHelper.CompactAndCollect(); // 병합 후 LOH 회수.
+            }
         }
 
         /// <summary>기존 인스턴스 픽셀을 새 BBox 로 nearest-neighbor 리샘플링. 라벨 레이어 안에서만 작동.
@@ -614,36 +707,32 @@ namespace VSMVVM.WPF.Controls
             newBBox.Intersect(bounds);
             if (newBBox.IsEmpty || newBBox.Width < 1 || newBBox.Height < 1) return;
 
-            // 새 BBox 영역에 이미 있는 같은 라벨의 다른 인스턴스 ID 수집 (병합 대상).
+            // 같은 라벨 다른 인스턴스 merge 대상 ID 수집은 **재기록 단계의 prev 검사**에서 자동으로 모음.
+            // newBBox 사각형 사전 스캔은 회귀 원인 — BBox 만 겹치고 픽셀이 안 닿은 다른 인스턴스도 흡수해버림.
+            // 새 마스크 픽셀이 실제 닿은 자리에서만 (prev != 0 && prev != id) 그 ID 가 진짜 흡수 대상.
             var sameLabelReplaced = new HashSet<uint>();
-            int nxStart = Math.Max(0, (int)Math.Round(newBBox.X));
-            int nyStart = Math.Max(0, (int)Math.Round(newBBox.Y));
-            int nxEnd = Math.Min(_width, (int)Math.Round(newBBox.X + newBBox.Width));
-            int nyEnd = Math.Min(_height, (int)Math.Round(newBBox.Y + newBBox.Height));
-            for (int y = nyStart; y < nyEnd; y++)
-            {
-                int rowStart = y * _width;
-                for (int x = nxStart; x < nxEnd; x++)
-                {
-                    uint existing = mask[rowStart + x];
-                    if (existing != 0 && existing != id) sameLabelReplaced.Add(existing);
-                }
-            }
 
             int oldX = (int)oldBBox.X, oldY = (int)oldBBox.Y;
             int oldW = (int)oldBBox.Width, oldH = (int)oldBBox.Height;
 
-            var sourceBits = new bool[oldW * oldH];
+            // sourceBits 캐시 재사용 — 큰 인스턴스 (예: 4000×3000=12MB) 매번 alloc 시 LOH 누적.
+            int srcBitsLen = oldW * oldH;
+            if (_resampleSourceBitsBuffer == null || _resampleSourceBitsBuffer.Length < srcBitsLen)
+                _resampleSourceBitsBuffer = new bool[srcBitsLen];
+            else
+                Array.Clear(_resampleSourceBitsBuffer, 0, srcBitsLen);
+            var sourceBits = _resampleSourceBitsBuffer;
+
+            // sourceBits 추출 — (x, y) 직접 호출 + tile cache 효과.
             for (int y = 0; y < oldH; y++)
             {
                 int gy = oldY + y;
                 if ((uint)gy >= (uint)_height) continue;
-                int rowStart = gy * _width;
                 for (int x = 0; x < oldW; x++)
                 {
                     int gx = oldX + x;
                     if ((uint)gx >= (uint)_width) continue;
-                    if (mask[rowStart + gx] == id) sourceBits[y * oldW + x] = true;
+                    if (mask.Get(gx, gy) == id) sourceBits[y * oldW + x] = true;
                 }
             }
 
@@ -652,18 +741,23 @@ namespace VSMVVM.WPF.Controls
             int newWi = Math.Max(1, (int)Math.Round(newBBox.Width));
             int newHi = Math.Max(1, (int)Math.Round(newBBox.Height));
 
-            // 1. 기존 인스턴스 픽셀을 해당 라벨 레이어에서 제거.
+            int labelIdx = inst.LabelIndex;
+
+            // 1. 기존 인스턴스 픽셀을 해당 라벨 레이어에서 제거 — sourceBits 가 어느 픽셀이 id 인지 알므로
+            //    매 픽셀 `mask.Get(gx, gy) == id` 검사 대신 sourceBits true 만 처리. 더 빠름.
             for (int y = 0; y < oldH; y++)
             {
                 int gy = oldY + y;
                 if ((uint)gy >= (uint)_height) continue;
-                int rowStart = gy * _width;
+                int sourceRowBase = y * oldW;
+                int gRow = gy * _width;
                 for (int x = 0; x < oldW; x++)
                 {
+                    if (!sourceBits[sourceRowBase + x]) continue;
                     int gx = oldX + x;
                     if ((uint)gx >= (uint)_width) continue;
-                    int idx = rowStart + gx;
-                    if (mask[idx] == id) mask[idx] = 0;
+                    RecordPixelChange(labelIdx, gRow + gx, id, 0);
+                    mask.Set(gx, gy, 0);
                 }
             }
 
@@ -680,13 +774,21 @@ namespace VSMVVM.WPF.Controls
                 {
                     int gy = oldY + y + dyShift;
                     if ((uint)gy >= (uint)_height) continue;
-                    int rowStart = gy * _width;
+                    int sourceRowBase = y * oldW;
+                    int gRow = gy * _width;
                     for (int x = 0; x < oldW; x++)
                     {
-                        if (!sourceBits[y * oldW + x]) continue;
+                        if (!sourceBits[sourceRowBase + x]) continue;
                         int gx = oldX + x + dxShift;
                         if ((uint)gx >= (uint)_width) continue;
-                        mask[rowStart + gx] = id;
+                        uint prev = mask.Get(gx, gy);
+                        if (prev != id)
+                        {
+                            // 이동된 마스크의 실제 픽셀이 닿은 자리에서 다른 인스턴스 ID 만났으면 흡수 대상.
+                            if (prev != 0) sameLabelReplaced.Add(prev);
+                            RecordPixelChange(labelIdx, gRow + gx, prev, id);
+                            mask.Set(gx, gy, id);
+                        }
                     }
                 }
             }
@@ -698,32 +800,46 @@ namespace VSMVVM.WPF.Controls
                     if (srcY >= oldH) srcY = oldH - 1;
                     int gy = newYi + y;
                     if ((uint)gy >= (uint)_height) continue;
-                    int rowStart = gy * _width;
+                    int sourceRowBase = srcY * oldW;
+                    int gRow = gy * _width;
                     for (int x = 0; x < newWi; x++)
                     {
                         int srcX = (int)((double)x * oldW / newWi);
                         if (srcX >= oldW) srcX = oldW - 1;
-                        if (!sourceBits[srcY * oldW + srcX]) continue;
+                        if (!sourceBits[sourceRowBase + srcX]) continue;
                         int gx = newXi + x;
                         if ((uint)gx >= (uint)_width) continue;
-                        mask[rowStart + gx] = id;
+                        uint prev = mask.Get(gx, gy);
+                        if (prev != id)
+                        {
+                            // 새 마스크 픽셀이 실제 닿은 자리에서 다른 인스턴스 만났으면 흡수 대상.
+                            if (prev != 0) sameLabelReplaced.Add(prev);
+                            RecordPixelChange(labelIdx, gRow + gx, prev, id);
+                            mask.Set(gx, gy, id);
+                        }
                     }
                 }
             }
 
-            // 3. PolygonPoints 도 동일 아핀 변환으로 동기화 (vertex 편집 진입 시 일치 유지).
-            if (inst.PolygonPoints != null && oldBBox.Width > 0 && oldBBox.Height > 0)
+            // 3. PolygonContours (외곽 + hole) 도 동일 아핀 변환으로 동기화 — vertex 편집 진입 시 일치 유지.
+            if (inst.PolygonContours != null && inst.PolygonContours.Count > 0
+                && oldBBox.Width > 0 && oldBBox.Height > 0)
             {
                 double sx = newBBox.Width / oldBBox.Width;
                 double sy = newBBox.Height / oldBBox.Height;
-                var xformed = new List<Point>(inst.PolygonPoints.Count);
-                foreach (var p in inst.PolygonPoints)
+                var newContours = new List<IList<Point>>(inst.PolygonContours.Count);
+                foreach (var c in inst.PolygonContours)
                 {
-                    double nx = newBBox.X + (p.X - oldBBox.X) * sx;
-                    double ny = newBBox.Y + (p.Y - oldBBox.Y) * sy;
-                    xformed.Add(new Point(nx, ny));
+                    var xformed = new List<Point>(c.Count);
+                    foreach (var p in c)
+                    {
+                        double nx = newBBox.X + (p.X - oldBBox.X) * sx;
+                        double ny = newBBox.Y + (p.Y - oldBBox.Y) * sy;
+                        xformed.Add(new Point(nx, ny));
+                    }
+                    newContours.Add(xformed);
                 }
-                inst.PolygonPoints = xformed;
+                inst.PolygonContours = newContours;
             }
 
             // 4. 겹쳐 덮인 같은 라벨의 다른 인스턴스들을 id 로 통합 (EndStroke 와 동일 정책).
@@ -735,6 +851,8 @@ namespace VSMVVM.WPF.Controls
                     var victim = _instances.GetById(victimId);
                     if (victim != null) _instances.Remove(victim);
                 }
+                // 흡수 일어남 — affine 변환된 PolygonContours 가 부분만 표현. 무효화 → 다음 더블클릭 시 재추출.
+                inst.PolygonContours = null;
             }
 
             RecomputeInstanceMetadata(id);
@@ -745,7 +863,19 @@ namespace VSMVVM.WPF.Controls
             if (!pureTranslate)
                 SplitIfDisconnected(id);
 
-            RefreshAll();
+            // 6. 변경 영역만 합성 — oldBBox ∪ newBBox. 8K 풀 합성 (RefreshAll) 대비 100~1000배 빠름.
+            //    union 안 픽셀만 변경됐으므로 그 영역만 재합성하면 정확. union 밖 다른 인스턴스는 그대로.
+            var union = Rect.Union(oldBBox, newBBox);
+            int rx = Math.Max(0, (int)Math.Floor(union.X));
+            int ry = Math.Max(0, (int)Math.Floor(union.Y));
+            int rxEnd = Math.Min(_width, (int)Math.Ceiling(union.X + union.Width));
+            int ryEnd = Math.Min(_height, (int)Math.Ceiling(union.Y + union.Height));
+            int rw = rxEnd - rx;
+            int rh = ryEnd - ry;
+            if (rw > 0 && rh > 0) UpdateDisplayRect(rx, ry, rw, rh);
+
+            // 큰 작업 후 LOH 단편화 회수 — 자주 호출 안 됨 (drag commit 1회).
+            MemoryHelper.CompactAndCollect();
         }
 
         #endregion
@@ -963,6 +1093,142 @@ namespace VSMVVM.WPF.Controls
             UpdateDisplayRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
         }
 
+        /// <summary>
+        /// SAM-style point-prompt fill. 2-pass:
+        /// (1) negative 시드들에서 RGB tolerance flood — "blocked" 마킹된 connected component 만 차단.
+        /// (2) positive 시드들에서 RGB tolerance flood — blocked 안 됐으면서 positive 색 안인 픽셀만 칠함.
+        /// 같은 색이라도 negative 시드에서 끊어진 다른 connected component 는 영향 없음 (spatial 분리).
+        /// SourceImage 필요. 활성 stroke 필요(BeginStroke 이미 호출).
+        /// </summary>
+        public void PaintPointPromptFill(
+            IReadOnlyList<(int x, int y)> positiveSeeds,
+            IReadOnlyList<(int x, int y)> negativeSeeds,
+            int labelIndex,
+            int tolerance)
+        {
+            if (_width == 0 || _height == 0) return;
+            if (labelIndex == LabelClassCollection.BackgroundIndex) return;
+            if (positiveSeeds == null || positiveSeeds.Count == 0) return;
+            var src = _sourcePixels;
+            if (src == null) return;
+
+            // positive / negative 시드 RGB 수집.
+            var posRgb = new List<(byte r, byte g, byte b)>(positiveSeeds.Count);
+            foreach (var (x, y) in positiveSeeds)
+            {
+                if ((uint)x >= (uint)_width || (uint)y >= (uint)_height) continue;
+                int p = (y * _width + x) * 4;
+                posRgb.Add((src[p + 2], src[p + 1], src[p + 0]));
+            }
+            if (posRgb.Count == 0) return;
+
+            // Positive 시드 위치를 stop pixel 로 마킹 — negative flood 가 여기 닿으면 멈춤.
+            // 같은 색 connected component 안에 positive 와 negative 가 둘 다 있을 때, negative 가
+            // positive 영역까지 침범해서 다 막아버리는 문제 방지.
+            var positiveStop = new bool[_width * _height];
+            foreach (var (x, y) in positiveSeeds)
+            {
+                if ((uint)x >= (uint)_width || (uint)y >= (uint)_height) continue;
+                positiveStop[y * _width + x] = true;
+            }
+
+            // Pass 1: negative 시드에서 4-conn flood — 각 시드 색 tolerance 안 인접 픽셀에 blocked 마킹.
+            // 같은 색이라도 다른 connected component 면 마킹 안 됨 → spatial 분리 보장.
+            // positiveStop 픽셀은 negative flood 가 통과/마킹 못 함 → positive 시드는 항상 살아남음.
+            var blocked = new bool[_width * _height];
+            if (negativeSeeds != null && negativeSeeds.Count > 0)
+            {
+                var nStack = new Stack<(int x, int y)>();
+                foreach (var (sx, sy) in negativeSeeds)
+                {
+                    if ((uint)sx >= (uint)_width || (uint)sy >= (uint)_height) continue;
+                    int seedIdx = sy * _width + sx;
+                    if (blocked[seedIdx] || positiveStop[seedIdx]) continue;
+                    int sp = seedIdx * 4;
+                    byte sB = src[sp + 0], sG = src[sp + 1], sR = src[sp + 2];
+
+                    blocked[seedIdx] = true;
+                    nStack.Push((sx, sy));
+                    while (nStack.Count > 0)
+                    {
+                        var (x, y) = nStack.Pop();
+                        int idx = y * _width + x;
+                        int p = idx * 4;
+                        int diff = Math.Max(Math.Abs(src[p + 2] - sR),
+                                   Math.Max(Math.Abs(src[p + 1] - sG), Math.Abs(src[p + 0] - sB)));
+                        if (diff > tolerance) continue;
+                        // 이웃 push — positiveStop 은 마킹/통과 금지.
+                        if (x + 1 < _width && !blocked[idx + 1] && !positiveStop[idx + 1])
+                        { blocked[idx + 1] = true; nStack.Push((x + 1, y)); }
+                        if (x - 1 >= 0 && !blocked[idx - 1] && !positiveStop[idx - 1])
+                        { blocked[idx - 1] = true; nStack.Push((x - 1, y)); }
+                        if (y + 1 < _height && !blocked[idx + _width] && !positiveStop[idx + _width])
+                        { blocked[idx + _width] = true; nStack.Push((x, y + 1)); }
+                        if (y - 1 >= 0 && !blocked[idx - _width] && !positiveStop[idx - _width])
+                        { blocked[idx - _width] = true; nStack.Push((x, y - 1)); }
+                    }
+                }
+            }
+
+            // Pass 2: positive 시드에서 4-conn flood. blocked 픽셀은 통과 금지.
+            var visited = new bool[_width * _height];
+            var stack = new Stack<(int x, int y)>();
+            int minX = int.MaxValue, maxX = int.MinValue, minY = int.MaxValue, maxY = int.MinValue;
+
+            foreach (var (x, y) in positiveSeeds)
+            {
+                if ((uint)x >= (uint)_width || (uint)y >= (uint)_height) continue;
+                int seedIdx = y * _width + x;
+                if (visited[seedIdx] || blocked[seedIdx]) continue;
+                visited[seedIdx] = true;
+                stack.Push((x, y));
+            }
+
+            while (stack.Count > 0)
+            {
+                var (x, y) = stack.Pop();
+                int idx = y * _width + x;
+                int p = idx * 4;
+                byte b = src[p + 0], g = src[p + 1], r = src[p + 2];
+
+                // positive 색 매칭 — 하나라도 tolerance 안이면 통과.
+                bool allowed = false;
+                for (int i = 0; i < posRgb.Count; i++)
+                {
+                    var pp = posRgb[i];
+                    int diff = Math.Max(Math.Abs(r - pp.r), Math.Max(Math.Abs(g - pp.g), Math.Abs(b - pp.b)));
+                    if (diff <= tolerance) { allowed = true; break; }
+                }
+                if (!allowed) continue;
+
+                WritePixelToLayer(idx, labelIndex);
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+
+                void TryPush(int nx, int ny)
+                {
+                    if ((uint)nx >= (uint)_width || (uint)ny >= (uint)_height) return;
+                    int ni = ny * _width + nx;
+                    if (visited[ni] || blocked[ni]) return;
+                    visited[ni] = true;
+                    stack.Push((nx, ny));
+                }
+                TryPush(x + 1, y);
+                TryPush(x - 1, y);
+                TryPush(x, y + 1);
+                TryPush(x, y - 1);
+            }
+
+            if (maxX >= minX)
+            {
+                ExpandStrokeBounds(minX, minY);
+                ExpandStrokeBounds(maxX, maxY);
+                UpdateDisplayRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+            }
+        }
+
         /// <summary>활성 stroke 를 취소하고 시작 전 상태로 롤백.</summary>
         public void CancelStroke()
         {
@@ -1014,15 +1280,31 @@ namespace VSMVVM.WPF.Controls
 
         private void WritePixelToLayer(int idx, int labelIndex)
         {
+            // idx → x, y 한 번 분해 후 (x, y) Set 호출 — 인덱서의 매번 modulo/division 회피, tile cache 활용.
+            int x = idx % _width;
+            int y = idx / _width;
             if (labelIndex == LabelClassCollection.BackgroundIndex)
             {
                 // 지우개: 모든 레이어에서 해당 픽셀을 0 으로.
-                foreach (var kv in _layers) kv.Value[idx] = 0;
+                foreach (var kv in _layers)
+                {
+                    uint prev = kv.Value.Get(x, y);
+                    if (prev != 0)
+                    {
+                        RecordPixelChange(kv.Key, idx, prev, 0);
+                        kv.Value.Set(x, y, 0);
+                    }
+                }
                 return;
             }
             if (_activeStrokeId == 0) return;
             var layer = GetOrCreateLayer(labelIndex);
-            layer[idx] = _activeStrokeId;
+            uint prevId = layer.Get(x, y);
+            if (prevId != _activeStrokeId)
+            {
+                RecordPixelChange(labelIndex, idx, prevId, _activeStrokeId);
+                layer.Set(x, y, _activeStrokeId);
+            }
         }
 
         private void ExpandStrokeBounds(int x, int y)
@@ -1034,12 +1316,251 @@ namespace VSMVVM.WPF.Controls
             _strokeAnyPixel = true;
         }
 
-        private void RemapInstanceIdsInLayer(uint[] layer, HashSet<uint> from, uint toId)
+        private void RemapInstanceIdsInLayer(SparseTileLayer layer, HashSet<uint> from, uint toId)
         {
             if (from.Count == 0) return;
-            for (int i = 0; i < layer.Length; i++)
-                if (from.Contains(layer[i])) layer[i] = toId;
+            int labelIdx = LabelIndexForLayer(layer);
+            // 모든 alloc 된 타일 enumerate — 빈 타일은 자동 skip (sparse 효율).
+            foreach (var (tileX, tileY, tile) in layer.EnumerateAllocatedTiles())
+            {
+                int tileBaseX = tileX * SparseTileLayer.TileSize;
+                int tileBaseY = tileY * SparseTileLayer.TileSize;
+                for (int ly = 0; ly < SparseTileLayer.TileSize; ly++)
+                {
+                    int gy = tileBaseY + ly;
+                    if (gy >= layer.Height) break;
+                    for (int lx = 0; lx < SparseTileLayer.TileSize; lx++)
+                    {
+                        int gx = tileBaseX + lx;
+                        if (gx >= layer.Width) break;
+                        int localIdx = ly * SparseTileLayer.TileSize + lx;
+                        uint old = tile[localIdx];
+                        if (!from.Contains(old)) continue;
+                        int globalIdx = gy * layer.Width + gx;
+                        RecordPixelChange(labelIdx, globalIdx, old, toId);
+                        tile[localIdx] = toId;
+                    }
+                }
+            }
         }
+
+        /// <summary>주어진 layer 가 어느 라벨에 속하는지 _layers 에서 역검색. RecordPixelChange 의 LabelIndex 인자용.</summary>
+        private int LabelIndexForLayer(SparseTileLayer layer)
+        {
+            foreach (var kv in _layers)
+                if (ReferenceEquals(kv.Value, layer)) return kv.Key;
+            return -1;
+        }
+
+        #region Diff 기록 인프라 — Undo/Redo 메모리 절감 (SnapshotFull 200MB → 변경 픽셀 수십 KB)
+
+        /// <summary>diff 기록 시작. 이전 인스턴스 메타와 NextId 를 캡처. 픽셀은 건드리지 않음.</summary>
+        public void BeginDiffRecording()
+        {
+            _diffEntries = new List<MaskLayerDiff.PixelEntry>();
+            _diffInstancesBefore = SnapshotInstanceRecords();
+            _diffNextIdBefore = _instances.PeekNextId();
+            _diffMinX = int.MaxValue; _diffMinY = int.MaxValue;
+            _diffMaxX = int.MinValue; _diffMaxY = int.MinValue;
+        }
+
+        /// <summary>diff 기록 종료 — 모인 픽셀 변경 + 인스턴스 메타 변화로 MaskLayerDiff 빌드. recording 안 켜져 있으면 null.</summary>
+        public MaskLayerDiff? EndDiffRecording()
+        {
+            if (_diffEntries == null || _diffInstancesBefore == null) return null;
+
+            var entries = _diffEntries;
+            var before = _diffInstancesBefore;
+            var nextIdBefore = _diffNextIdBefore;
+
+            // before/after 비교는 단순화해서 둘 다 InstanceDelta 에 담아 둠 — 호출 측에서 Restore 시 사용.
+            var after = SnapshotInstanceRecords();
+            var nextIdAfter = _instances.PeekNextId();
+            var delta = new MaskLayerDiff.InstanceDelta(before, after, nextIdBefore, nextIdAfter);
+
+            int minX = _diffMinX == int.MaxValue ? 0 : _diffMinX;
+            int minY = _diffMinY == int.MaxValue ? 0 : _diffMinY;
+            int maxX = _diffMaxX == int.MinValue ? -1 : _diffMaxX;
+            int maxY = _diffMaxY == int.MinValue ? -1 : _diffMaxY;
+
+            // recording 종료.
+            _diffEntries = null;
+            _diffInstancesBefore = null;
+            _diffNextIdBefore = 0;
+
+            // RLE 압축 — 같은 (label, oldId, newId) + pixelIndex 연속 entries 를 한 run 으로 묶음.
+            // brush stroke 1.5M entries (24 MB) → 보통 수백 runs (수 KB) 로 1000× 절감.
+            var runs = CompressEntriesToRuns(entries);
+            return new MaskLayerDiff(runs, delta, minX, minY, maxX, maxY);
+        }
+
+        /// <summary>PixelEntry[] → RLE PixelRun[] 압축. (label, oldId, newId) 별로 그룹화 후 pixelIndex 정렬, 연속 묶음.
+        /// 같은 (label, idx) 가 여러 번 변경되면 (예: brush 가 같은 자리 재방문, 또는 stroke 후 RemapInstanceIdsInLayer 가 재변경)
+        /// 순 효과 (firstOldId → lastNewId) 만 남기는 dedup 단계 선행.</summary>
+        private static List<MaskLayerDiff.PixelRun> CompressEntriesToRuns(List<MaskLayerDiff.PixelEntry> entries)
+        {
+            var runs = new List<MaskLayerDiff.PixelRun>();
+            if (entries.Count == 0) return runs;
+
+            // Dedup: (label, idx) → (firstOldId, lastNewId). 순 효과만 남김.
+            // 같은 픽셀에 (A→B) 후 (B→C) 가 들어오면 (A→C) 하나로 합침. RLE 정렬 후 순서 의존성 회피 + 메모리 추가 절감.
+            var dedup = new Dictionary<(int label, int idx), (uint old, uint cur)>(entries.Count);
+            foreach (var e in entries)
+            {
+                var key = (e.LabelIndex, e.PixelIndex);
+                if (dedup.TryGetValue(key, out var v))
+                    dedup[key] = (v.old, e.NewId);
+                else
+                    dedup[key] = (e.OldId, e.NewId);
+            }
+
+            // dedup 결과를 일시적인 PixelEntry 리스트로 재구성. oldId == newId (no-op) 는 제거.
+            var deduped = new List<MaskLayerDiff.PixelEntry>(dedup.Count);
+            foreach (var kv in dedup)
+            {
+                if (kv.Value.old == kv.Value.cur) continue;
+                deduped.Add(new MaskLayerDiff.PixelEntry(kv.Key.label, kv.Key.idx, kv.Value.old, kv.Value.cur));
+            }
+            if (deduped.Count == 0) return runs;
+
+            // 정렬 키: (label, oldId, newId, pixelIndex). 같은 (label,old,new) 안에서 pixelIndex 순.
+            deduped.Sort((a, b) =>
+            {
+                int c = a.LabelIndex.CompareTo(b.LabelIndex);
+                if (c != 0) return c;
+                c = a.OldId.CompareTo(b.OldId);
+                if (c != 0) return c;
+                c = a.NewId.CompareTo(b.NewId);
+                if (c != 0) return c;
+                return a.PixelIndex.CompareTo(b.PixelIndex);
+            });
+
+            int i = 0;
+            while (i < deduped.Count)
+            {
+                var first = deduped[i];
+                int runStart = first.PixelIndex;
+                int runEnd = first.PixelIndex; // inclusive
+                int j = i + 1;
+                while (j < deduped.Count)
+                {
+                    var e = deduped[j];
+                    if (e.LabelIndex != first.LabelIndex) break;
+                    if (e.OldId != first.OldId) break;
+                    if (e.NewId != first.NewId) break;
+                    if (e.PixelIndex != runEnd + 1) break; // 연속 끊김.
+                    runEnd = e.PixelIndex;
+                    j++;
+                }
+                runs.Add(new MaskLayerDiff.PixelRun(
+                    first.LabelIndex, runStart, runEnd - runStart + 1, first.OldId, first.NewId));
+                i = j;
+            }
+            return runs;
+        }
+
+        /// <summary>recording 모드일 때 픽셀 변경을 기록. 비-recording 모드면 즉시 return — 비용 거의 0.</summary>
+        private void RecordPixelChange(int labelIndex, int pixelIndex, uint oldId, uint newId)
+        {
+            if (_diffEntries == null) return;
+            if (oldId == newId) return;
+            _diffEntries.Add(new MaskLayerDiff.PixelEntry(labelIndex, pixelIndex, oldId, newId));
+            int x = pixelIndex % _width;
+            int y = pixelIndex / _width;
+            if (x < _diffMinX) _diffMinX = x;
+            if (x > _diffMaxX) _diffMaxX = x;
+            if (y < _diffMinY) _diffMinY = y;
+            if (y > _diffMaxY) _diffMaxY = y;
+        }
+
+        /// <summary>현재 인스턴스 컬렉션을 InstanceRecord 리스트로 캡처 (메타데이터만, 깊은 복사).</summary>
+        private List<MaskLayerSnapshot.InstanceRecord> SnapshotInstanceRecords()
+        {
+            var list = new List<MaskLayerSnapshot.InstanceRecord>(_instances.Count);
+            foreach (var i in _instances)
+            {
+                list.Add(new MaskLayerSnapshot.InstanceRecord(
+                    i.Id, i.LabelIndex, i.BoundingBox, i.PixelCount, i.IsVisible,
+                    CloneContours(i.PolygonContours)));
+            }
+            return list;
+        }
+
+        /// <summary>diff 의 NewId 로 forward 적용 (Redo). 픽셀 + 인스턴스 메타 모두.</summary>
+        public void ApplyDiffForward(MaskLayerDiff diff)
+        {
+            if (diff == null) return;
+            ApplyPixelEntries(diff, forward: true);
+            RestoreInstanceRecords(diff.Instances.After, diff.Instances.NextIdAfter);
+            RefreshDisplayForDiff(diff);
+        }
+
+        /// <summary>diff 의 OldId 로 reverse 적용 (Undo). 픽셀 + 인스턴스 메타 모두.</summary>
+        public void ApplyDiffReverse(MaskLayerDiff diff)
+        {
+            if (diff == null) return;
+            ApplyPixelEntries(diff, forward: false);
+            RestoreInstanceRecords(diff.Instances.Before, diff.Instances.NextIdBefore);
+            RefreshDisplayForDiff(diff);
+        }
+
+        private void ApplyPixelEntries(MaskLayerDiff diff, bool forward)
+        {
+            // Entries (legacy 호환) 적용.
+            foreach (var e in diff.Entries)
+            {
+                if (e.LabelIndex < 0) continue;
+                var layer = GetOrCreateLayer(e.LabelIndex);
+                if ((uint)e.PixelIndex >= (uint)layer.Length) continue;
+                layer[e.PixelIndex] = forward ? e.NewId : e.OldId;
+            }
+            // Runs (RLE 압축) 적용 — 한 run 의 pixelIndex 연속 구간을 한 번에 채움.
+            foreach (var r in diff.Runs)
+            {
+                if (r.LabelIndex < 0 || r.Length <= 0) continue;
+                var layer = GetOrCreateLayer(r.LabelIndex);
+                int end = r.StartIndex + r.Length;
+                if (end > layer.Length) end = layer.Length;
+                int start = r.StartIndex < 0 ? 0 : r.StartIndex;
+                uint val = forward ? r.NewId : r.OldId;
+                for (int i = start; i < end; i++) layer[i] = val;
+            }
+        }
+
+        private void RestoreInstanceRecords(IReadOnlyList<MaskLayerSnapshot.InstanceRecord> records, uint nextId)
+        {
+            // 단순 정책: 컬렉션 비우고 records 로 재구성. INPC 폭증을 피하려면 diff 기반 add/remove 가 더 좋지만 본 작업 범위 외.
+            _instances.Clear();
+            foreach (var r in records)
+            {
+                var inst = new MaskInstance
+                {
+                    Id = r.Id,
+                    LabelIndex = r.LabelIndex,
+                    BoundingBox = r.BoundingBox,
+                    PixelCount = r.PixelCount,
+                    IsVisible = r.IsVisible,
+                    PolygonContours = CloneContoursMutable(r.PolygonContours),
+                };
+                AssignLabelRef(inst);
+                _instances.Add(inst);
+            }
+            _instances.EnsureNextIdAtLeast(nextId);
+        }
+
+        private void RefreshDisplayForDiff(MaskLayerDiff diff)
+        {
+            if (!diff.HasPixelChanges) { InvalidateVisual(); return; }
+            int x = Math.Max(0, diff.StrokeMinX);
+            int y = Math.Max(0, diff.StrokeMinY);
+            int w = Math.Min(_width - x, diff.StrokeMaxX - diff.StrokeMinX + 1);
+            int h = Math.Min(_height - y, diff.StrokeMaxY - diff.StrokeMinY + 1);
+            if (w > 0 && h > 0) UpdateDisplayRect(x, y, w, h); else RefreshAll();
+        }
+
+        // CloneContours / CloneContoursMutable 은 Snapshot 영역 (이 파일 하단) 에 이미 정의되어 있으므로 여기선 재사용.
+
+        #endregion
 
         public void RecomputeInstanceMetadata(uint id)
         {
@@ -1052,19 +1573,27 @@ namespace VSMVVM.WPF.Controls
                 return;
             }
 
+            // Sparse 친화적 — 모든 alloc 된 타일만 enumerate (빈 타일 skip), inner loop 는 dense.
             int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
             int count = 0;
-            for (int y = 0; y < _height; y++)
+            foreach (var (tileX, tileY, tile) in mask.EnumerateAllocatedTiles())
             {
-                int rowStart = y * _width;
-                for (int x = 0; x < _width; x++)
+                int tileBaseX = tileX * SparseTileLayer.TileSize;
+                int tileBaseY = tileY * SparseTileLayer.TileSize;
+                int yEnd = Math.Min(SparseTileLayer.TileSize, _height - tileBaseY);
+                int xEnd = Math.Min(SparseTileLayer.TileSize, _width - tileBaseX);
+                for (int ly = 0; ly < yEnd; ly++)
                 {
-                    if (mask[rowStart + x] == id)
+                    int tileRowBase = ly * SparseTileLayer.TileSize;
+                    int gy = tileBaseY + ly;
+                    for (int lx = 0; lx < xEnd; lx++)
                     {
-                        if (x < minX) minX = x;
-                        if (x > maxX) maxX = x;
-                        if (y < minY) minY = y;
-                        if (y > maxY) maxY = y;
+                        if (tile[tileRowBase + lx] != id) continue;
+                        int gx = tileBaseX + lx;
+                        if (gx < minX) minX = gx;
+                        if (gx > maxX) maxX = gx;
+                        if (gy < minY) minY = gy;
+                        if (gy > maxY) maxY = gy;
                         count++;
                     }
                 }
@@ -1104,8 +1633,7 @@ namespace VSMVVM.WPF.Controls
                 {
                     int localIdx = (y - by) * bw + (x - bx);
                     if (visited[localIdx]) continue;
-                    int globalIdx = y * _width + x;
-                    if (mask[globalIdx] != id) continue;
+                    if (mask.Get(x, y) != id) continue;
 
                     var comp = new List<int>();
                     queue.Clear();
@@ -1117,8 +1645,7 @@ namespace VSMVVM.WPF.Controls
                         if (nx < bx || nx >= bx + bw || ny < by || ny >= by + bh) return;
                         int nLocal = (ny - by) * bw + (nx - bx);
                         if (visited[nLocal]) return;
-                        int nGlobal = ny * _width + nx;
-                        if (mask[nGlobal] != id) return;
+                        if (mask.Get(nx, ny) != id) return;
                         visited[nLocal] = true;
                         queue.Enqueue((nx, ny));
                     }
@@ -1141,14 +1668,32 @@ namespace VSMVVM.WPF.Controls
             for (int c = 1; c < components.Count; c++)
             {
                 var newId = _instances.NextId();
-                foreach (var gi in components[c]) mask[gi] = newId;
+                foreach (var gi in components[c])
+                {
+                    int gx = gi % _width;
+                    int gy = gi / _width;
+                    RecordPixelChange(inst.LabelIndex, gi, id, newId);
+                    mask.Set(gx, gy, newId);
+                }
                 var newInst = new MaskInstance { Id = newId, LabelIndex = inst.LabelIndex };
                 AssignLabelRef(newInst);
                 _instances.Add(newInst);
                 RecomputeInstanceMetadata(newId);
             }
             RecomputeInstanceMetadata(id);
+            // 분리 발생 — 원래 id 의 PolygonContours 가 부분만 표현. 무효화 → 다음 더블클릭 시 재추출.
+            inst.PolygonContours = null;
         }
+
+        #endregion
+
+        #region Public API — Memory management
+
+        /// <summary>가벼운 메모리 회수 — LOH compact + GC. 큰 작업 후 자동 호출되지만 사용자가 명시 호출도 가능.</summary>
+        public void TrimMemory() => MemoryHelper.CompactAndCollect();
+
+        /// <summary>Aggressive 메모리 회수 — LOH compact + Gen2 + Working Set 트림. 이미지 unload / 프로젝트 전환 시 사용.</summary>
+        public void ForceMemoryCleanup() => MemoryHelper.ForceFullCleanup();
 
         #endregion
 
@@ -1174,14 +1719,14 @@ namespace VSMVVM.WPF.Controls
                 throw new ArgumentException("스냅샷 크기가 현재 마스크와 일치하지 않습니다.");
             _layers.Clear();
             _instances.Clear();
-            var byLabel = new Dictionary<int, uint[]>();
+            var byLabel = new Dictionary<int, SparseTileLayer>();
             for (int i = 0; i < snapshot.Length; i++)
             {
                 byte lbl = snapshot[i];
                 if (lbl == 0) continue;
                 if (!byLabel.TryGetValue(lbl, out var mask))
                 {
-                    mask = new uint[_width * _height];
+                    mask = new SparseTileLayer(_width, _height);
                     byLabel[lbl] = mask;
                 }
             }
@@ -1246,16 +1791,14 @@ namespace VSMVVM.WPF.Controls
 
         public MaskLayerSnapshot SnapshotFull()
         {
-            var layers = new Dictionary<int, uint[]>(_layers.Count);
+            var layers = new Dictionary<int, SparseTileLayer>(_layers.Count);
             foreach (var kv in _layers)
             {
-                var copy = new uint[kv.Value.Length];
-                Buffer.BlockCopy(kv.Value, 0, copy, 0, kv.Value.Length * sizeof(uint));
-                layers[kv.Key] = copy;
+                layers[kv.Key] = kv.Value.Clone(); // 빈 타일 자동 skip — 면적 비례 alloc.
             }
             var records = _instances.Select(i =>
                 new MaskLayerSnapshot.InstanceRecord(i.Id, i.LabelIndex, i.BoundingBox, i.PixelCount, i.IsVisible,
-                    i.PolygonPoints != null ? (IReadOnlyList<System.Windows.Point>)new List<System.Windows.Point>(i.PolygonPoints) : null))
+                    CloneContours(i.PolygonContours)))
                 .ToList();
             uint maxId = 0;
             foreach (var i in _instances) if (i.Id > maxId) maxId = i.Id;
@@ -1268,11 +1811,9 @@ namespace VSMVVM.WPF.Controls
             _layers.Clear();
             foreach (var kv in snapshot.Layers)
             {
-                if (kv.Value.Length != _width * _height)
+                if (kv.Value.Width != _width || kv.Value.Height != _height)
                     throw new ArgumentException("스냅샷 레이어 크기가 현재 마스크와 일치하지 않습니다.");
-                var copy = new uint[kv.Value.Length];
-                Buffer.BlockCopy(kv.Value, 0, copy, 0, kv.Value.Length * sizeof(uint));
-                _layers[kv.Key] = copy;
+                _layers[kv.Key] = kv.Value.Clone(); // 깊은 복사 — 외부에서 snapshot 변경해도 영향 없게.
             }
             _instances.Clear();
             foreach (var r in snapshot.Instances)
@@ -1281,13 +1822,132 @@ namespace VSMVVM.WPF.Controls
                 {
                     Id = r.Id, LabelIndex = r.LabelIndex,
                     BoundingBox = r.BoundingBox, PixelCount = r.PixelCount, IsVisible = r.IsVisible,
-                    PolygonPoints = r.PolygonPoints != null ? new List<System.Windows.Point>(r.PolygonPoints) : null,
+                    PolygonContours = CloneContoursMutable(r.PolygonContours),
                 };
                 AssignLabelRef(inst);
                 _instances.Add(inst);
             }
             _instances.EnsureNextIdAtLeast(snapshot.NextId);
             RefreshAll();
+
+            // 큰 snapshot 복원 (Undo/Redo) 후 LOH 회수.
+            MemoryHelper.CompactAndCollect();
+        }
+
+        /// <summary>Snapshot 용 read-only 깊은 복사. null/empty 는 null 반환.</summary>
+        private static IReadOnlyList<IReadOnlyList<Point>>? CloneContours(IList<IList<Point>>? src)
+        {
+            if (src == null || src.Count == 0) return null;
+            var outer = new List<IReadOnlyList<Point>>(src.Count);
+            foreach (var c in src) outer.Add(new List<Point>(c));
+            return outer;
+        }
+
+        /// <summary>Restore 용 mutable 깊은 복사. null/empty 는 null 반환.</summary>
+        private static IList<IList<Point>>? CloneContoursMutable(IReadOnlyList<IReadOnlyList<Point>>? src)
+        {
+            if (src == null || src.Count == 0) return null;
+            var outer = new List<IList<Point>>(src.Count);
+            foreach (var c in src) outer.Add(new List<Point>(c));
+            return outer;
+        }
+
+        /// <summary>표준 ray-casting point-in-polygon. 폐곡선 가정 (마지막 점 → 첫 점 implicit close).</summary>
+        private static bool IsPointInPolygon(Point p, IReadOnlyList<Point> polygon)
+        {
+            int n = polygon.Count;
+            if (n < 3) return false;
+            bool inside = false;
+            for (int i = 0, j = n - 1; i < n; j = i++)
+            {
+                var a = polygon[i];
+                var b = polygon[j];
+                if ((a.Y > p.Y) != (b.Y > p.Y))
+                {
+                    double xCross = (b.X - a.X) * (p.Y - a.Y) / (b.Y - a.Y) + a.X;
+                    if (p.X < xCross) inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        /// <summary>
+        /// 더블클릭 시 호출. 첫 호출 시 마스크 픽셀에서 외곽 contour 를 추출 (촘촘하게).
+        /// **이미 PolygonContours 가 있으면 보존** — 사용자가 vertex 끌어 commit 한 미세 편집이 다음 더블클릭에 사라지지 않게.
+        /// 마스크 픽셀이 외부에서 변경되면 (브러시/지우개/resample/merge 등) RepaintPolygon 등 commit 경로에서 PolygonContours
+        /// 도 동기화되거나 무효화. 이 EnsurePolygonPoints 는 vertex 편집 진입 트리거이지 마스크 변경 후 강제 동기화 트리거가 아님.
+        /// </summary>
+        public bool EnsurePolygonPoints(uint id)
+        {
+            var inst = _instances.GetById(id);
+            if (inst == null) return false;
+
+            // 이미 PolygonContours 가 있고 외곽이 ≥3 점이면 그대로 사용 (사용자 편집 보존).
+            if (inst.PolygonContours != null && inst.PolygonContours.Count > 0
+                && inst.PolygonContours[0] != null && inst.PolygonContours[0].Count >= 3)
+            {
+                return true;
+            }
+
+            if (!_layers.TryGetValue(inst.LabelIndex, out var mask)) return false;
+            var bb = inst.BoundingBox;
+            if (bb.IsEmpty) return false;
+
+            int bx = Math.Max(0, (int)Math.Floor(bb.X));
+            int by = Math.Max(0, (int)Math.Floor(bb.Y));
+            int bw = Math.Min(_width - bx, (int)Math.Ceiling(bb.X + bb.Width) - bx);
+            int bh = Math.Min(_height - by, (int)Math.Ceiling(bb.Y + bb.Height) - by);
+            if (bw <= 0 || bh <= 0) return false;
+
+            var contours = ContourTracing.ExtractContoursAll(mask, _width, _height, id, bx, by, bw, bh);
+            if (contours.Count == 0) return false;
+
+            // 가장 긴 폐곡선 = 외곽. 나머지는 외곽 안에 들어있으면 hole, 아니면 무시(분리 컴포넌트).
+            contours.Sort((a, b) => b.Count.CompareTo(a.Count));
+            var outer = contours[0];
+            if (outer.Count < 3) return false;
+
+            var result = new List<IList<Point>>();
+            var simplifiedOuter = SimplifyOne(outer);
+            if (simplifiedOuter.Count < 3) return false;
+            result.Add(simplifiedOuter);
+
+            // 외곽 단순화는 끝났으나 hole 판정은 raw outer (촘촘한 점) 으로 해야 정확.
+            for (int i = 1; i < contours.Count; i++)
+            {
+                var c = contours[i];
+                if (c.Count < 3) continue;
+                if (!IsPointInPolygon(c[0], outer)) continue; // 외곽 안 hole 만 채택.
+                var simplifiedHole = SimplifyOne(c);
+                if (simplifiedHole.Count < 3) continue;
+                result.Add(simplifiedHole);
+            }
+
+            inst.PolygonContours = result;
+            return true;
+        }
+
+        /// <summary>외곽/hole 한 contour 를 DP 로 약하게 단순화 — 사용자 미세 편집 여지를 위해 점을 촘촘히 유지.
+        /// 코너만 제거하지 않고 직선 위 점도 일부 보존. 너무 많아지면 점진 단순화.</summary>
+        private static List<Point> SimplifyOne(List<Point> contour)
+        {
+            // 약한 단순화 — corner-aligned 0.5 offset 의 계단만 흡수, 직선 위 점은 그대로.
+            const double Epsilon = 0.6;
+            var simplified = PolygonSimplifier.SimplifyClosed(contour, Epsilon);
+            if (simplified.Count < 3)
+            {
+                int n = Math.Min(8, contour.Count);
+                var pts = new List<Point>(n);
+                double step = (double)contour.Count / n;
+                for (int k = 0; k < n; k++) pts.Add(contour[(int)(k * step)]);
+                return pts;
+            }
+            // 너무 많은 점은 시각 혼잡 — Adorner 핸들이 겹침. 1000 초과면 점진 단순화.
+            if (simplified.Count > 1000)
+            {
+                return PolygonSimplifier.SimplifyClosed(contour, Epsilon * 2.0);
+            }
+            return simplified;
         }
 
         /// <summary>
@@ -1297,8 +1957,20 @@ namespace VSMVVM.WPF.Controls
         /// </summary>
         public void RepaintPolygon(uint instanceId, IReadOnlyList<System.Windows.Point> newPoints)
         {
+            if (newPoints == null || newPoints.Count < 3) return;
+            RepaintPolygon(instanceId, new[] { newPoints });
+        }
+
+        /// <summary>
+        /// 다중 contour 버전 — 외곽 + hole 들을 even-odd rasterize 로 한 번에 그림.
+        /// contours[0] = 외곽, ≥1 = hole. 각 contour 는 ≥3 점 필요.
+        /// </summary>
+        public void RepaintPolygon(uint instanceId, IReadOnlyList<IReadOnlyList<System.Windows.Point>> newContours)
+        {
             var inst = _instances.GetById(instanceId);
-            if (inst == null || newPoints == null || newPoints.Count < 3) return;
+            if (inst == null || newContours == null || newContours.Count == 0) return;
+            // 외곽은 필수, hole 은 선택. 외곽 < 3 이면 무시.
+            if (newContours[0] == null || newContours[0].Count < 3) return;
             int label = inst.LabelIndex;
             var layer = GetOrCreateLayer(label);
 
@@ -1312,26 +1984,56 @@ namespace VSMVVM.WPF.Controls
                 x1 = Math.Min(_width - 1, (int)(oldBB.X + oldBB.Width));
                 y1 = Math.Min(_height - 1, (int)(oldBB.Y + oldBB.Height));
             }
-            for (int y = y0; y <= y1; y++)
+            // BBox 와 겹치는 alloc 된 타일만 enumerate (빈 타일 skip), inner loop dense.
+            foreach (var (tileX, tileY, tile) in layer.EnumerateTilesInBox(x0, y0, x1, y1))
             {
-                int row = y * _width;
-                for (int x = x0; x <= x1; x++)
+                int tileBaseX = tileX * SparseTileLayer.TileSize;
+                int tileBaseY = tileY * SparseTileLayer.TileSize;
+                int sxLo = Math.Max(x0, tileBaseX);
+                int syLo = Math.Max(y0, tileBaseY);
+                int sxHi = Math.Min(x1, tileBaseX + SparseTileLayer.TileSize - 1);
+                int syHi = Math.Min(y1, tileBaseY + SparseTileLayer.TileSize - 1);
+                for (int gy = syLo; gy <= syHi; gy++)
                 {
-                    if (layer[row + x] == instanceId) layer[row + x] = 0;
+                    int ly = gy - tileBaseY;
+                    int tileRowBase = ly * SparseTileLayer.TileSize;
+                    int gRow = gy * _width;
+                    for (int gx = sxLo; gx <= sxHi; gx++)
+                    {
+                        int lx = gx - tileBaseX;
+                        if (tile[tileRowBase + lx] == instanceId)
+                        {
+                            RecordPixelChange(label, gRow + gx, instanceId, 0);
+                            tile[tileRowBase + lx] = 0;
+                        }
+                    }
                 }
             }
 
-            // 2) 새 polygon rasterize — flat 배열로 변환 후 기존 헬퍼 재사용.
-            var flat = new double[newPoints.Count * 2];
-            for (int i = 0; i < newPoints.Count; i++)
-            {
-                flat[i * 2] = newPoints[i].X;
-                flat[i * 2 + 1] = newPoints[i].Y;
-            }
-            RasterizePolygonIntoLayer(layer, flat, instanceId);
 
-            // 3) PolygonPoints 업데이트 + 메타 재계산 + 렌더 갱신.
-            inst.PolygonPoints = new List<System.Windows.Point>(newPoints);
+            // 2) 모든 contour 를 flat 배열로 변환해 even-odd rasterize 한 번에 호출.
+            var flatList = new List<IReadOnlyList<double>>(newContours.Count);
+            foreach (var pts in newContours)
+            {
+                if (pts == null || pts.Count < 3) continue;
+                var flat = new double[pts.Count * 2];
+                for (int i = 0; i < pts.Count; i++)
+                {
+                    flat[i * 2] = pts[i].X;
+                    flat[i * 2 + 1] = pts[i].Y;
+                }
+                flatList.Add(flat);
+            }
+            RasterizePolygonIntoLayer(layer, flatList, instanceId);
+
+            // 3) PolygonContours 업데이트 + 메타 재계산 + 렌더 갱신.
+            var stored = new List<IList<System.Windows.Point>>(newContours.Count);
+            foreach (var pts in newContours)
+            {
+                if (pts == null || pts.Count < 3) continue;
+                stored.Add(new List<System.Windows.Point>(pts));
+            }
+            inst.PolygonContours = stored;
             RecomputeInstanceMetadata(instanceId);
             RefreshAll();
         }
@@ -1381,28 +2083,35 @@ namespace VSMVVM.WPF.Controls
             int bw = (int)bbox.Width, bh = (int)bbox.Height;
             if (bw <= 0 || bh <= 0) return null;
 
+            // 큰 BBox 는 다운샘플 — DrawImage 가 NearestNeighbor 로 dest rect 에 자동 stretch 하므로 시각 품질 동일.
+            // 8K 전면 BBox (8192×6144) 도 출력 ~1024×768 → 3 MB alloc, 100ms 이하.
+            const int MaxDim = 1024;
+            int scale = Math.Max(1, (Math.Max(bw, bh) + MaxDim - 1) / MaxDim);
+            int outW = Math.Max(1, bw / scale);
+            int outH = Math.Max(1, bh / scale);
+
             var color = inst.Label?.Color ?? Labels?.GetByIndex(inst.LabelIndex)?.Color ?? Colors.Yellow;
-            var bmp = new WriteableBitmap(bw, bh, 96, 96, PixelFormats.Bgra32, null);
-            var pixels = new byte[bw * bh * 4];
-            for (int y = 0; y < bh; y++)
+            var bmp = new WriteableBitmap(outW, outH, 96, 96, PixelFormats.Bgra32, null);
+            var pixels = new byte[outW * outH * 4];
+            for (int oy = 0; oy < outH; oy++)
             {
-                int gy = by + y;
+                int gy = by + oy * scale;
                 if ((uint)gy >= (uint)_height) continue;
                 int rowStart = gy * _width;
-                int dstRow = y * bw * 4;
-                for (int x = 0; x < bw; x++)
+                int dstRow = oy * outW * 4;
+                for (int ox = 0; ox < outW; ox++)
                 {
-                    int gx = bx + x;
+                    int gx = bx + ox * scale;
                     if ((uint)gx >= (uint)_width) continue;
                     if (mask[rowStart + gx] != id) continue;
-                    int di = dstRow + x * 4;
+                    int di = dstRow + ox * 4;
                     pixels[di + 0] = color.B;
                     pixels[di + 1] = color.G;
                     pixels[di + 2] = color.R;
                     pixels[di + 3] = color.A;
                 }
             }
-            bmp.WritePixels(new Int32Rect(0, 0, bw, bh), pixels, bw * 4, 0);
+            bmp.WritePixels(new Int32Rect(0, 0, outW, outH), pixels, outW * 4, 0);
             bmp.Freeze();
             return bmp;
         }
@@ -1526,41 +2235,70 @@ namespace VSMVVM.WPF.Controls
             catch { return Colors.Gray; }
         }
 
-        private void RasterizePolygonIntoLayer(uint[] layer, IReadOnlyList<double> flat, uint id)
+        /// <summary>단일 contour 오버로드 — 다중 오버로드로 위임.</summary>
+        private void RasterizePolygonIntoLayer(SparseTileLayer layer, IReadOnlyList<double> flat, uint id)
         {
-            if (flat.Count < 6) return;
-            int n = flat.Count / 2;
+            RasterizePolygonIntoLayer(layer, new[] { flat }, id);
+        }
+
+        /// <summary>
+        /// 다중 contour rasterize. even-odd scanline fill — 외곽 + hole 자동 처리.
+        /// 각 contour 는 평면 [x0,y0,x1,y1,...] 형태. contour 별로 j=(i+1)%n_c 로 폐쇄, 모든 contour 의 edge 교차점을
+        /// 한 xs 리스트에 모아 정렬 → 짝수 진입/홀수 종료 = WPF FillRule.EvenOdd 와 동치.
+        /// </summary>
+        private void RasterizePolygonIntoLayer(SparseTileLayer layer, IReadOnlyList<IReadOnlyList<double>> contours, uint id)
+        {
+            // y 범위 = 모든 contour 합집합.
             double minY = double.PositiveInfinity, maxY = double.NegativeInfinity;
-            for (int i = 0; i < n; i++)
+            int totalPoints = 0;
+            foreach (var c in contours)
             {
-                double y = flat[i * 2 + 1];
-                if (y < minY) minY = y;
-                if (y > maxY) maxY = y;
+                if (c.Count < 6) continue;
+                totalPoints += c.Count / 2;
+                for (int i = 0; i < c.Count; i += 2)
+                {
+                    double y = c[i + 1];
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
             }
+            if (totalPoints < 3) return;
             int y0 = Math.Max(0, (int)Math.Floor(minY));
             int y1 = Math.Min(_height - 1, (int)Math.Ceiling(maxY));
             for (int y = y0; y <= y1; y++)
             {
                 var xs = new List<double>();
                 double cy = y + 0.5;
-                for (int i = 0; i < n; i++)
+                foreach (var flat in contours)
                 {
-                    int j = (i + 1) % n;
-                    double ay = flat[i * 2 + 1], by = flat[j * 2 + 1];
-                    if ((ay <= cy && by > cy) || (by <= cy && ay > cy))
+                    if (flat.Count < 6) continue;
+                    int n = flat.Count / 2;
+                    for (int i = 0; i < n; i++)
                     {
-                        double ax = flat[i * 2], bx = flat[j * 2];
-                        double t = (cy - ay) / (by - ay);
-                        xs.Add(ax + t * (bx - ax));
+                        int j = (i + 1) % n; // contour 내부에서만 wrap — 외곽-hole 사이 가짜 edge 방지.
+                        double ay = flat[i * 2 + 1], by = flat[j * 2 + 1];
+                        if ((ay <= cy && by > cy) || (by <= cy && ay > cy))
+                        {
+                            double ax = flat[i * 2], bx = flat[j * 2];
+                            double t = (cy - ay) / (by - ay);
+                            xs.Add(ax + t * (bx - ax));
+                        }
                     }
                 }
                 xs.Sort();
+                int labelIdx = LabelIndexForLayer(layer);
                 for (int k = 0; k + 1 < xs.Count; k += 2)
                 {
                     int xa = Math.Max(0, (int)Math.Floor(xs[k]));
                     int xb = Math.Min(_width - 1, (int)Math.Ceiling(xs[k + 1]));
                     int row = y * _width;
-                    for (int x = xa; x <= xb; x++) layer[row + x] = id;
+                    for (int x = xa; x <= xb; x++)
+                    {
+                        // (x, y) 직접 호출 — modulo/division 2번 회피. tile cache 도 같은 타일 연속 access 시 효과.
+                        uint prev = layer.Get(x, y);
+                        if (prev != id) RecordPixelChange(labelIdx, row + x, prev, id);
+                        layer.Set(x, y, id);
+                    }
                 }
             }
         }
@@ -1581,10 +2319,16 @@ namespace VSMVVM.WPF.Controls
             return (_sourcePixels[i + 2], _sourcePixels[i + 1], _sourcePixels[i + 0]); // Bgra32
         }
 
-        /// <summary>Sobel gradient magnitude 배열 (width*height, null 가능).</summary>
-        public double[]? GetSourceGradient() => _sourceGradient;
+        /// <summary>Sobel gradient magnitude 배열 (width*height, null 가능). Magnetic Lasso 첫 사용 시 lazy 빌드.</summary>
+        public double[]? GetSourceGradient()
+        {
+            if (_sourceGradient != null) return _sourceGradient;
+            if (_sourcePixels == null) return null;
+            BuildSourceGradient();
+            return _sourceGradient;
+        }
 
-        /// <summary>SourceImage 가 바뀌면 픽셀/gradient 캐시 재구성.</summary>
+        /// <summary>SourceImage 가 바뀌면 픽셀 캐시만 재구성. Sobel gradient 는 lazy (8K 면 400MB × 2 = 800MB LOH 절감).</summary>
         private void RebuildSourceCaches()
         {
             var src = SourceImage as BitmapSource;
@@ -1607,6 +2351,16 @@ namespace VSMVVM.WPF.Controls
             var buf = new byte[_width * _height * 4];
             toRead.CopyPixels(buf, _width * 4, 0);
             _sourcePixels = buf;
+
+            // gradient cache 는 GetSourceGradient() 가 처음 호출될 때 lazy 빌드.
+            _sourceGradient = null;
+        }
+
+        /// <summary>Sobel gradient magnitude 빌드. Magnetic Lasso 도구 첫 사용 시에만 호출 — 8K 면 800MB temp + 400MB cache.</summary>
+        private void BuildSourceGradient()
+        {
+            if (_sourcePixels == null || _width == 0 || _height == 0) return;
+            var buf = _sourcePixels;
 
             // Sobel gradient magnitude: gray = 0.299R + 0.587G + 0.114B.
             var gray = new double[_width * _height];
@@ -1707,50 +2461,101 @@ namespace VSMVVM.WPF.Controls
             if (w <= 0 || h <= 0) return;
 
             var labels = Labels;
-            var sortedLabels = _layers.Keys.OrderByDescending(k => k).ToList(); // 위에서 아래로
 
-            var pixels = new byte[w * h * 4];
-            for (int row = 0; row < h; row++)
+            // 라벨 메타 캐시 — 매 픽셀 GetByIndex / IsVisible 호출 제거.
+            // 정렬은 라벨 인덱스 내림차순 (위에서 아래로). 보이지 않는 라벨은 제외.
+            var sortedLabelKeys = _layers.Keys.OrderByDescending(k => k).ToList();
+            int labelCount = sortedLabelKeys.Count;
+            var labelLayers = new SparseTileLayer[labelCount];
+            var labelColors = new Color[labelCount];
+            int activeLabelCount = 0;
+            for (int i = 0; i < labelCount; i++)
             {
-                int srcRow = (y + row) * _width + x;
-                int dstRow = row * w * 4;
-                for (int col = 0; col < w; col++)
-                {
-                    int srcIdx = srcRow + col;
-                    Color color = Colors.Transparent;
-                    byte a = 0;
-                    bool found = false;
-                    foreach (var lblIdx in sortedLabels)
-                    {
-                        var layer = _layers[lblIdx];
-                        uint instId = layer[srcIdx];
-                        if (instId == 0) continue;
-                        var lbl = labels?.GetByIndex(lblIdx);
-                        if (lbl == null) continue;
-                        if (!lbl.IsVisible) continue;
-                        var inst = _instances.GetById(instId);
-                        if (inst != null && !inst.IsVisible) continue;
-                        color = lbl.Color;
-                        a = color.A;
-                        // 선택된(IsSelected=true) 인스턴스는 alpha 최대로 boost → 다중 선택 모두 강조.
-                        if (inst != null && inst.IsSelected) a = 255;
-                        found = true;
-                        break;
-                    }
+                int lblIdx = sortedLabelKeys[i];
+                var lbl = labels?.GetByIndex(lblIdx);
+                if (lbl == null || !lbl.IsVisible) continue;
+                labelLayers[activeLabelCount] = _layers[lblIdx];
+                labelColors[activeLabelCount] = lbl.Color;
+                activeLabelCount++;
+            }
 
-                    int di = dstRow + col * 4;
-                    if (!found)
+            // 인스턴스 IsVisible=false ID 만 캐시. 매 픽셀 _instances.GetById 회피.
+            HashSet<uint>? hiddenInstances = null;
+            foreach (var inst in _instances)
+            {
+                if (!inst.IsVisible)
+                {
+                    hiddenInstances ??= new HashSet<uint>();
+                    hiddenInstances.Add(inst.Id);
+                }
+            }
+
+            // 임시 버퍼 재사용 — 매 호출마다 alloc 하면 8K BBox 시 200MB byte[] + 50MB bool[] 이 LOH 누적.
+            // 버퍼 size 가 부족할 때만 재alloc. UpdateDisplayRect 의 최대 BBox 가 _width × _height 라 최대 alloc 1회.
+            int bufferLen = w * h;
+            int pixelsLen = bufferLen * 4;
+            if (_displayPixelsBuffer == null || _displayPixelsBuffer.Length < pixelsLen)
+                _displayPixelsBuffer = new byte[pixelsLen];
+            else
+                Array.Clear(_displayPixelsBuffer, 0, pixelsLen);
+            if (_displayFilledBuffer == null || _displayFilledBuffer.Length < bufferLen)
+                _displayFilledBuffer = new bool[bufferLen];
+            else
+                Array.Clear(_displayFilledBuffer, 0, bufferLen);
+            var pixels = _displayPixelsBuffer;
+            var filled = _displayFilledBuffer;
+
+            // 픽셀 합성 — 라벨별 z-order 우선 픽셀 합성. 빈 영역은 0 (Array.Clear).
+            // 라벨 layer 의 BBox 와 겹치는 타일을 enumerate 해서 inner loop 는 dense tile[localIdx].
+            // 가장 높은 z 부터 그리되 이미 채운 픽셀은 skip — bool[] filled 로 추적.
+
+            for (int li = 0; li < activeLabelCount; li++) // sortedLabelKeys 가 내림차순 = li 0 이 가장 높은 z
+            {
+                var layer = labelLayers[li];
+                var color = labelColors[li];
+                byte cb = color.B, cg = color.G, cr = color.R, ca = color.A;
+
+                int x1 = x + w - 1;
+                int y1 = y + h - 1;
+                foreach (var (tileX, tileY, tile) in layer.EnumerateTilesInBox(x, y, x1, y1))
+                {
+                    int tileBaseX = tileX * SparseTileLayer.TileSize;
+                    int tileBaseY = tileY * SparseTileLayer.TileSize;
+
+                    // 타일과 BBox 의 교집합 영역만.
+                    int sxLo = Math.Max(x, tileBaseX);
+                    int syLo = Math.Max(y, tileBaseY);
+                    int sxHi = Math.Min(x1, tileBaseX + SparseTileLayer.TileSize - 1);
+                    int syHi = Math.Min(y1, tileBaseY + SparseTileLayer.TileSize - 1);
+
+                    for (int gy = syLo; gy <= syHi; gy++)
                     {
-                        pixels[di + 0] = 0; pixels[di + 1] = 0; pixels[di + 2] = 0; pixels[di + 3] = 0;
-                    }
-                    else
-                    {
-                        pixels[di + 0] = color.B; pixels[di + 1] = color.G; pixels[di + 2] = color.R; pixels[di + 3] = a;
+                        int ly = gy - tileBaseY;
+                        int dstRowBase = (gy - y) * w;
+                        int tileRowBase = ly * SparseTileLayer.TileSize;
+                        for (int gx = sxLo; gx <= sxHi; gx++)
+                        {
+                            int dstIdx = dstRowBase + (gx - x);
+                            if (filled[dstIdx]) continue;
+                            int lx = gx - tileBaseX;
+                            uint instId = tile[tileRowBase + lx];
+                            if (instId == 0) continue;
+                            if (hiddenInstances != null && hiddenInstances.Contains(instId)) continue;
+                            int di = dstIdx * 4;
+                            pixels[di + 0] = cb;
+                            pixels[di + 1] = cg;
+                            pixels[di + 2] = cr;
+                            pixels[di + 3] = ca;
+                            filled[dstIdx] = true;
+                        }
                     }
                 }
             }
+
             _displayBitmap.WritePixels(new Int32Rect(x, y, w, h), pixels, w * 4, 0);
             RaiseDisplayChanged();
+            // OnRender 가 다시 실행되어 다중 선택 BBox 점선 (이전 위치 잔상) 도 새 위치로 갱신.
+            InvalidateVisual();
         }
 
         private void UpdateDisplayPixel(int x, int y) => UpdateDisplayRect(x, y, 1, 1);

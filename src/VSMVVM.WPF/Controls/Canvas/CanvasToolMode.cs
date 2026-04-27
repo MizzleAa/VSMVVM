@@ -25,5 +25,6 @@ namespace VSMVVM.WPF.Controls
         // 자동 선택 도구
         MagicWand,
         MagneticLasso,
+        PointPromptFill,
     }
 }

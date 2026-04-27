@@ -103,20 +103,20 @@ namespace VSMVVM.WPF.Controls.Behaviors
         {
             var mask = MaskLayer;
             if (mask == null) return;
-            var before = mask.SnapshotFull();
-            mask.RepaintPolygon(e.InstanceId, e.Points);
-            var after = mask.SnapshotFull();
-            InvokeStrokeCommand(before, after, mask);
+            mask.BeginDiffRecording();
+            mask.RepaintPolygon(e.InstanceId, e.Contours);
+            var diff = mask.EndDiffRecording();
+            InvokeStrokeCommandFromDiff(diff, mask);
         }
 
         private void OnAdornerCommitRequested(object? sender, MaskInstanceResizeEventArgs e)
         {
             var mask = MaskLayer;
             if (mask == null) return;
-            var before = mask.SnapshotFull();
+            mask.BeginDiffRecording();
             mask.ResampleInstance(e.InstanceId, e.NewBoundingBox);
-            var after = mask.SnapshotFull();
-            InvokeStrokeCommand(before, after, mask);
+            var diff = mask.EndDiffRecording();
+            InvokeStrokeCommandFromDiff(diff, mask);
         }
 
         public static readonly DependencyProperty StrokeCompletedCommandProperty =
@@ -226,7 +226,7 @@ namespace VSMVVM.WPF.Controls.Behaviors
 
         #endregion
 
-        private MaskLayerSnapshot? _snapshotBeforeStroke;
+        private bool _diffRecordingActive;
 
         protected override void OnAttached()
         {
@@ -250,19 +250,25 @@ namespace VSMVVM.WPF.Controls.Behaviors
             var tool = AssociatedObject.CurrentTool;
             if (tool is IMaskMutatingTool)
             {
-                _snapshotBeforeStroke = mask.SnapshotFull();
+                mask.BeginDiffRecording();
+                _diffRecordingActive = true;
             }
         }
 
         private void OnDrawingCompleted(object? sender, EventArgs e)
         {
             var mask = MaskLayer;
-            var before = _snapshotBeforeStroke;
-            _snapshotBeforeStroke = null;
-            if (mask == null || before == null) return;
+            System.Diagnostics.Debug.WriteLine($"[OnDrawingCompleted] recording={_diffRecordingActive}, mask={mask != null}");
+            if (mask == null || !_diffRecordingActive) { _diffRecordingActive = false; return; }
+            _diffRecordingActive = false;
+            var diff = mask.EndDiffRecording();
+            InvokeStrokeCommandFromDiff(diff, mask);
 
-            var after = mask.SnapshotFull();
-            InvokeStrokeCommand(before, after, mask);
+            // 메모리 진단 — 모든 stroke 완료 후 GC 강제 + Working Set 측정.
+            System.GC.Collect();
+            System.GC.WaitForPendingFinalizers();
+            System.GC.Collect();
+            System.Diagnostics.Debug.WriteLine($"[Memory] After full GC: managed={System.GC.GetTotalMemory(true) / 1024 / 1024} MB, WorkingSet={System.Diagnostics.Process.GetCurrentProcess().WorkingSet64 / 1024 / 1024} MB");
         }
 
         private static void OnSavePngRequestChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -290,6 +296,7 @@ namespace VSMVVM.WPF.Controls.Behaviors
             var mask = MaskLayer;
             if (mask == null || mask.MaskWidth <= 0 || mask.MaskHeight <= 0) return;
 
+            // Load 는 전체 교체라 diff 가 비현실적으로 큼 → Snapshot 기반 유지.
             var before = mask.SnapshotFull();
             mask.ImportCocoJson(req.Path);
             var after = mask.SnapshotFull();
@@ -298,10 +305,31 @@ namespace VSMVVM.WPF.Controls.Behaviors
 
         private void InvokeStrokeCommand(MaskLayerSnapshot before, MaskLayerSnapshot after, MaskLayer mask)
         {
+            System.Diagnostics.Debug.WriteLine($"[StrokeCmd-SNAPSHOT] (legacy Snapshot path called! before={before != null}, after={after != null})");
             var cmd = StrokeCompletedCommand;
             if (cmd == null) return;
 
             var args = new MaskStrokeCompletedArgs(before, after, snapshot => mask.RestoreFull(snapshot));
+            if (cmd.CanExecute(args))
+                cmd.Execute(args);
+        }
+
+        /// <summary>diff 기반 args 발화 — Snapshot 200MB × N 대신 변경 픽셀 비례 메모리만 사용.</summary>
+        private void InvokeStrokeCommandFromDiff(VSMVVM.WPF.Imaging.MaskLayerDiff? diff, MaskLayer mask)
+        {
+            System.Diagnostics.Debug.WriteLine($"[StrokeCmdFromDiff] diff={diff != null}, entries={diff?.Entries.Count ?? -1}, runs={diff?.Runs.Count ?? -1}, hasPixel={diff?.HasPixelChanges ?? false}");
+            var cmd = StrokeCompletedCommand;
+            if (cmd == null || diff == null) return;
+            // 변경 없으면 push 안 함.
+            if (!diff.HasPixelChanges
+                && diff.Instances.Before.Count == diff.Instances.After.Count
+                && diff.Instances.NextIdBefore == diff.Instances.NextIdAfter)
+            {
+                return;
+            }
+            var args = new MaskStrokeCompletedArgs(
+                undo: () => mask.ApplyDiffReverse(diff),
+                redo: () => mask.ApplyDiffForward(diff));
             if (cmd.CanExecute(args))
                 cmd.Execute(args);
         }
@@ -336,11 +364,11 @@ namespace VSMVVM.WPF.Controls.Behaviors
             if (mask == null || mask.MaskWidth <= 0 || mask.MaskHeight <= 0) return;
             if (instanceId == 0) return;
 
-            var before = mask.SnapshotFull();
+            mask.BeginDiffRecording();
             if (split) mask.SplitInstance(instanceId);
             else mask.DeleteInstance(instanceId);
-            var after = mask.SnapshotFull();
-            InvokeStrokeCommand(before, after, mask);
+            var diff = mask.EndDiffRecording();
+            InvokeStrokeCommandFromDiff(diff, mask);
         }
 
         private void HandleInstancesDelete(System.Collections.Generic.IReadOnlyList<uint> ids)
@@ -349,10 +377,10 @@ namespace VSMVVM.WPF.Controls.Behaviors
             if (mask == null || mask.MaskWidth <= 0 || mask.MaskHeight <= 0) return;
             if (ids.Count == 0) return;
 
-            var before = mask.SnapshotFull();
+            mask.BeginDiffRecording();
             mask.DeleteInstances(ids);
-            var after = mask.SnapshotFull();
-            InvokeStrokeCommand(before, after, mask);
+            var diff = mask.EndDiffRecording();
+            InvokeStrokeCommandFromDiff(diff, mask);
         }
 
         private void HandleInstancesMerge(System.Collections.Generic.IReadOnlyList<uint> ids)
@@ -361,10 +389,10 @@ namespace VSMVVM.WPF.Controls.Behaviors
             if (mask == null || mask.MaskWidth <= 0 || mask.MaskHeight <= 0) return;
             if (ids.Count < 2) return;
 
-            var before = mask.SnapshotFull();
+            mask.BeginDiffRecording();
             mask.MergeInstances(ids);
-            var after = mask.SnapshotFull();
-            InvokeStrokeCommand(before, after, mask);
+            var diff = mask.EndDiffRecording();
+            InvokeStrokeCommandFromDiff(diff, mask);
         }
     }
 }

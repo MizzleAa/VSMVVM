@@ -18,6 +18,9 @@ namespace VSMVVM.WPF.Imaging
         /// <summary>다음 사용 가능한 인스턴스 ID 를 반환하고 내부 카운터를 증가시킨다.</summary>
         public uint NextId() => _nextId++;
 
+        /// <summary>현재 카운터 값을 발번 없이 조회. Diff 기록에서 nextId before/after 비교용.</summary>
+        public uint PeekNextId() => _nextId;
+
         /// <summary>ID 로 인스턴스를 찾는다. 없으면 null.</summary>
         public MaskInstance? GetById(uint id)
         {

@@ -41,6 +41,7 @@ namespace VSMVVM.WPF.Sample.ViewModels
         public AngleMeasurementTool AngleMeasurementTool { get; } = new();
         public MagicWandTool MagicWandTool { get; } = new();
         public MagneticLassoTool MagneticLassoTool { get; } = new();
+        public PointPromptFillTool PointPromptFillTool { get; } = new();
 
         // ── 측정 컬렉션 ──
         public MeasurementCollection Measurements { get; } = new();
@@ -123,8 +124,8 @@ namespace VSMVVM.WPF.Sample.ViewModels
 
             _currentTool = ArrowTool;
 
-            Labels.Add("Tissue", Colors.DeepSkyBlue);
-            Labels.Add("Lesion", Colors.OrangeRed);
+            Labels.Add("Label1", Colors.DeepSkyBlue);
+            Labels.Add("Label2", Colors.OrangeRed);
             SelectedLabel = Labels.Count > 1 ? Labels[1] : null;
 
             // 측정 도구에 결과 저장 컬렉션 주입.
@@ -147,7 +148,10 @@ namespace VSMVVM.WPF.Sample.ViewModels
 
         partial void OnSelectedLabelChanged(LabelClass? value)
         {
-            if (value != null) CurrentLabelIndex = value.Index;
+            if (value != null)
+            {
+                CurrentLabelIndex = value.Index;
+            }
         }
 
         partial void OnBrushRadiusChanged(int value)
@@ -158,7 +162,30 @@ namespace VSMVVM.WPF.Sample.ViewModels
 
         partial void OnCurrentToolChanged(ICanvasTool value)
         {
+            // Select / Arrow 외 작업 도구 (brush, eraser, polygon, rectangle, ellipse, fill 등) 로 전환 시
+            // 인스턴스 선택 해제. 작업 도구 사용 중에 BBox + 8 핸들이 떠 있으면 사용자 혼란.
+            if (!ReferenceEquals(value, SelectTool) && !ReferenceEquals(value, ArrowTool))
+            {
+                DeselectAllInstances();
+            }
+            // mutating 도구일 때 MaskLayer 의 인스턴스 hit-test 끄기 — 칠해진 마스크 위 클릭이
+            // "인스턴스 선택" 으로 가로채이지 않고 도구로 흘러가도록.
+            if (MaskLayer != null)
+            {
+                MaskLayer.IsInstanceHitTestEnabled = value is not IMaskMutatingTool;
+            }
             UpdateStatus();
+        }
+
+        private void DeselectAllInstances()
+        {
+            if (MaskLayer == null) return;
+            foreach (var inst in MaskLayer.Instances)
+            {
+                if (inst.IsSelected) inst.IsSelected = false;
+            }
+            SelectedInstance = null;
+            MaskLayer.IsVertexEditMode = false;
         }
 
         partial void OnZoomLevelChanged(double value)
@@ -185,6 +212,7 @@ namespace VSMVVM.WPF.Sample.ViewModels
         [RelayCommand] private void SetToolAngleMeasurement() => CurrentTool = AngleMeasurementTool;
         [RelayCommand] private void SetToolMagicWand() => CurrentTool = MagicWandTool;
         [RelayCommand] private void SetToolMagneticLasso() => CurrentTool = MagneticLassoTool;
+        [RelayCommand] private void SetToolPointPromptFill() => CurrentTool = PointPromptFillTool;
 
         [RelayCommand]
         private void ClearMeasurements()
@@ -365,6 +393,12 @@ namespace VSMVVM.WPF.Sample.ViewModels
             var path = _fileDialog.OpenFile("Image files|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff");
             if (string.IsNullOrEmpty(path)) return;
 
+            // 새 이미지 로드 — 기존 마스크 인스턴스 + Undo/Redo 스택 모두 클리어.
+            // MaskLayer.Clear() 가 SelectedInstance / IsVertexEditMode 도 자동 초기화.
+            MaskLayer?.Clear();
+            _undoRedo.Clear();
+            SelectedInstance = null;
+
             var bmp = new BitmapImage();
             bmp.BeginInit();
             bmp.CacheOption = BitmapCacheOption.OnLoad;
@@ -416,12 +450,8 @@ namespace VSMVVM.WPF.Sample.ViewModels
         private void StrokeCompleted(MaskStrokeCompletedArgs? args)
         {
             if (args == null) return;
-            var before = args.Before;
-            var after = args.After;
-            var restore = args.Restore;
-            _undoRedo.Push(
-                undo: () => restore(before),
-                redo: () => restore(after));
+            // Snapshot/Diff 어느 경로든 args.UndoAction / RedoAction 으로 통일.
+            _undoRedo.Push(undo: args.UndoAction, redo: args.RedoAction);
         }
 
         // ── 인스턴스 관리 커맨드 ──

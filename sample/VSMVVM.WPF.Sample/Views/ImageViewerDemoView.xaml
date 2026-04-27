@@ -248,6 +248,13 @@
                         <Image Width="16" Height="16"
                                Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/stroke_24.svg, Fill={StaticResource TextPrimary}}"/>
                     </RadioButton>
+                    <RadioButton Style="{StaticResource IconToolButton}"
+                                 ToolTip="Point-prompt fill (Click=allow, Shift+Click=block, Enter/DblClick=commit, Esc=cancel)" GroupName="Tool"
+                                 IsChecked="{Binding CurrentTool, Converter={StaticResource ToolModeToBool}, ConverterParameter=PointPromptFill, Mode=OneWay}"
+                                 Command="{Binding SetToolPointPromptFillCommand}">
+                        <Image Width="16" Height="16"
+                               Source="{media:SvgImage Source=/VSMVVM.WPF.Sample;component/Assets/b_circle_fill_24.svg, Fill={StaticResource TextPrimary}}"/>
+                    </RadioButton>
                 </StackPanel>
             </Border>
 
@@ -313,6 +320,20 @@
                                         Value="{Binding MagicWandTool.Tolerance, Mode=TwoWay}"
                                         VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding MagicWandTool.Tolerance}"
+                                           VerticalAlignment="Center" Margin="{StaticResource Ml2}"
+                                           Foreground="{DynamicResource TextPrimary}"/>
+                            </StackPanel>
+
+                            <!-- Point-Prompt Fill 옵션 -->
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center"
+                                        Visibility="{Binding CurrentTool, Converter={x:Static ctrl:ToolModeToVisibilityConverter.Instance}, ConverterParameter=PointPromptFill}">
+                                <TextBlock Text="Fill Tol:" VerticalAlignment="Center" Margin="{StaticResource Mr2}"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           ToolTip="Point-prompt fill RGB tolerance (0-128). Click=allow, Shift+Click=block, Enter/DblClick=commit"/>
+                                <Slider Minimum="0" Maximum="128" Width="100"
+                                        Value="{Binding PointPromptFillTool.Tolerance, Mode=TwoWay}"
+                                        VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding PointPromptFillTool.Tolerance}"
                                            VerticalAlignment="Center" Margin="{StaticResource Ml2}"
                                            Foreground="{DynamicResource TextPrimary}"/>
                             </StackPanel>
@@ -465,7 +486,7 @@
                                         Padding="{StaticResource P3}"
                                         Margin="{StaticResource Mb1}">
                                     <StackPanel MinWidth="200">
-                                        <TextBlock Text="이미지 정보"
+                                        <TextBlock Text="Image Information"
                                                    FontWeight="{StaticResource FontSemibold}"
                                                    Foreground="{DynamicResource TextPrimary}"
                                                    Margin="{StaticResource Mb2}"/>
@@ -480,11 +501,11 @@
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
-                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="확대" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mr2}"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Zoom" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mr2}"/>
                                             <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ZoomLevel, StringFormat='×{0:F2}'}" Foreground="{DynamicResource TextPrimary}"/>
-                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="위치" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mr2}"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Location" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mr2}"/>
                                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding MousePositionText}" Foreground="{DynamicResource TextPrimary}"/>
-                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="크기" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mr2}"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Size" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mr2}"/>
                                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ImageSizeText}" Foreground="{DynamicResource TextPrimary}"/>
                                             <TextBlock Grid.Row="3" Grid.Column="0" Text="RGB" Foreground="{DynamicResource TextMuted}" Margin="{StaticResource Mr2}"/>
                                             <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">

@@ -37,6 +37,34 @@ namespace VSMVVM.WPF.Imaging.Coco
             return counts;
         }
 
+        /// <summary>SparseTileLayer 오버로드 — 동일 알고리즘, Get(x, y) 사용. COCO export 경로.</summary>
+        public static List<int> Encode(SparseTileLayer instanceMask, int width, int height, uint targetId)
+        {
+            var counts = new List<int>();
+            int run = 0;
+            bool prevBit = false;
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    bool bit = instanceMask.Get(x, y) == targetId;
+                    if (bit == prevBit)
+                    {
+                        run++;
+                    }
+                    else
+                    {
+                        counts.Add(run);
+                        prevBit = bit;
+                        run = 1;
+                    }
+                }
+            }
+            counts.Add(run);
+            return counts;
+        }
+
         /// <summary>
         /// column-major RLE 를 row-major binary mask 로 디코딩. 1 인 픽셀은 outId, 아니면 0.
         /// 반환 배열 크기는 width*height. instanceMask 에 OR 로 합치거나 직접 씀.

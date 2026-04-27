@@ -9,4 +9,178 @@
         <Setter Property="VerticalContentAlignment" Value="Stretch" />
     </Style>
 
+    <!-- MiniMapControl Default Style — Template 미사용. OnRender가 직접 그린다.
+         Width/Height는 MeasureOverride가 콘텐츠 종횡비로 결정한다. -->
+    <Style TargetType="{x:Type controls:MiniMapControl}">
+        <Setter Property="Background" Value="#222"/>
+        <Setter Property="BorderBrush" Value="#555"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:MiniMapControl}"/>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- RulerControl Default Style — OnRender 직접. Template 비움. -->
+    <Style TargetType="{x:Type controls:RulerControl}">
+        <Setter Property="Background" Value="#1A1A1A"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:RulerControl}"/>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- 체크무늬(투명도 표시용) 브러시. Alpha 트랙 및 preview 스워치의 배경. -->
+    <DrawingBrush x:Key="VSMVVM.ColorPicker.CheckerBrush"
+                  TileMode="Tile"
+                  Viewport="0,0,10,10"
+                  ViewportUnits="Absolute">
+        <DrawingBrush.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#CCCCCC">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,10,10"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#888888">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="0,0,5,5"/>
+                            <RectangleGeometry Rect="5,5,5,5"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+
+    <!-- Hue 무지개 그라데이션. -->
+    <LinearGradientBrush x:Key="VSMVVM.ColorPicker.HueBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0.000" Color="#FF0000"/>
+        <GradientStop Offset="0.167" Color="#FFFF00"/>
+        <GradientStop Offset="0.333" Color="#00FF00"/>
+        <GradientStop Offset="0.500" Color="#00FFFF"/>
+        <GradientStop Offset="0.667" Color="#0000FF"/>
+        <GradientStop Offset="0.833" Color="#FF00FF"/>
+        <GradientStop Offset="1.000" Color="#FF0000"/>
+    </LinearGradientBrush>
+
+    <!-- ColorPicker Default Style -->
+    <Style TargetType="{x:Type controls:ColorPicker}">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="MinWidth" Value="240"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:ColorPicker}">
+                    <StackPanel>
+                        <!-- SV pad: Base(W→색상) + Overlay(투명→검정) 두 Rectangle 을 겹쳐 렌더. -->
+                        <Border BorderBrush="#444" BorderThickness="1" CornerRadius="2"
+                                Height="140" Margin="0,0,0,8">
+                            <Canvas x:Name="PART_SvPad" ClipToBounds="True" Background="Transparent">
+                                <Rectangle x:Name="PART_SvBase"
+                                           IsHitTestVisible="False"
+                                           Width="{Binding ActualWidth, ElementName=PART_SvPad}"
+                                           Height="{Binding ActualHeight, ElementName=PART_SvPad}"/>
+                                <Rectangle x:Name="PART_SvOverlay"
+                                           IsHitTestVisible="False"
+                                           Width="{Binding ActualWidth, ElementName=PART_SvPad}"
+                                           Height="{Binding ActualHeight, ElementName=PART_SvPad}">
+                                    <Rectangle.Fill>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                            <GradientStop Offset="0" Color="#00000000"/>
+                                            <GradientStop Offset="1" Color="#FF000000"/>
+                                        </LinearGradientBrush>
+                                    </Rectangle.Fill>
+                                </Rectangle>
+                                <Ellipse x:Name="PART_SvThumb"
+                                         Width="12" Height="12"
+                                         Stroke="White" StrokeThickness="2"
+                                         IsHitTestVisible="False">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect Color="Black" ShadowDepth="0" BlurRadius="3" Opacity="0.8"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                            </Canvas>
+                        </Border>
+
+                        <!-- Hue slider -->
+                        <Border BorderBrush="#444" BorderThickness="1" CornerRadius="2"
+                                Height="14" Margin="0,0,0,8"
+                                Background="{StaticResource VSMVVM.ColorPicker.HueBrush}">
+                            <Canvas x:Name="PART_HueTrack" ClipToBounds="False" Background="Transparent">
+                                <Rectangle x:Name="PART_HueThumb"
+                                           Width="6" Height="18"
+                                           Canvas.Top="-3"
+                                           Fill="White"
+                                           Stroke="Black" StrokeThickness="1"
+                                           IsHitTestVisible="False"/>
+                            </Canvas>
+                        </Border>
+
+                        <!-- Alpha slider: 체크무늬 위에 색상 그라데이션 (코드가 주입). -->
+                        <Border BorderBrush="#444" BorderThickness="1" CornerRadius="2"
+                                Height="14" Margin="0,0,0,8"
+                                Background="{StaticResource VSMVVM.ColorPicker.CheckerBrush}">
+                            <Canvas x:Name="PART_AlphaTrack" ClipToBounds="False">
+                                <Rectangle x:Name="PART_AlphaThumb"
+                                           Width="6" Height="18"
+                                           Canvas.Top="-3"
+                                           Fill="White"
+                                           Stroke="Black" StrokeThickness="1"
+                                           IsHitTestVisible="False"/>
+                            </Canvas>
+                        </Border>
+
+                        <!-- RGBA 숫자 입력 -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="4"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="4"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="4"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="R" HorizontalAlignment="Center"
+                                       Foreground="#AAA" FontSize="11"/>
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="G" HorizontalAlignment="Center"
+                                       Foreground="#AAA" FontSize="11"/>
+                            <TextBlock Grid.Row="0" Grid.Column="4" Text="B" HorizontalAlignment="Center"
+                                       Foreground="#AAA" FontSize="11"/>
+                            <TextBlock Grid.Row="0" Grid.Column="6" Text="A" HorizontalAlignment="Center"
+                                       Foreground="#AAA" FontSize="11"/>
+                            <TextBox Grid.Row="1" Grid.Column="0" x:Name="PART_R" TextAlignment="Center"/>
+                            <TextBox Grid.Row="1" Grid.Column="2" x:Name="PART_G" TextAlignment="Center"/>
+                            <TextBox Grid.Row="1" Grid.Column="4" x:Name="PART_B" TextAlignment="Center"/>
+                            <TextBox Grid.Row="1" Grid.Column="6" x:Name="PART_A" TextAlignment="Center"/>
+                        </Grid>
+
+                        <!-- Hex + preview swatch -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="6"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Grid.Column="0" Width="28" Height="28"
+                                    BorderBrush="#444" BorderThickness="1" CornerRadius="2"
+                                    Background="{StaticResource VSMVVM.ColorPicker.CheckerBrush}">
+                                <Border Background="{Binding SelectedColor, RelativeSource={RelativeSource AncestorType={x:Type controls:ColorPicker}}, Converter={x:Static controls:ColorToBrushConverter.Instance}}"/>
+                            </Border>
+                            <TextBox Grid.Column="2" x:Name="PART_Hex" VerticalAlignment="Center"
+                                     FontFamily="Consolas, Courier New, monospace"/>
+                        </Grid>
+                    </StackPanel>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

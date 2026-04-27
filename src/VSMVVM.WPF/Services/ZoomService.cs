@@ -24,6 +24,11 @@ namespace VSMVVM.WPF.Services
         double OffsetY { get; set; }
 
         /// <summary>
+        /// Zoom 또는 오프셋이 바뀔 때마다 발화합니다.
+        /// </summary>
+        event EventHandler ViewChanged;
+
+        /// <summary>
         /// 화면 좌표를 캔버스 좌표로 변환.
         /// </summary>
         Point ScreenToCanvas(Point screenPoint);
@@ -41,14 +46,59 @@ namespace VSMVVM.WPF.Services
 
     /// <summary>
     /// Zoom/Pan 좌표 변환 서비스 구현체.
+    /// 값이 실제로 바뀔 때만 <see cref="ViewChanged"/>를 발화합니다.
     /// </summary>
     public sealed class ZoomService : IZoomService
     {
+        #region Fields
+
+        private double _zoomLevel = 1.0;
+        private double _offsetX;
+        private double _offsetY;
+        private bool _suppressNotify;
+
+        #endregion
+
         #region Properties
 
-        public double ZoomLevel { get; set; } = 1.0;
-        public double OffsetX { get; set; }
-        public double OffsetY { get; set; }
+        public double ZoomLevel
+        {
+            get => _zoomLevel;
+            set
+            {
+                if (_zoomLevel == value) return;
+                _zoomLevel = value;
+                RaiseViewChanged();
+            }
+        }
+
+        public double OffsetX
+        {
+            get => _offsetX;
+            set
+            {
+                if (_offsetX == value) return;
+                _offsetX = value;
+                RaiseViewChanged();
+            }
+        }
+
+        public double OffsetY
+        {
+            get => _offsetY;
+            set
+            {
+                if (_offsetY == value) return;
+                _offsetY = value;
+                RaiseViewChanged();
+            }
+        }
+
+        #endregion
+
+        #region Events
+
+        public event EventHandler ViewChanged;
 
         #endregion
 
@@ -56,23 +106,43 @@ namespace VSMVVM.WPF.Services
 
         public Point ScreenToCanvas(Point screenPoint)
         {
-            var x = (screenPoint.X - OffsetX) / ZoomLevel;
-            var y = (screenPoint.Y - OffsetY) / ZoomLevel;
+            var x = (screenPoint.X - _offsetX) / _zoomLevel;
+            var y = (screenPoint.Y - _offsetY) / _zoomLevel;
             return new Point(x, y);
         }
 
         public Point CanvasToScreen(Point canvasPoint)
         {
-            var x = canvasPoint.X * ZoomLevel + OffsetX;
-            var y = canvasPoint.Y * ZoomLevel + OffsetY;
+            var x = canvasPoint.X * _zoomLevel + _offsetX;
+            var y = canvasPoint.Y * _zoomLevel + _offsetY;
             return new Point(x, y);
         }
 
         public void ResetView()
         {
-            ZoomLevel = 1.0;
-            OffsetX = 0;
-            OffsetY = 0;
+            // 3개 필드 연속 변경 시 발화를 마지막 한 번으로 합치기
+            _suppressNotify = true;
+            try
+            {
+                ZoomLevel = 1.0;
+                OffsetX = 0;
+                OffsetY = 0;
+            }
+            finally
+            {
+                _suppressNotify = false;
+            }
+            RaiseViewChanged();
+        }
+
+        #endregion
+
+        #region Private
+
+        private void RaiseViewChanged()
+        {
+            if (_suppressNotify) return;
+            ViewChanged?.Invoke(this, EventArgs.Empty);
         }
 
         #endregion

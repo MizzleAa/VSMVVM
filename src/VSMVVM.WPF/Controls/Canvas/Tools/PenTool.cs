@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 
+#nullable enable
 namespace VSMVVM.WPF.Controls.Tools
 {
     /// <summary>

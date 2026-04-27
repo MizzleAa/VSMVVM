@@ -15,6 +15,28 @@
 	<ItemGroup>
 	  <None Remove="Assets\arrow_back_ios_24.svg" />
 	  <None Remove="Assets\arrow_forward_ios_24.svg" />
+	  <None Remove="Assets\cursor_24.svg" />
+	  <None Remove="Assets\selection_24.svg" />
+	  <None Remove="Assets\brush_24.svg" />
+	  <None Remove="Assets\erase_brush_24.svg" />
+	  <None Remove="Assets\b_circle_fill_24.svg" />
+	  <None Remove="Assets\box_24.svg" />
+	  <None Remove="Assets\circle_24.svg" />
+	  <None Remove="Assets\polygon_24.svg" />
+	  <None Remove="Assets\split_24.svg" />
+	  <None Remove="Assets\straighten_24.svg" />
+	  <None Remove="Assets\square_foot_24.svg" />
+	  <None Remove="Assets\special_24.svg" />
+	  <None Remove="Assets\stroke_24.svg" />
+	  <None Remove="Assets\folder_open_24.svg" />
+	  <None Remove="Assets\save_24.svg" />
+	  <None Remove="Assets\download_24.svg" />
+	  <None Remove="Assets\arrow_left_24.svg" />
+	  <None Remove="Assets\arrow_right_24.svg" />
+	  <None Remove="Assets\add_24.svg" />
+	  <None Remove="Assets\delete_24.svg" />
+	  <None Remove="Assets\merge_24.svg" />
+	  <None Remove="Assets\cancel_circle_24.svg" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -27,10 +49,36 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<Resource Include="Assets\arrow_back_ios_24.svg" />
 		<Resource Include="Assets\arrow_forward_ios_24.svg" />
 		<Resource Include="Assets\info_24.svg" />
 		<Resource Include="Assets\app.ico" />
+		<Resource Include="Assets\cursor_24.svg" />
+		<Resource Include="Assets\selection_24.svg" />
+		<Resource Include="Assets\brush_24.svg" />
+		<Resource Include="Assets\erase_brush_24.svg" />
+		<Resource Include="Assets\b_circle_fill_24.svg" />
+		<Resource Include="Assets\box_24.svg" />
+		<Resource Include="Assets\circle_24.svg" />
+		<Resource Include="Assets\polygon_24.svg" />
+		<Resource Include="Assets\split_24.svg" />
+		<Resource Include="Assets\straighten_24.svg" />
+		<Resource Include="Assets\square_foot_24.svg" />
+		<Resource Include="Assets\special_24.svg" />
+		<Resource Include="Assets\stroke_24.svg" />
+		<Resource Include="Assets\folder_open_24.svg" />
+		<Resource Include="Assets\save_24.svg" />
+		<Resource Include="Assets\download_24.svg" />
+		<Resource Include="Assets\arrow_left_24.svg" />
+		<Resource Include="Assets\arrow_right_24.svg" />
+		<Resource Include="Assets\add_24.svg" />
+		<Resource Include="Assets\delete_24.svg" />
+		<Resource Include="Assets\merge_24.svg" />
+		<Resource Include="Assets\cancel_circle_24.svg" />
 	</ItemGroup>
 
 </Project>

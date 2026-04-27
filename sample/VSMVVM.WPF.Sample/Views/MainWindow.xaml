@@ -136,6 +136,7 @@
                         <Button Content="Multi Window" Tag="Multi Window" Command="{Binding NavigateMultiWindowCommand}" Style="{StaticResource NavButton}"/>
                         <Button Content="Logging" Tag="Logging" Command="{Binding NavigateLoggingCommand}" Style="{StaticResource NavButton}"/>
                         <Button Content="Canvas" Tag="Canvas" Command="{Binding NavigateCanvasCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Image Viewer" Tag="Image Viewer" Command="{Binding NavigateImageViewerCommand}" Style="{StaticResource NavButton}"/>
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>

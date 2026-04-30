@@ -1,0 +1,96 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:charts="clr-namespace:VSMVVM.WPF.Design.Components.Charts">
+
+    <Style TargetType="{x:Type charts:LineChart}">
+        <Setter Property="PlotBackgroundBrush" Value="{DynamicResource BgPrimary}"/>
+        <Setter Property="GridBrush" Value="{DynamicResource BorderMuted}"/>
+        <Setter Property="AxisBrush" Value="{DynamicResource BorderDefault}"/>
+        <Setter Property="TextBrush" Value="{DynamicResource TextSecondary}"/>
+        <Setter Property="MinHeight" Value="160"/>
+        <Setter Property="MinWidth" Value="160"/>
+    </Style>
+
+    <Style TargetType="{x:Type charts:ScatterChart}">
+        <Setter Property="PlotBackgroundBrush" Value="{DynamicResource BgPrimary}"/>
+        <Setter Property="GridBrush" Value="{DynamicResource BorderMuted}"/>
+        <Setter Property="AxisBrush" Value="{DynamicResource BorderDefault}"/>
+        <Setter Property="TextBrush" Value="{DynamicResource TextSecondary}"/>
+        <Setter Property="MinHeight" Value="160"/>
+        <Setter Property="MinWidth" Value="160"/>
+    </Style>
+
+    <Style TargetType="{x:Type charts:BarChart}">
+        <Setter Property="PlotBackgroundBrush" Value="{DynamicResource BgPrimary}"/>
+        <Setter Property="GridBrush" Value="{DynamicResource BorderMuted}"/>
+        <Setter Property="AxisBrush" Value="{DynamicResource BorderDefault}"/>
+        <Setter Property="TextBrush" Value="{DynamicResource TextSecondary}"/>
+        <Setter Property="MinHeight" Value="160"/>
+        <Setter Property="MinWidth" Value="160"/>
+    </Style>
+
+    <Style TargetType="{x:Type charts:PieChart}">
+        <Setter Property="PlotBackgroundBrush" Value="{DynamicResource BgPrimary}"/>
+        <Setter Property="GridBrush" Value="{DynamicResource BorderMuted}"/>
+        <Setter Property="AxisBrush" Value="{DynamicResource BorderDefault}"/>
+        <Setter Property="TextBrush" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="MinHeight" Value="160"/>
+        <Setter Property="MinWidth" Value="160"/>
+    </Style>
+
+    <Style TargetType="{x:Type charts:ConfusionMatrix}">
+        <Setter Property="LowColorBrush" Value="{DynamicResource BgPrimary}"/>
+        <Setter Property="HighColorBrush" Value="{DynamicResource AccentPrimary}"/>
+        <Setter Property="TextBrush" Value="{DynamicResource TextSecondary}"/>
+        <Setter Property="AxisBrush" Value="{DynamicResource BorderDefault}"/>
+        <Setter Property="MinHeight" Value="200"/>
+        <Setter Property="MinWidth" Value="200"/>
+    </Style>
+
+    <Style TargetType="{x:Type charts:Heatmap}">
+        <Setter Property="PlotBackgroundBrush" Value="{DynamicResource BgPrimary}"/>
+        <Setter Property="GridBrush" Value="{DynamicResource BorderMuted}"/>
+        <Setter Property="AxisBrush" Value="{DynamicResource BorderDefault}"/>
+        <Setter Property="TextBrush" Value="{DynamicResource TextSecondary}"/>
+        <Setter Property="LowColorBrush" Value="{DynamicResource BgPrimary}"/>
+        <Setter Property="HighColorBrush" Value="{DynamicResource AccentPrimary}"/>
+        <Setter Property="MinHeight" Value="200"/>
+        <Setter Property="MinWidth" Value="200"/>
+    </Style>
+
+    <Style TargetType="{x:Type charts:Contour}">
+        <Setter Property="PlotBackgroundBrush" Value="{DynamicResource BgPrimary}"/>
+        <Setter Property="GridBrush" Value="{DynamicResource BorderMuted}"/>
+        <Setter Property="AxisBrush" Value="{DynamicResource BorderDefault}"/>
+        <Setter Property="TextBrush" Value="{DynamicResource TextSecondary}"/>
+        <Setter Property="MinHeight" Value="200"/>
+        <Setter Property="MinWidth" Value="200"/>
+    </Style>
+
+    <Style TargetType="{x:Type charts:Treemap}">
+        <Setter Property="BorderBrush" Value="{DynamicResource BgPrimary}"/>
+        <Setter Property="TextBrush" Value="{DynamicResource TextPrimary}"/>
+        <Setter Property="MinHeight" Value="200"/>
+        <Setter Property="MinWidth" Value="200"/>
+    </Style>
+
+    <Style TargetType="{x:Type charts:Candlestick}">
+        <Setter Property="PlotBackgroundBrush" Value="{DynamicResource BgPrimary}"/>
+        <Setter Property="GridBrush" Value="{DynamicResource BorderMuted}"/>
+        <Setter Property="AxisBrush" Value="{DynamicResource BorderDefault}"/>
+        <Setter Property="TextBrush" Value="{DynamicResource TextSecondary}"/>
+        <Setter Property="MinHeight" Value="200"/>
+        <Setter Property="MinWidth" Value="200"/>
+    </Style>
+
+    <Style TargetType="{x:Type charts:Histogram}">
+        <Setter Property="PlotBackgroundBrush" Value="{DynamicResource BgPrimary}"/>
+        <Setter Property="GridBrush" Value="{DynamicResource BorderMuted}"/>
+        <Setter Property="AxisBrush" Value="{DynamicResource BorderDefault}"/>
+        <Setter Property="TextBrush" Value="{DynamicResource TextSecondary}"/>
+        <Setter Property="MinHeight" Value="200"/>
+        <Setter Property="MinWidth" Value="200"/>
+    </Style>
+
+</ResourceDictionary>

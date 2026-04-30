@@ -41,6 +41,7 @@
 
         <!-- Components -->
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Components/LoadingOverlay.xaml"/>
+        <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Components/Charts/ChartShared.xaml"/>
 
     </ResourceDictionary.MergedDictionaries>
 

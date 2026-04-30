@@ -1,0 +1,741 @@
+<UserControl x:Class="VSMVVM.WPF.Sample.Views.ChartsDemoView"
+             x:Name="Root"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:charts="clr-namespace:VSMVVM.WPF.Design.Components.Charts;assembly=VSMVVM.WPF.Design"
+             xmlns:cc="clr-namespace:VSMVVM.WPF.Design.Components.Charts.Core;assembly=VSMVVM.WPF.Design"
+             xmlns:chBeh="clr-namespace:VSMVVM.WPF.Design.Components.Charts.Behaviors;assembly=VSMVVM.WPF.Design"
+             xmlns:wpfctrl="clr-namespace:VSMVVM.WPF.Controls;assembly=VSMVVM.WPF"
+             xmlns:bh="clr-namespace:VSMVVM.WPF.Sample.Behaviors"
+             xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
+             me:ViewModelLocator.AutoWireViewModel="True">
+    <UserControl.Resources>
+        <!-- Series legend item: visibility checkbox + color swatch button (with attached props) + title -->
+        <DataTemplate x:Key="SeriesLegendItemTemplate">
+            <Border Padding="{StaticResource Px2Py1}"
+                    Margin="{StaticResource Mr2}"
+                    BorderBrush="{DynamicResource BorderMuted}"
+                    BorderThickness="{StaticResource Border}"
+                    CornerRadius="{StaticResource RoundedSm}"
+                    Background="{DynamicResource BgSecondary}">
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox IsChecked="{Binding IsVisible, Mode=TwoWay}"
+                              VerticalAlignment="Center"
+                              Margin="{StaticResource Mr2}"/>
+                    <Button Width="18" Height="18"
+                            VerticalAlignment="Center"
+                            Margin="{StaticResource Mr2}"
+                            Background="{Binding Brush}"
+                            BorderBrush="{DynamicResource BorderDefault}"
+                            BorderThickness="{StaticResource Border}"
+                            chBeh:SeriesColorPicker.Series="{Binding}"
+                            chBeh:SeriesColorPicker.Popup="{Binding ElementName=ColorPopup}"
+                            ToolTip="Change color"/>
+                    <TextBlock Text="{Binding Title}"
+                               Foreground="{DynamicResource TextPrimary}"
+                               FontSize="{StaticResource TextSm}"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+    </UserControl.Resources>
+
+    <Grid Background="{DynamicResource BgPrimary}">
+        <!-- Sync VM AxisFont→ChartAxis -->
+        <i:Interaction.Behaviors>
+            <bh:AxisFontSyncBehavior SourceFamily="{Binding AxisFontFamily}"
+                                     SourceSize="{Binding AxisFontSize}"
+                                     Axes="{Binding AllAxes}"/>
+        </i:Interaction.Behaviors>
+
+        <DockPanel>
+
+            <!-- Shared toolbar (Anchor + Font + Hz) -->
+            <Border DockPanel.Dock="Top"
+                    Background="{DynamicResource BgSecondary}"
+                    BorderBrush="{DynamicResource BorderDefault}"
+                    BorderThickness="{StaticResource BorderB}"
+                    Padding="{StaticResource P2}">
+                <WrapPanel>
+                    <ToggleButton Content="Tooltip"
+                                  IsChecked="{Binding IsTooltipOn}"
+                                  Padding="{StaticResource Px2Py1}"
+                                  Margin="{StaticResource Mr3}"/>
+
+                    <TextBlock Text="Axis Font:" Foreground="{DynamicResource TextSecondary}"
+                               VerticalAlignment="Center" Margin="{StaticResource Mr2}"/>
+                    <ComboBox ItemsSource="{Binding FontFamilyOptions}"
+                              SelectedItem="{Binding AxisFontFamily}"
+                              Width="140"
+                              Margin="{StaticResource Mr3}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Source}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <TextBlock Text="Size:" Foreground="{DynamicResource TextSecondary}"
+                               VerticalAlignment="Center" Margin="{StaticResource Mr2}"/>
+                    <ComboBox ItemsSource="{Binding FontSizeOptions}"
+                              SelectedItem="{Binding AxisFontSize}"
+                              Width="64"
+                              Margin="{StaticResource Mr3}"/>
+
+                    <TextBlock Text="Live Hz:" Foreground="{DynamicResource TextSecondary}"
+                               VerticalAlignment="Center" Margin="{StaticResource Mr2}"/>
+                    <Slider Minimum="1" Maximum="60" Value="{Binding LiveHz}"
+                            Width="160" VerticalAlignment="Center"
+                            Margin="{StaticResource Mr2}"/>
+                    <TextBlock Text="{Binding LiveHz, StringFormat={}{0:F0}}"
+                               Foreground="{DynamicResource TextPrimary}"
+                               VerticalAlignment="Center" Width="32"
+                               Margin="{StaticResource Mr3}"/>
+
+                    <TextBlock Text="ColorMap:" Foreground="{DynamicResource TextSecondary}"
+                               VerticalAlignment="Center" Margin="{StaticResource Mr2}"/>
+                    <ComboBox ItemsSource="{Binding ColorMapOptions}"
+                              SelectedItem="{Binding SelectedColorMap}"
+                              Width="100"/>
+                </WrapPanel>
+            </Border>
+
+            <TabControl Margin="{StaticResource M2}">
+
+                <!-- Line 100k -->
+                <TabItem Header="Line (100k)">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="{StaticResource M2}">
+                            <ToggleButton Content="Live"
+                                          IsChecked="{Binding LineLiveOn}"
+                                          Padding="{StaticResource Px2Py1}"
+                                          Margin="{StaticResource Mr3}"/>
+                            <ToggleButton Content="Crosshair"
+                                          IsChecked="{Binding LineCrosshairOn}"
+                                          Padding="{StaticResource Px2Py1}"
+                                          Margin="{StaticResource Mr3}"/>
+                            <Button Content="Fit to All"
+                                    Command="{Binding FitLineCommand}"
+                                    Padding="{StaticResource Px2Py1}" Margin="{StaticResource Mr3}"/>
+                            <TextBlock Text="{Binding LineSeriesInfo}"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ItemsControl DockPanel.Dock="Top"
+                                      ItemsSource="{Binding LineSeries}"
+                                      ItemTemplate="{StaticResource SeriesLegendItemTemplate}"
+                                      Margin="{StaticResource Mx2}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                        <Grid>
+                            <charts:LineChart x:Name="LineChartCtrl"
+                                              Series="{Binding LineSeries}"
+                                              XAxis="{Binding LineXAxis}"
+                                              YAxis="{Binding LineYAxis}"
+                                              IsTooltipEnabled="{Binding IsTooltipOn}"
+                                              HoverMode="{Binding LineHoverMode}">
+                                <i:Interaction.Behaviors>
+                                    <chBeh:ChartTooltipBehavior TooltipElement="{Binding ElementName=LineTooltip}"
+                                                                TitleElement="{Binding ElementName=LineTooltipTitle}"
+                                                                BodyElement="{Binding ElementName=LineTooltipBody}"/>
+                                    <chBeh:LineCrosshairBehavior CrosshairCanvas="{Binding ElementName=LineCrosshairCanvas}"
+                                                                  TooltipElement="{Binding ElementName=LineCrosshairTooltip}"
+                                                                  TitleElement="{Binding ElementName=LineCrosshairTooltipTitle}"
+                                                                  BodyElement="{Binding ElementName=LineCrosshairTooltipBody}"
+                                                                  LineBrush="{DynamicResource TextMuted}"/>
+                                    <chBeh:FitTriggerBehavior FitTrigger="{Binding LineFitTrigger}"/>
+                                </i:Interaction.Behaviors>
+                            </charts:LineChart>
+                            <Canvas x:Name="LineCrosshairCanvas" IsHitTestVisible="False"/>
+                            <Border x:Name="LineTooltip"
+                                    Visibility="Collapsed"
+                                    IsHitTestVisible="False"
+                                    Background="{DynamicResource BgSecondary}"
+                                    BorderBrush="{DynamicResource BorderDefault}"
+                                    BorderThickness="{StaticResource Border}"
+                                    CornerRadius="{StaticResource RoundedSm}"
+                                    Padding="{StaticResource Px2Py1}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <TextBlock x:Name="LineTooltipTitle"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               FontSize="{StaticResource TextSm}"/>
+                                    <TextBlock x:Name="LineTooltipBody"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               FontSize="{StaticResource TextXs}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border x:Name="LineCrosshairTooltip"
+                                    Visibility="Collapsed"
+                                    IsHitTestVisible="False"
+                                    Background="{DynamicResource BgSecondary}"
+                                    BorderBrush="{DynamicResource BorderDefault}"
+                                    BorderThickness="{StaticResource Border}"
+                                    CornerRadius="{StaticResource RoundedSm}"
+                                    Padding="{StaticResource Px2Py1}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <TextBlock x:Name="LineCrosshairTooltipTitle"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               FontSize="{StaticResource TextSm}"
+                                               FontWeight="{StaticResource FontSemibold}"/>
+                                    <TextBlock x:Name="LineCrosshairTooltipBody"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               FontSize="{StaticResource TextXs}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- Scatter 100k -->
+                <TabItem Header="Scatter (100k)">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="{StaticResource M2}">
+                            <ToggleButton Content="Live"
+                                          IsChecked="{Binding ScatterLiveOn}"
+                                          Padding="{StaticResource Px2Py1}"
+                                          Margin="{StaticResource Mr3}"/>
+                            <ToggleButton Content="Crosshair"
+                                          IsChecked="{Binding ScatterCrosshairOn}"
+                                          Padding="{StaticResource Px2Py1}"
+                                          Margin="{StaticResource Mr3}"/>
+                            <Button Content="Fit to All"
+                                    Command="{Binding FitScatterCommand}"
+                                    Padding="{StaticResource Px2Py1}" Margin="{StaticResource Mr3}"/>
+                            <TextBlock Text="Density:" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" Margin="{StaticResource Mr2}"/>
+                            <ComboBox ItemsSource="{Binding ScatterDensityModeOptions}"
+                                      SelectedItem="{Binding ScatterDensityMode}"
+                                      Width="100" Margin="{StaticResource Mr3}"/>
+                            <TextBlock Text="100k × 2"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ItemsControl DockPanel.Dock="Top"
+                                      ItemsSource="{Binding ScatterSeries}"
+                                      ItemTemplate="{StaticResource SeriesLegendItemTemplate}"
+                                      Margin="{StaticResource Mx2}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                        <Grid>
+                            <charts:ScatterChart x:Name="ScatterChartCtrl"
+                                                 Series="{Binding ScatterSeries}"
+                                                 XAxis="{Binding ScatterXAxis}"
+                                                 YAxis="{Binding ScatterYAxis}"
+                                                 IsTooltipEnabled="{Binding IsTooltipOn}"
+                                                 HoverMode="{Binding ScatterHoverMode}"
+                                                 DensityMode="{Binding ScatterDensityMode}"
+                                                 ColorMap="{Binding SelectedColorMap}">
+                                <i:Interaction.Behaviors>
+                                    <chBeh:ChartTooltipBehavior TooltipElement="{Binding ElementName=ScatterTooltip}"
+                                                                TitleElement="{Binding ElementName=ScatterTooltipTitle}"
+                                                                BodyElement="{Binding ElementName=ScatterTooltipBody}"/>
+                                    <chBeh:LineCrosshairBehavior CrosshairCanvas="{Binding ElementName=ScatterCrosshairCanvas}"
+                                                                  TooltipElement="{Binding ElementName=ScatterCrosshairTooltip}"
+                                                                  TitleElement="{Binding ElementName=ScatterCrosshairTooltipTitle}"
+                                                                  BodyElement="{Binding ElementName=ScatterCrosshairTooltipBody}"
+                                                                  LineBrush="{DynamicResource AccentPrimary}"/>
+                                    <chBeh:FitTriggerBehavior FitTrigger="{Binding ScatterFitTrigger}"/>
+                                </i:Interaction.Behaviors>
+                            </charts:ScatterChart>
+                            <Canvas x:Name="ScatterCrosshairCanvas" IsHitTestVisible="False"/>
+                            <Border x:Name="ScatterTooltip"
+                                    Visibility="Collapsed"
+                                    IsHitTestVisible="False"
+                                    Background="{DynamicResource BgSecondary}"
+                                    BorderBrush="{DynamicResource BorderDefault}"
+                                    BorderThickness="{StaticResource Border}"
+                                    CornerRadius="{StaticResource RoundedSm}"
+                                    Padding="{StaticResource Px2Py1}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <TextBlock x:Name="ScatterTooltipTitle"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               FontSize="{StaticResource TextSm}"/>
+                                    <TextBlock x:Name="ScatterTooltipBody"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               FontSize="{StaticResource TextXs}"/>
+                                </StackPanel>
+                            </Border>
+                            <Border x:Name="ScatterCrosshairTooltip"
+                                    Visibility="Collapsed"
+                                    IsHitTestVisible="False"
+                                    Background="{DynamicResource BgSecondary}"
+                                    BorderBrush="{DynamicResource BorderDefault}"
+                                    BorderThickness="{StaticResource Border}"
+                                    CornerRadius="{StaticResource RoundedSm}"
+                                    Padding="{StaticResource Px2Py1}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <TextBlock x:Name="ScatterCrosshairTooltipTitle"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               FontSize="{StaticResource TextSm}"
+                                               FontWeight="{StaticResource FontSemibold}"/>
+                                    <TextBlock x:Name="ScatterCrosshairTooltipBody"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               FontSize="{StaticResource TextXs}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- Bar -->
+                <TabItem Header="Bar">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="{StaticResource M2}">
+                            <ToggleButton Content="Live"
+                                          IsChecked="{Binding BarLiveOn}"
+                                          Padding="{StaticResource Px2Py1}"
+                                          Margin="{StaticResource Mr3}"/>
+                            <Button Content="Fit to All"
+                                    Command="{Binding FitBarCommand}"
+                                    Padding="{StaticResource Px2Py1}" Margin="{StaticResource Mr3}"/>
+                            <TextBlock Text="Orientation:" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" Margin="{StaticResource Mr2}"/>
+                            <ComboBox ItemsSource="{Binding BarOrientationOptions}"
+                                      SelectedItem="{Binding BarOrientation}"
+                                      Width="100" Margin="{StaticResource Mr3}"/>
+                            <TextBlock Text="Mode:" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" Margin="{StaticResource Mr2}"/>
+                            <ComboBox ItemsSource="{Binding BarModeOptions}"
+                                      SelectedItem="{Binding BarMode}"
+                                      Width="100" Margin="{StaticResource Mr3}"/>
+                            <ToggleButton Content="Show Values"
+                                          IsChecked="{Binding BarShowValues}"
+                                          Padding="{StaticResource Px2Py1}"/>
+                        </StackPanel>
+                        <ItemsControl DockPanel.Dock="Top"
+                                      ItemsSource="{Binding BarSeries}"
+                                      ItemTemplate="{StaticResource SeriesLegendItemTemplate}"
+                                      Margin="{StaticResource Mx2}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                        <Grid>
+                            <charts:BarChart x:Name="BarChartCtrl"
+                                             Series="{Binding BarSeries}"
+                                             XAxis="{Binding BarXAxis}"
+                                             YAxis="{Binding BarYAxis}"
+                                             Orientation="{Binding BarOrientation}"
+                                             BarMode="{Binding BarMode}"
+                                             ShowValues="{Binding BarShowValues}"
+                                             IsTooltipEnabled="{Binding IsTooltipOn}">
+                                <i:Interaction.Behaviors>
+                                    <chBeh:BarChartTooltipBehavior TooltipElement="{Binding ElementName=BarTooltip}"
+                                                                   TitleElement="{Binding ElementName=BarTooltipTitle}"
+                                                                   BodyElement="{Binding ElementName=BarTooltipBody}"/>
+                                    <chBeh:FitTriggerBehavior FitTrigger="{Binding BarFitTrigger}"/>
+                                </i:Interaction.Behaviors>
+                            </charts:BarChart>
+                            <Border x:Name="BarTooltip"
+                                    Visibility="Collapsed"
+                                    IsHitTestVisible="False"
+                                    Background="{DynamicResource BgSecondary}"
+                                    BorderBrush="{DynamicResource BorderDefault}"
+                                    BorderThickness="{StaticResource Border}"
+                                    CornerRadius="{StaticResource RoundedSm}"
+                                    Padding="{StaticResource Px2Py1}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <TextBlock x:Name="BarTooltipTitle"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               FontSize="{StaticResource TextSm}"/>
+                                    <TextBlock x:Name="BarTooltipBody"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               FontSize="{StaticResource TextXs}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- Pie -->
+                <TabItem Header="Pie / Doughnut">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="{StaticResource M2}">
+                            <ToggleButton Content="Live"
+                                          IsChecked="{Binding PieLiveOn}"
+                                          Padding="{StaticResource Px2Py1}"
+                                          Margin="{StaticResource Mr3}"/>
+                            <CheckBox Content="Doughnut"
+                                      IsChecked="{Binding IsDoughnut}"
+                                      Foreground="{DynamicResource TextPrimary}"
+                                      VerticalAlignment="Center"
+                                      Margin="{StaticResource Mr3}"/>
+                            <TextBlock Text="Label:" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" Margin="{StaticResource Mr2}"/>
+                            <ComboBox ItemsSource="{Binding PieLabelModeOptions}"
+                                      SelectedItem="{Binding PieLabelMode}"
+                                      Width="100"/>
+                        </StackPanel>
+                        <ItemsControl DockPanel.Dock="Top"
+                                      ItemsSource="{Binding PieSeries}"
+                                      ItemTemplate="{StaticResource SeriesLegendItemTemplate}"
+                                      Margin="{StaticResource Mx2}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                        <Grid>
+                            <charts:PieChart x:Name="PieChartCtrl"
+                                             Series="{Binding PieSeries}"
+                                             IsDoughnut="{Binding IsDoughnut}"
+                                             LabelMode="{Binding PieLabelMode}"
+                                             IsTooltipEnabled="{Binding IsTooltipOn}">
+                                <i:Interaction.Behaviors>
+                                    <chBeh:PieChartTooltipBehavior TooltipElement="{Binding ElementName=PieTooltip}"
+                                                                   TitleElement="{Binding ElementName=PieTooltipTitle}"
+                                                                   BodyElement="{Binding ElementName=PieTooltipBody}"/>
+                                </i:Interaction.Behaviors>
+                            </charts:PieChart>
+                            <Border x:Name="PieTooltip"
+                                    Visibility="Collapsed"
+                                    IsHitTestVisible="False"
+                                    Background="{DynamicResource BgSecondary}"
+                                    BorderBrush="{DynamicResource BorderDefault}"
+                                    BorderThickness="{StaticResource Border}"
+                                    CornerRadius="{StaticResource RoundedSm}"
+                                    Padding="{StaticResource Px2Py1}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <TextBlock x:Name="PieTooltipTitle"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               FontSize="{StaticResource TextSm}"/>
+                                    <TextBlock x:Name="PieTooltipBody"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               FontSize="{StaticResource TextXs}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- Heatmap -->
+                <TabItem Header="Heatmap">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="{StaticResource M2}">
+                            <Button Content="Fit to All"
+                                    Command="{Binding FitHeatmapCommand}"
+                                    Padding="{StaticResource Px2Py1}" Margin="{StaticResource Mr3}"/>
+                            <TextBlock Text="80×80 grid (zoom/pan + colormap)"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Grid>
+                        <charts:Heatmap x:Name="HeatmapCtrl"
+                                        Data="{Binding HeatmapData}"
+                                        XMin="{Binding HeatmapXMin}"
+                                        XMax="{Binding HeatmapXMax}"
+                                        YMin="{Binding HeatmapYMin}"
+                                        YMax="{Binding HeatmapYMax}"
+                                        ColorMap="{Binding SelectedColorMap}"
+                                        IsTooltipEnabled="{Binding IsTooltipOn}">
+                            <i:Interaction.Behaviors>
+                                <chBeh:ChartTooltipBehavior TooltipElement="{Binding ElementName=HeatmapTooltip}"
+                                                            TitleElement="{Binding ElementName=HeatmapTooltipTitle}"
+                                                            BodyElement="{Binding ElementName=HeatmapTooltipBody}"
+                                                            BodyFormat="X: {0:0.##}  Value: {1:0.###}"/>
+                                <chBeh:FitTriggerBehavior FitTrigger="{Binding HeatmapFitTrigger}"/>
+                            </i:Interaction.Behaviors>
+                        </charts:Heatmap>
+                        <Border x:Name="HeatmapTooltip"
+                                Visibility="Collapsed"
+                                IsHitTestVisible="False"
+                                Background="{DynamicResource BgSecondary}"
+                                BorderBrush="{DynamicResource BorderDefault}"
+                                BorderThickness="{StaticResource Border}"
+                                CornerRadius="{StaticResource RoundedSm}"
+                                Padding="{StaticResource Px2Py1}"
+                                HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <StackPanel>
+                                <TextBlock x:Name="HeatmapTooltipTitle"
+                                           Foreground="{DynamicResource TextPrimary}"
+                                           FontSize="{StaticResource TextSm}"/>
+                                <TextBlock x:Name="HeatmapTooltipBody"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           FontSize="{StaticResource TextXs}"/>
+                            </StackPanel>
+                        </Border>
+                        </Grid>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- Contour -->
+                <TabItem Header="Contour">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="{StaticResource M2}">
+                            <Button Content="Fit to All"
+                                    Command="{Binding FitContourCommand}"
+                                    Padding="{StaticResource Px2Py1}" Margin="{StaticResource Mr3}"/>
+                            <TextBlock Text="100×100 grid (Marching Squares, 12 levels)"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Grid>
+                            <charts:Contour x:Name="ContourCtrl"
+                                            Data="{Binding ContourData}"
+                                            XMin="{Binding ContourXMin}"
+                                            XMax="{Binding ContourXMax}"
+                                            YMin="{Binding ContourYMin}"
+                                            YMax="{Binding ContourYMax}"
+                                            LevelCount="{Binding ContourLevelCount}"
+                                            ColorMap="{Binding SelectedColorMap}">
+                                <i:Interaction.Behaviors>
+                                    <chBeh:FitTriggerBehavior FitTrigger="{Binding ContourFitTrigger}"/>
+                                </i:Interaction.Behaviors>
+                            </charts:Contour>
+                        </Grid>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- Confusion Matrix -->
+                <TabItem Header="Confusion Matrix">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="{StaticResource M2}">
+                            <Button Content="Fit to All"
+                                    Command="{Binding FitConfusionCommand}"
+                                    Padding="{StaticResource Px2Py1}" Margin="{StaticResource Mr3}"/>
+                            <TextBlock Text="(zoom/pan + colormap + custom font)"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Grid>
+                        <charts:ConfusionMatrix x:Name="ConfusionCtrl"
+                                                Matrix="{Binding ConfusionMatrix}"
+                                                RowLabels="{Binding ConfusionLabels}"
+                                                ColumnLabels="{Binding ConfusionLabels}"
+                                                ColorMap="{Binding SelectedColorMap}"
+                                                FontFamily="{Binding AxisFontFamily}"
+                                                CellValueFontSize="{Binding AxisFontSize}"
+                                                LabelFontSize="{Binding AxisFontSize}">
+                            <i:Interaction.Behaviors>
+                                <chBeh:ConfusionMatrixTooltipBehavior TooltipElement="{Binding ElementName=ConfusionTooltip}"
+                                                                       TitleElement="{Binding ElementName=ConfusionTooltipTitle}"
+                                                                       BodyElement="{Binding ElementName=ConfusionTooltipBody}"/>
+                                <chBeh:FitTriggerBehavior FitTrigger="{Binding ConfusionFitTrigger}"/>
+                            </i:Interaction.Behaviors>
+                        </charts:ConfusionMatrix>
+                        <Border x:Name="ConfusionTooltip"
+                                Visibility="Collapsed"
+                                IsHitTestVisible="False"
+                                Background="{DynamicResource BgSecondary}"
+                                BorderBrush="{DynamicResource BorderDefault}"
+                                BorderThickness="{StaticResource Border}"
+                                CornerRadius="{StaticResource RoundedSm}"
+                                Padding="{StaticResource Px2Py1}"
+                                HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <StackPanel>
+                                <TextBlock x:Name="ConfusionTooltipTitle"
+                                           Foreground="{DynamicResource TextPrimary}"
+                                           FontSize="{StaticResource TextSm}"/>
+                                <TextBlock x:Name="ConfusionTooltipBody"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           FontSize="{StaticResource TextXs}"/>
+                            </StackPanel>
+                        </Border>
+                        </Grid>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- Treemap -->
+                <TabItem Header="Treemap">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="{StaticResource M2}">
+                            <Button Content="Fit to All"
+                                    Command="{Binding FitTreemapCommand}"
+                                    Padding="{StaticResource Px2Py1}" Margin="{StaticResource Mr3}"/>
+                            <TextBlock Text="(zoom/pan + colormap + custom font)"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Grid>
+                        <charts:Treemap x:Name="TreemapCtrl"
+                                        Items="{Binding TreemapItems}"
+                                        ColorMap="{Binding SelectedColorMap}"
+                                        FontFamily="{Binding AxisFontFamily}"
+                                        LabelFontSize="{Binding AxisFontSize}">
+                            <i:Interaction.Behaviors>
+                                <chBeh:TreemapTooltipBehavior TooltipElement="{Binding ElementName=TreemapTooltip}"
+                                                              TitleElement="{Binding ElementName=TreemapTooltipTitle}"
+                                                              BodyElement="{Binding ElementName=TreemapTooltipBody}"/>
+                                <chBeh:FitTriggerBehavior FitTrigger="{Binding TreemapFitTrigger}"/>
+                            </i:Interaction.Behaviors>
+                        </charts:Treemap>
+                        <Border x:Name="TreemapTooltip"
+                                Visibility="Collapsed"
+                                IsHitTestVisible="False"
+                                Background="{DynamicResource BgSecondary}"
+                                BorderBrush="{DynamicResource BorderDefault}"
+                                BorderThickness="{StaticResource Border}"
+                                CornerRadius="{StaticResource RoundedSm}"
+                                Padding="{StaticResource Px2Py1}"
+                                HorizontalAlignment="Left" VerticalAlignment="Top">
+                            <StackPanel>
+                                <TextBlock x:Name="TreemapTooltipTitle"
+                                           Foreground="{DynamicResource TextPrimary}"
+                                           FontSize="{StaticResource TextSm}"/>
+                                <TextBlock x:Name="TreemapTooltipBody"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           FontSize="{StaticResource TextXs}"/>
+                            </StackPanel>
+                        </Border>
+                        </Grid>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- Candlestick -->
+                <TabItem Header="Candlestick">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="{StaticResource M2}">
+                            <ToggleButton Content="Live"
+                                          IsChecked="{Binding CandleLiveOn}"
+                                          Padding="{StaticResource Px2Py1}"
+                                          Margin="{StaticResource Mr3}"/>
+                            <Button Content="Fit to All"
+                                    Command="{Binding FitCandlestickCommand}"
+                                    Padding="{StaticResource Px2Py1}" Margin="{StaticResource Mr3}"/>
+                            <TextBlock Text="Bull:" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" Margin="{StaticResource Mr1}"/>
+                            <Button Width="22" Height="22"
+                                    Margin="{StaticResource Mr3}"
+                                    Background="{Binding CandleSeries.BullBrush}"
+                                    BorderBrush="{DynamicResource BorderDefault}"
+                                    BorderThickness="{StaticResource Border}"
+                                    chBeh:SeriesColorPicker.CandleSeries="{Binding CandleSeries}"
+                                    chBeh:SeriesColorPicker.CandleColorRole="Bull"
+                                    chBeh:SeriesColorPicker.Popup="{Binding ElementName=ColorPopup}"/>
+                            <TextBlock Text="Bear:" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" Margin="{StaticResource Mr1}"/>
+                            <Button Width="22" Height="22"
+                                    Margin="{StaticResource Mr3}"
+                                    Background="{Binding CandleSeries.BearBrush}"
+                                    BorderBrush="{DynamicResource BorderDefault}"
+                                    BorderThickness="{StaticResource Border}"
+                                    chBeh:SeriesColorPicker.CandleSeries="{Binding CandleSeries}"
+                                    chBeh:SeriesColorPicker.CandleColorRole="Bear"
+                                    chBeh:SeriesColorPicker.Popup="{Binding ElementName=ColorPopup}"/>
+                            <TextBlock Text="OHLC 250 days (zoom/pan, hover for OHLC)"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Grid>
+                            <charts:Candlestick x:Name="CandlestickCtrl"
+                                                CandleSeries="{Binding CandleSeries}"
+                                                IsTooltipEnabled="{Binding IsTooltipOn}">
+                                <i:Interaction.Behaviors>
+                                    <chBeh:CandleTooltipBehavior TooltipElement="{Binding ElementName=CandleTooltip}"
+                                                                  TitleElement="{Binding ElementName=CandleTooltipTitle}"
+                                                                  BodyElement="{Binding ElementName=CandleTooltipBody}"/>
+                                    <chBeh:FitTriggerBehavior FitTrigger="{Binding CandlestickFitTrigger}"/>
+                                </i:Interaction.Behaviors>
+                            </charts:Candlestick>
+                            <Border x:Name="CandleTooltip"
+                                    Visibility="Collapsed"
+                                    IsHitTestVisible="False"
+                                    Background="{DynamicResource BgSecondary}"
+                                    BorderBrush="{DynamicResource BorderDefault}"
+                                    BorderThickness="{StaticResource Border}"
+                                    CornerRadius="{StaticResource RoundedSm}"
+                                    Padding="{StaticResource Px2Py1}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <TextBlock x:Name="CandleTooltipTitle"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               FontSize="{StaticResource TextSm}"
+                                               FontWeight="{StaticResource FontSemibold}"/>
+                                    <TextBlock x:Name="CandleTooltipBody"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               FontSize="{StaticResource TextXs}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- Histogram -->
+                <TabItem Header="Histogram">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="{StaticResource M2}">
+                            <Button Content="Fit to All"
+                                    Command="{Binding FitHistogramCommand}"
+                                    Padding="{StaticResource Px2Py1}" Margin="{StaticResource Mr3}"/>
+                            <TextBlock Text="3 Gaussian distributions × 5000 samples (overlapping bins)"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <ItemsControl DockPanel.Dock="Top"
+                                      ItemsSource="{Binding HistogramSeries}"
+                                      ItemTemplate="{StaticResource SeriesLegendItemTemplate}"
+                                      Margin="{StaticResource Mx2}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                        </ItemsControl>
+                        <Grid>
+                            <charts:Histogram x:Name="HistogramCtrl"
+                                              Series="{Binding HistogramSeries}"
+                                              XAxis="{Binding HistogramXAxis}"
+                                              YAxis="{Binding HistogramYAxis}"
+                                              BinCount="30"
+                                              IsTooltipEnabled="{Binding IsTooltipOn}">
+                                <i:Interaction.Behaviors>
+                                    <chBeh:ChartTooltipBehavior TooltipElement="{Binding ElementName=HistogramTooltip}"
+                                                                TitleElement="{Binding ElementName=HistogramTooltipTitle}"
+                                                                BodyElement="{Binding ElementName=HistogramTooltipBody}"
+                                                                BodyFormat="X: {0:0.##}  Count: {1:0}"/>
+                                    <chBeh:FitTriggerBehavior FitTrigger="{Binding HistogramFitTrigger}"/>
+                                </i:Interaction.Behaviors>
+                            </charts:Histogram>
+                            <Border x:Name="HistogramTooltip"
+                                    Visibility="Collapsed"
+                                    IsHitTestVisible="False"
+                                    Background="{DynamicResource BgSecondary}"
+                                    BorderBrush="{DynamicResource BorderDefault}"
+                                    BorderThickness="{StaticResource Border}"
+                                    CornerRadius="{StaticResource RoundedSm}"
+                                    Padding="{StaticResource Px2Py1}"
+                                    HorizontalAlignment="Left" VerticalAlignment="Top">
+                                <StackPanel>
+                                    <TextBlock x:Name="HistogramTooltipTitle"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               FontSize="{StaticResource TextSm}"/>
+                                    <TextBlock x:Name="HistogramTooltipBody"
+                                               Foreground="{DynamicResource TextSecondary}"
+                                               FontSize="{StaticResource TextXs}"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </DockPanel>
+                </TabItem>
+
+            </TabControl>
+        </DockPanel>
+
+        <!-- Color picker popup (shared by all series swatches via attached property).
+             ColorPicker.SelectedBrush 가 SeriesColorPicker.CurrentTarget.Brush 로 양방향 바인딩되어
+             변경 시 즉시 시리즈에 반영된다. -->
+        <Popup x:Name="ColorPopup"
+               StaysOpen="False"
+               AllowsTransparency="True"
+               Placement="Bottom">
+            <Border Background="{DynamicResource BgSecondary}"
+                    BorderBrush="{DynamicResource BorderDefault}"
+                    BorderThickness="{StaticResource Border}"
+                    CornerRadius="{StaticResource RoundedMd}"
+                    Padding="{StaticResource P2}">
+                <wpfctrl:ColorPicker
+                    SelectedColor="{Binding Path=(chBeh:SeriesColorPicker.CurrentColor),
+                                            ElementName=ColorPopup, Mode=TwoWay}"/>
+            </Border>
+        </Popup>
+    </Grid>
+</UserControl>

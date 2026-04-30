@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Windows.Media;
 using VSMVVM.Core.MVVM;
 using VSMVVM.Core.Attributes;
 
@@ -20,5 +21,15 @@ namespace VSMVVM.WPF.Sample.ViewModels
 
         [Property]
         private DateTime _selectedDateTime = DateTime.Now;
+
+        [Property]
+        private Color _selectedDemoColor = Color.FromRgb(59, 130, 246);
+
+        public Brush SelectedDemoBrush => new SolidColorBrush(SelectedDemoColor);
+
+        partial void OnSelectedDemoColorChanged(Color value)
+        {
+            OnPropertyChanged(nameof(SelectedDemoBrush));
+        }
     }
 }

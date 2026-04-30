@@ -8,9 +8,7 @@ using VSMVVM.WPF.Services;
 namespace VSMVVM.WPF.Sample
 {
     /// <summary>
-
     /// Application bootstrapper for DI registration, View-ViewModel mapping, and Region configuration.
-
     /// </summary>
 
     public class Bootstrapper : AppBootstrapper
@@ -38,6 +36,7 @@ namespace VSMVVM.WPF.Sample
             serviceCollection.AddTransient<MultiWindowView>();
             serviceCollection.AddTransient<CanvasView>();
             serviceCollection.AddTransient<ImageViewerDemoView>();
+            serviceCollection.AddTransient<ChartsDemoView>();
             serviceCollection.AddTransient<LoggingView>();
             serviceCollection.AddTransient<SubWindow>();
 
@@ -57,6 +56,7 @@ namespace VSMVVM.WPF.Sample
             serviceCollection.AddTransient<MultiWindowViewModel>();
             serviceCollection.AddTransient<CanvasViewModel>();
             serviceCollection.AddTransient<ImageViewerDemoViewModel>();
+            serviceCollection.AddTransient<ChartsDemoViewModel>();
             serviceCollection.AddTransient<LoggingViewModel>();
             serviceCollection.AddTransient<SubWindowViewModel>();
 
@@ -97,6 +97,7 @@ namespace VSMVVM.WPF.Sample
             viewModelMapper.Register<MultiWindowView, MultiWindowViewModel>();
             viewModelMapper.Register<CanvasView, CanvasViewModel>();
             viewModelMapper.Register<ImageViewerDemoView, ImageViewerDemoViewModel>();
+            viewModelMapper.Register<ChartsDemoView, ChartsDemoViewModel>();
             viewModelMapper.Register<LoggingView, LoggingViewModel>();
             viewModelMapper.Register<SubWindow, SubWindowViewModel>();
         }

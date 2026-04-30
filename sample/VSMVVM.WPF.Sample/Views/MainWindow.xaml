@@ -137,6 +137,7 @@
                         <Button Content="Logging" Tag="Logging" Command="{Binding NavigateLoggingCommand}" Style="{StaticResource NavButton}"/>
                         <Button Content="Canvas" Tag="Canvas" Command="{Binding NavigateCanvasCommand}" Style="{StaticResource NavButton}"/>
                         <Button Content="Image Viewer" Tag="Image Viewer" Command="{Binding NavigateImageViewerCommand}" Style="{StaticResource NavButton}"/>
+                        <Button Content="Charts" Tag="Charts" Command="{Binding NavigateChartsCommand}" Style="{StaticResource NavButton}"/>
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>

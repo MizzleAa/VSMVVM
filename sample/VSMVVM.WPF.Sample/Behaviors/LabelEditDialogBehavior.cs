@@ -5,9 +5,10 @@ using System.Windows.Controls;
 using Microsoft.Xaml.Behaviors;
 using VSMVVM.WPF.Controls;
 using VSMVVM.WPF.Sample.ViewModels;
+using VSMVVM.WPF.Sample.Views;
 
 #nullable enable
-namespace VSMVVM.WPF.Sample.Views
+namespace VSMVVM.WPF.Sample.Behaviors
 {
     /// <summary>
     /// 코드비하인드를 대체하여 View 에 부착하면 다음을 수행:
@@ -77,7 +78,6 @@ namespace VSMVVM.WPF.Sample.Views
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            // DataContextChanged 가 Loaded 이전에 발화했을 수 있음 → 한 번 더 시도.
             Subscribe();
         }
 

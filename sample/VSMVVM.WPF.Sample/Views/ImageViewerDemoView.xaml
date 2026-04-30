@@ -8,6 +8,7 @@
              xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
              xmlns:media="clr-namespace:VSMVVM.WPF.Media;assembly=VSMVVM.WPF"
              xmlns:views="clr-namespace:VSMVVM.WPF.Sample.Views"
+			 xmlns:behaviors="clr-namespace:VSMVVM.WPF.Sample.Behaviors"
              me:ViewModelLocator.AutoWireViewModel="True"
              Focusable="True">
     <UserControl.Resources>
@@ -93,8 +94,8 @@
 
     <Grid>
         <i:Interaction.Behaviors>
-            <views:LabelEditDialogBehavior MaskLayer="{Binding ElementName=MainMask}"
-                                           DialogPlacementTarget="{Binding ElementName=LabelPanelRoot}"/>
+			<behaviors:LabelEditDialogBehavior MaskLayer="{Binding ElementName=MainMask}"
+											   DialogPlacementTarget="{Binding ElementName=LabelPanelRoot}"/>
         </i:Interaction.Behaviors>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>

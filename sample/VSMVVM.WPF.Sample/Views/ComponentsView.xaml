@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
              xmlns:comp="clr-namespace:VSMVVM.WPF.Design.Components;assembly=VSMVVM.WPF.Design"
+             xmlns:wpfctrl="clr-namespace:VSMVVM.WPF.Controls;assembly=VSMVVM.WPF"
              me:ViewModelLocator.AutoWireViewModel="True">
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{StaticResource P2}">
@@ -73,6 +74,35 @@
                            Margin="{StaticResource Mr2}"/>
                 <comp:InfoPopup Title="InfoPopup Demo"
                                 Description="This popup provides contextual help. It supports Title and Description binding, auto-hides Title when empty, and uses design system tokens for consistent styling."/>
+            </StackPanel>
+
+            <!-- ColorPicker -->
+            <TextBlock Text="ColorPicker" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                       Foreground="{DynamicResource AccentPrimary}" Margin="{StaticResource Mb2}"/>
+            <TextBlock Text="Palette + RGB inputs + Hue slider + Hex. SelectedBrush is two-way bindable."
+                       FontSize="{StaticResource TextSm}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       Margin="{StaticResource Mb2}"/>
+            <StackPanel Orientation="Horizontal" Margin="{StaticResource Mb6}">
+                <wpfctrl:ColorPicker SelectedColor="{Binding SelectedDemoColor, Mode=TwoWay}"
+                                     Margin="{StaticResource Mr3}"/>
+                <StackPanel VerticalAlignment="Top">
+                    <TextBlock Text="Live preview:"
+                               Foreground="{DynamicResource TextSecondary}"
+                               FontSize="{StaticResource TextSm}"
+                               Margin="{StaticResource Mb1}"/>
+                    <Border Width="160" Height="80"
+                            Background="{Binding SelectedDemoBrush}"
+                            BorderBrush="{DynamicResource BorderDefault}"
+                            BorderThickness="{StaticResource Border}"
+                            CornerRadius="{StaticResource RoundedMd}"
+                            Margin="{StaticResource Mb2}"/>
+                    <Button Content="Sample Button"
+                            Background="{Binding SelectedDemoBrush}"
+                            Foreground="White"
+                            Padding="{StaticResource Px3Py2}"
+                            HorizontalAlignment="Left"/>
+                </StackPanel>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

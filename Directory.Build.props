@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<Version>1.0.1</Version>
 		<Authors>ca-cy</Authors>
-		<Copyright>짤 2026 ca-cy</Copyright>
+		<Copyright>@ 2026 ca-cy</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/MizzleAa/VSMVVM</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/MizzleAa/VSMVVM</RepositoryUrl>

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Resources;
 
@@ -14,6 +15,11 @@ namespace VSMVVM.Core.MVVM
         private ResourceManager _resourceManager;
         private CultureInfo _currentCulture;
 
+        // LocalizeService는 싱글톤이라 strong-ref 이벤트는 구독한 View들을 영구히 잡아 메모리 누수를 일으킨다.
+        // 동일 이벤트 시그니처를 유지하면서 내부적으로 약참조 subscription 리스트로 보관한다.
+        private readonly List<WeakReference<Action<string>>> _localeChangedSubscribers = new List<WeakReference<Action<string>>>();
+        private readonly object _subscribersLock = new object();
+
         #endregion
 
         #region Properties
@@ -24,7 +30,29 @@ namespace VSMVVM.Core.MVVM
 
         #region Events
 
-        public event Action<string> LocaleChanged;
+        public event Action<string> LocaleChanged
+        {
+            add
+            {
+                if (value == null) return;
+                lock (_subscribersLock)
+                {
+                    _localeChangedSubscribers.Add(new WeakReference<Action<string>>(value));
+                }
+            }
+            remove
+            {
+                if (value == null) return;
+                lock (_subscribersLock)
+                {
+                    _localeChangedSubscribers.RemoveAll(wr =>
+                    {
+                        if (!wr.TryGetTarget(out var target)) return true;
+                        return ReferenceEquals(target, value);
+                    });
+                }
+            }
+        }
 
         #endregion
 
@@ -44,7 +72,7 @@ namespace VSMVVM.Core.MVVM
 
             _currentCulture = new CultureInfo(locale);
             CultureInfo.CurrentUICulture = _currentCulture;
-            LocaleChanged?.Invoke(locale);
+            RaiseLocaleChanged(locale);
         }
 
         public string GetString(string key)
@@ -56,6 +84,43 @@ namespace VSMVVM.Core.MVVM
 
             var culture = _currentCulture ?? CultureInfo.CurrentUICulture;
             return _resourceManager.GetString(key, culture) ?? key;
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private void RaiseLocaleChanged(string locale)
+        {
+            List<WeakReference<Action<string>>> snapshot;
+            lock (_subscribersLock)
+            {
+                snapshot = new List<WeakReference<Action<string>>>(_localeChangedSubscribers);
+            }
+
+            List<WeakReference<Action<string>>> dead = null;
+            foreach (var weakRef in snapshot)
+            {
+                if (weakRef.TryGetTarget(out var callback))
+                {
+                    callback(locale);
+                }
+                else
+                {
+                    (dead ??= new List<WeakReference<Action<string>>>()).Add(weakRef);
+                }
+            }
+
+            if (dead != null)
+            {
+                lock (_subscribersLock)
+                {
+                    foreach (var d in dead)
+                    {
+                        _localeChangedSubscribers.Remove(d);
+                    }
+                }
+            }
         }
 
         #endregion

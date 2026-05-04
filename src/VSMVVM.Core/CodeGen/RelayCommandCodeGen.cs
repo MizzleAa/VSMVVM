@@ -97,7 +97,7 @@ namespace VSMVVM.Core.CodeGen
             return string.Empty;
         }
 
-        private static List<AutoMethodInfo> GetMethodList(Compilation compilation, MemberDeclarationSyntax cls)
+        private static List<AutoMethodInfo> GetMethodList(Compilation compilation, MemberDeclarationSyntax cls, SourceProductionContext context, string clsNamespace, string clsName)
         {
             var methodList = new List<AutoMethodInfo>();
             var model = compilation.GetSemanticModel(cls.SyntaxTree);
@@ -154,17 +154,47 @@ namespace VSMVVM.Core.CodeGen
                     continue;
                 }
 
-                // 파라미터 타입 확인
+                // [RelayCommand]는 void 반환만 허용. Action으로 wrap하므로 비-void는 컴파일 에러를 유발한다.
+                var returnType = method.ReturnType.ToString();
+                if (returnType != "void")
+                {
+                    ReportDiagnostic(context, "VSMVVM0010", "[RelayCommand] method must return void",
+                        $"{clsNamespace}.{clsName}.{method.Identifier.ValueText} must return void to be wrapped as RelayCommand. Use [AsyncRelayCommand] for Task-returning methods.");
+                    continue;
+                }
+
+                // 파라미터 타입 확인 + ref/out/in 한정자 금지 (Action<T>와 시그니처 매칭 안 됨)
                 string parameterType = null;
+                if (method.ParameterList.Parameters.Count > 1)
+                {
+                    ReportDiagnostic(context, "VSMVVM0011", "[RelayCommand] method must have 0 or 1 parameter",
+                        $"{clsNamespace}.{clsName}.{method.Identifier.ValueText} has {method.ParameterList.Parameters.Count} parameters; RelayCommand supports only 0 or 1.");
+                    continue;
+                }
                 if (method.ParameterList.Parameters.Count == 1)
                 {
-                    parameterType = method.ParameterList.Parameters[0].Type?.ToString();
+                    var p = method.ParameterList.Parameters[0];
+                    if (p.Modifiers.Any(m => m.IsKind(SyntaxKind.RefKeyword) || m.IsKind(SyntaxKind.OutKeyword) || m.IsKind(SyntaxKind.InKeyword)))
+                    {
+                        ReportDiagnostic(context, "VSMVVM0012", "[RelayCommand] parameter must not be ref/out/in",
+                            $"{clsNamespace}.{clsName}.{method.Identifier.ValueText} parameter '{p.Identifier.ValueText}' must not have ref/out/in modifier.");
+                        continue;
+                    }
+                    parameterType = p.Type?.ToString();
+                }
+
+                // 같은 메서드 이름이 두 번 이상 나오면 backing field 충돌. overload는 지원하지 않는다.
+                if (methodList.Any(m => m.MethodName == method.Identifier.ValueText))
+                {
+                    ReportDiagnostic(context, "VSMVVM0013", "[RelayCommand] does not support method overloads",
+                        $"{clsNamespace}.{clsName} has multiple [RelayCommand] methods named '{method.Identifier.ValueText}'. Rename one to avoid backing-field conflict.");
+                    continue;
                 }
 
                 methodList.Add(new AutoMethodInfo
                 {
                     MethodName = method.Identifier.ValueText,
-                    ReturnType = method.ReturnType.ToString(),
+                    ReturnType = returnType,
                     CanExecuteName = canExecuteName,
                     IsAsync = false,
                     ParameterType = parameterType
@@ -172,6 +202,12 @@ namespace VSMVVM.Core.CodeGen
             }
 
             return methodList;
+        }
+
+        private static void ReportDiagnostic(SourceProductionContext context, string id, string title, string message)
+        {
+            var descriptor = new DiagnosticDescriptor(id, title, message, "VSMVVM", DiagnosticSeverity.Error, true);
+            context.ReportDiagnostic(Diagnostic.Create(descriptor, Location.None));
         }
 
         private static void Execute(Compilation compilation, ImmutableArray<ClassDeclarationSyntax> classes, SourceProductionContext context)
@@ -189,7 +225,7 @@ namespace VSMVVM.Core.CodeGen
                 var usingText = usingDirectives.ToString();
 
                 var clsNamespace = GetNamespace(compilation, cls);
-                var methodList = GetMethodList(compilation, cls);
+                var methodList = GetMethodList(compilation, cls, context, clsNamespace, cls.Identifier.ValueText);
 
                 if (methodList.Count == 0)
                 {

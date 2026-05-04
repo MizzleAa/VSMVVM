@@ -66,9 +66,17 @@ namespace VSMVVM.Core.MVVM
                 throw new ArgumentNullException(nameof(newState));
             }
 
-            _state = newState;
+            // _state 할당과 알림 사이가 노출되면 두 스레드의 UpdateState가 인터리빙되어
+            // subscriber가 받는 상태와 최종 _state가 어긋날 수 있다. lock으로 직렬화한다.
+            TState snapshotState;
+            lock (_lock)
+            {
+                _state = newState;
+                snapshotState = newState;
+            }
+
             OnPropertyChanged(nameof(State));
-            NotifySubscribers();
+            NotifySubscribers(snapshotState);
         }
 
         #endregion
@@ -122,7 +130,7 @@ namespace VSMVVM.Core.MVVM
 
         #region Private Methods
 
-        private void NotifySubscribers()
+        private void NotifySubscribers(TState stateToNotify)
         {
             List<WeakReference<Action<TState>>> snapshot;
 
@@ -137,7 +145,8 @@ namespace VSMVVM.Core.MVVM
             {
                 if (weakRef.TryGetTarget(out var callback))
                 {
-                    callback(_state);
+                    // _state가 아니라 호출자가 본 그 시점의 state를 통지해야 알림과 값이 일관된다.
+                    callback(stateToNotify);
                 }
                 else
                 {

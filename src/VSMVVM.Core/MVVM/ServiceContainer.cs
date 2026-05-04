@@ -148,17 +148,32 @@ namespace VSMVVM.Core.MVVM
                 throw new InvalidOperationException($"No public constructor found: {type.FullName}");
             }
 
-            // 파라미터가 가장 많은 생성자 선택 (greedy resolution)
-            var constructor = constructors.OrderByDescending(c => c.GetParameters().Length).First();
-            var parameters = constructor.GetParameters();
-            var args = new object[parameters.Length];
+            // .NET DI 표준과 동일한 greedy 전략: 등록된 서비스로 모든 파라미터를 만족할 수 있는
+            // 가장 큰 ctor를 선택한다. 단순히 가장 큰 ctor를 잡으면 (예: 5-param + 0-param 두 개일 때
+            // 5-param 중 미등록이 있으면) 0-param fallback이 가능한데도 throw하게 된다.
+            var orderedCtors = constructors.OrderByDescending(c => c.GetParameters().Length).ToList();
 
-            for (int i = 0; i < parameters.Length; i++)
+            foreach (var ctor in orderedCtors)
             {
-                args[i] = Resolve(parameters[i].ParameterType);
+                var parameters = ctor.GetParameters();
+                if (parameters.All(p => _serviceCollection.ContainsService(p.ParameterType)))
+                {
+                    var args = new object[parameters.Length];
+                    for (int i = 0; i < parameters.Length; i++)
+                    {
+                        args[i] = Resolve(parameters[i].ParameterType);
+                    }
+                    return ctor.Invoke(args);
+                }
             }
 
-            return constructor.Invoke(args);
+            // 어떤 ctor도 만족 못함. 가장 큰 ctor 기준으로 어느 파라미터가 미등록인지 알리는 메시지로 throw.
+            var biggest = orderedCtors[0];
+            var unresolved = biggest.GetParameters()
+                .Where(p => !_serviceCollection.ContainsService(p.ParameterType))
+                .Select(p => p.ParameterType.FullName);
+            throw new InvalidOperationException(
+                $"No suitable constructor found for {type.FullName}. Unresolved parameter types in largest constructor: {string.Join(", ", unresolved)}");
         }
 
         private static void InvokeServiceInitialized(object instance)

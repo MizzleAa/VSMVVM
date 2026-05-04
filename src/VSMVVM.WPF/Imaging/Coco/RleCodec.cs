@@ -7,7 +7,7 @@ namespace VSMVVM.WPF.Imaging.Coco
     /// pycocotools 호환 column-major RLE 인코딩/디코딩.
     /// 각 인스턴스당 binary mask (0 = not-this-instance, 1 = this-instance) 를 RLE 로.
     /// </summary>
-    internal static class RleCodec
+    public static class RleCodec
     {
         /// <summary>instanceMask 전체 버퍼에서 targetId 에 해당하는 binary mask 를 column-major 로 RLE 인코딩.</summary>
         public static List<int> Encode(uint[] instanceMask, int width, int height, uint targetId)

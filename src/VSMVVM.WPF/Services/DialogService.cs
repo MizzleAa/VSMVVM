@@ -167,7 +167,7 @@ namespace VSMVVM.WPF.Services
                 Height = height,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 Owner = GetActiveWindow(),
-                ResizeMode = ResizeMode.NoResize
+                ResizeMode = System.Windows.ResizeMode.NoResize
             };
 
             ApplyDialogWindowStyle(window);

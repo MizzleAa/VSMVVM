@@ -8,7 +8,7 @@ namespace VSMVVM.WPF.Imaging.Coco
     /// 2D 마스크에서 외곽 contour 를 추출하는 Moore-neighbor tracing.
     /// 구멍은 무시(외곽만). COCO polygon 생성용.
     /// </summary>
-    internal static class ContourTracing
+    public static class ContourTracing
     {
         /// <summary>
         /// instanceMask 에서 target == targetId 픽셀로 구성된 영역들의 외곽 contour 목록을 반환.

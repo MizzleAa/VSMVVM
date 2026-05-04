@@ -5,6 +5,9 @@ using System.Windows.Markup;
 [assembly: XmlnsDefinition("https://github.com/your-org/vsmvvm", "VSMVVM.WPF.Controls.Tools")]
 [assembly: XmlnsDefinition("https://github.com/your-org/vsmvvm", "VSMVVM.WPF.MarkupExtensions")]
 [assembly: XmlnsDefinition("https://github.com/your-org/vsmvvm", "VSMVVM.WPF.Behaviors")]
+[assembly: XmlnsDefinition("https://github.com/your-org/vsmvvm", "VSMVVM.WPF.Behaviors.Triggers")]
+[assembly: XmlnsDefinition("https://github.com/your-org/vsmvvm", "VSMVVM.WPF.Behaviors.Actions")]
+[assembly: XmlnsDefinition("https://github.com/your-org/vsmvvm", "VSMVVM.WPF.Behaviors.Behaviors")]
 [assembly: XmlnsDefinition("https://github.com/your-org/vsmvvm", "VSMVVM.WPF.Services")]
 
 // Themes/Generic.xaml 자동 로드를 활성화. Control 기반 커스텀 컨트롤(ColorPicker 등)의

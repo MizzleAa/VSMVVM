@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace VSMVVM.Core.MVVM
 {
@@ -18,6 +19,11 @@ namespace VSMVVM.Core.MVVM
         // 실제 인스턴스 생성은 단 한 번만 일어나도록 보장한다.
         private readonly ConcurrentDictionary<Type, Lazy<object>> _singletonCache = new ConcurrentDictionary<Type, Lazy<object>>();
         private readonly ConcurrentDictionary<Type, Lazy<object>> _scopedCache = new ConcurrentDictionary<Type, Lazy<object>>();
+
+        // 순환 의존 감지를 위한 thread-local 해석 체인.
+        // 같은 스레드에서 같은 타입을 두 번 Resolve하려 하면 cycle로 판정한다.
+        private readonly ThreadLocal<HashSet<Type>> _resolutionChain =
+            new ThreadLocal<HashSet<Type>>(() => new HashSet<Type>());
 
         #endregion
 
@@ -41,19 +47,54 @@ namespace VSMVVM.Core.MVVM
 
             var descriptor = _serviceCollection.GetDescriptor(serviceType);
 
-            switch (descriptor.Lifetime)
+            // Singleton/Scoped 캐시 hit는 cycle이 아니므로 chain 등록 없이 즉시 반환.
+            // (이미 만들어진 객체를 단순 조회하는 행위는 의존성 빌드 그래프와 무관)
+            if (descriptor.Lifetime == ServiceLifetime.Singleton
+                && _singletonCache.TryGetValue(serviceType, out var cachedSingleton)
+                && cachedSingleton.IsValueCreated)
             {
-                case ServiceLifetime.Singleton:
-                    return ResolveSingleton(serviceType, descriptor);
+                return cachedSingleton.Value;
+            }
 
-                case ServiceLifetime.Transient:
-                    return CreateInstance(descriptor);
+            if (descriptor.Lifetime == ServiceLifetime.Scoped
+                && _scopedCache.TryGetValue(serviceType, out var cachedScoped)
+                && cachedScoped.IsValueCreated)
+            {
+                return cachedScoped.Value;
+            }
 
-                case ServiceLifetime.Scoped:
-                    return ResolveScoped(serviceType, descriptor);
+            // 빌드가 필요한 경로. 진입 시점에 cycle 감지.
+            // (.NET Lazy는 self-reference를 'ValueFactory attempted to access...' 메시지로 throw하지만
+            //  의미 불명이므로 여기서 더 명확한 메시지로 선제적으로 throw한다.)
+            var chain = _resolutionChain.Value;
+            if (!chain.Add(serviceType))
+            {
+                var path = string.Join(" -> ", chain.Select(t => t.FullName)) + " -> " + serviceType.FullName;
+                // 정상 stack 정리를 위해 add 실패 시점엔 chain에 변동 없으므로 그대로 throw.
+                throw new InvalidOperationException(
+                    $"Circular dependency detected while resolving services: {path}");
+            }
 
-                default:
-                    throw new InvalidOperationException($"Unknown service lifetime: {descriptor.Lifetime}");
+            try
+            {
+                switch (descriptor.Lifetime)
+                {
+                    case ServiceLifetime.Singleton:
+                        return ResolveSingleton(serviceType, descriptor);
+
+                    case ServiceLifetime.Transient:
+                        return CreateInstance(descriptor);
+
+                    case ServiceLifetime.Scoped:
+                        return ResolveScoped(serviceType, descriptor);
+
+                    default:
+                        throw new InvalidOperationException($"Unknown service lifetime: {descriptor.Lifetime}");
+                }
+            }
+            finally
+            {
+                chain.Remove(serviceType);
             }
         }
 

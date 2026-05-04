@@ -94,7 +94,17 @@ namespace VSMVVM.Core.MVVM
 
         public async void Execute(object parameter)
         {
-            await ExecuteAsync(parameter);
+            // ICommand.Execute는 void 시그니처라 async void가 불가피.
+            // 사용자 람다(_execute)에서 던진 예외가 SynchronizationContext로 전파되어
+            // WPF 디스패처 unhandled exception으로 앱이 크래시되는 것을 방지한다.
+            try
+            {
+                await ExecuteAsync(parameter);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AsyncRelayCommand] Execute failed: {ex}");
+            }
         }
 
         #endregion
@@ -196,7 +206,17 @@ namespace VSMVVM.Core.MVVM
 
         public async void Execute(object parameter)
         {
-            await ExecuteAsync(parameter);
+            // ICommand.Execute는 void 시그니처라 async void가 불가피.
+            // 사용자 람다(_execute)에서 던진 예외가 SynchronizationContext로 전파되어
+            // WPF 디스패처 unhandled exception으로 앱이 크래시되는 것을 방지한다.
+            try
+            {
+                await ExecuteAsync(parameter);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AsyncRelayCommand<T>] Execute failed: {ex}");
+            }
         }
 
         #endregion

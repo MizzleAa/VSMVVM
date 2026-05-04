@@ -53,5 +53,36 @@ namespace VSMVVM.Core.Tests.Guard
             var act = () => Core.Guard.Guard.IsNotEmpty(new System.Collections.Generic.List<int>(), "param");
             act.Should().Throw<System.ArgumentException>();
         }
+
+        // 회귀 테스트: null reference value를 받았을 때 NRE가 아니라 의미 있는 예외를 던져야 한다.
+        [Fact]
+        public void IsEqualTo_NullValue_DoesNotThrowNRE()
+        {
+            var act = () => Core.Guard.Guard.IsEqualTo<string>(null, "expected", "param");
+            act.Should().Throw<System.ArgumentException>()
+                .And.Should().NotBeOfType<System.NullReferenceException>();
+        }
+
+        [Fact]
+        public void IsEqualTo_BothNull_DoesNotThrow()
+        {
+            // EqualityComparer<string>.Default.Equals(null, null) == true 라서 검증 통과.
+            var act = () => Core.Guard.Guard.IsEqualTo<string>(null, null, "param");
+            act.Should().NotThrow();
+        }
+
+        [Fact]
+        public void IsGreaterThan_NullValue_ThrowsArgumentNullException()
+        {
+            var act = () => Core.Guard.Guard.IsGreaterThan<string>(null, "min", "param");
+            act.Should().Throw<System.ArgumentNullException>();
+        }
+
+        [Fact]
+        public void IsInRange_NullValue_ThrowsArgumentNullException()
+        {
+            var act = () => Core.Guard.Guard.IsInRange<string>(null, "a", "z", "param");
+            act.Should().Throw<System.ArgumentNullException>();
+        }
     }
 }

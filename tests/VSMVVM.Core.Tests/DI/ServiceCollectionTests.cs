@@ -141,5 +141,58 @@ namespace VSMVVM.Core.Tests.DI
             resolved.UsedSimple.Should().BeFalse();
             resolved.Inner.Should().NotBeNull();
         }
+
+        public class DisposableSingleton : System.IDisposable
+        {
+            public int DisposeCount { get; private set; }
+            public void Dispose() => DisposeCount++;
+        }
+
+        [Fact]
+        public void Dispose_DisposesCachedDisposableSingletons()
+        {
+            // 회귀 테스트: ServiceContainer.Dispose는 캐시된 IDisposable singleton 인스턴스도 함께 정리해야 한다.
+            var sc = new ServiceCollection();
+            sc.AddSingleton<DisposableSingleton>();
+            var container = (System.IDisposable)sc.CreateContainer();
+            var resolvedContainer = (IServiceContainer)container;
+
+            var instance = resolvedContainer.GetService<DisposableSingleton>();
+            instance.DisposeCount.Should().Be(0);
+
+            container.Dispose();
+
+            instance.DisposeCount.Should().Be(1, "캐시된 IDisposable singleton은 컨테이너 dispose 시 함께 dispose되어야 한다");
+        }
+
+        [Fact]
+        public void Dispose_IsIdempotent()
+        {
+            var sc = new ServiceCollection();
+            sc.AddSingleton<DisposableSingleton>();
+            var container = (System.IDisposable)sc.CreateContainer();
+            var resolvedContainer = (IServiceContainer)container;
+            var instance = resolvedContainer.GetService<DisposableSingleton>();
+
+            container.Dispose();
+            container.Dispose();
+            container.Dispose();
+
+            instance.DisposeCount.Should().Be(1, "Dispose는 멱등이어야 한다");
+        }
+
+        [Fact]
+        public void Dispose_NotResolvedSingletons_AreNotDisposed()
+        {
+            // 등록만 되고 한 번도 resolve된 적 없는 IDisposable은 dispose하지 않아야 한다 (인스턴스 자체가 없음).
+            var sc = new ServiceCollection();
+            sc.AddSingleton<DisposableSingleton>();
+            var container = (System.IDisposable)sc.CreateContainer();
+
+            // resolve 안 함
+
+            var act = () => container.Dispose();
+            act.Should().NotThrow();
+        }
     }
 }

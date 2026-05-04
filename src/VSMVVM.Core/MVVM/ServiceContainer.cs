@@ -9,8 +9,10 @@ namespace VSMVVM.Core.MVVM
     /// <summary>
     /// 서비스 해석(resolve) 구현체.
     /// Reflection 기반 DI + Singleton 캐싱 + Scoped 스코프 관리.
+    /// 명시적으로 Dispose하면 ThreadLocal 자원 + 캐시된 IDisposable 인스턴스를 함께 정리한다.
+    /// (앱 수명 동안 살리는 일반적 사용에서는 Dispose 호출이 필수는 아님.)
     /// </summary>
-    public sealed class ServiceContainer : IServiceContainer
+    public sealed class ServiceContainer : IServiceContainer, IDisposable
     {
         #region Fields
 
@@ -234,6 +236,41 @@ namespace VSMVVM.Core.MVVM
         public Type KeyType(string key)
         {
             return _serviceCollection.GetKeyType(key);
+        }
+
+        #endregion
+
+        #region IDisposable
+
+        private bool _disposed;
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            // 캐시된 IDisposable 인스턴스를 정리. 사용자 dispose 도중 예외가 다른 인스턴스 정리를 막지 않도록 격리.
+            DisposeCachedInstances(_singletonCache);
+            DisposeCachedInstances(_scopedCache);
+
+            try { _resolutionChain.Dispose(); } catch { /* dispose 도중 예외는 swallow */ }
+        }
+
+        private static void DisposeCachedInstances(ConcurrentDictionary<Type, Lazy<object>> cache)
+        {
+            foreach (var kv in cache)
+            {
+                if (!kv.Value.IsValueCreated) continue;
+                if (kv.Value.Value is IDisposable disposable)
+                {
+                    try { disposable.Dispose(); }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ServiceContainer] Disposing '{kv.Key.FullName}' threw: {ex}");
+                    }
+                }
+            }
+            cache.Clear();
         }
 
         #endregion

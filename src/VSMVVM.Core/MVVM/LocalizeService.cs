@@ -103,7 +103,15 @@ namespace VSMVVM.Core.MVVM
             {
                 if (weakRef.TryGetTarget(out var callback))
                 {
-                    callback(locale);
+                    // 한 핸들러의 예외가 다른 모든 핸들러를 막거나 dead-ref 정리를 건너뛰지 않도록 격리.
+                    try
+                    {
+                        callback(locale);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[LocalizeService] LocaleChanged handler threw: {ex}");
+                    }
                 }
                 else
                 {

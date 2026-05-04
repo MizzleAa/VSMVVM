@@ -70,5 +70,20 @@ namespace VSMVVM.Core.Tests.MVVM
         {
             public void OnChanged(string locale) { }
         }
+
+        [Fact]
+        public void LocaleChanged_HandlerThrows_OtherHandlersStillInvoked()
+        {
+            // 회귀 테스트: 한 핸들러의 예외가 다른 핸들러를 막지 않아야 한다.
+            var svc = CreateService();
+            int laterCallCount = 0;
+            svc.LocaleChanged += _ => throw new InvalidOperationException("boom");
+            svc.LocaleChanged += _ => laterCallCount++;
+
+            // ChangeLocale 자체는 throw하지 않아야 한다 (핸들러 예외는 격리되어야 함).
+            Action act = () => svc.ChangeLocale("en-US");
+            act.Should().NotThrow();
+            laterCallCount.Should().Be(1, "앞 핸들러가 throw해도 뒤 핸들러는 호출되어야 한다");
+        }
     }
 }

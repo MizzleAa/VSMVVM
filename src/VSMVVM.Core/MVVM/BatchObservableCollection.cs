@@ -109,6 +109,20 @@ namespace VSMVVM.Core.MVVM
             base.OnCollectionChanged(e);
         }
 
+        protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+        {
+            // 배치 중에는 부모 Add/Remove/Insert 등이 발화하는 Count/Item[] PropertyChanged도
+            // 함께 묻혀야 한다. 그렇지 않으면 BeginBatch + 일반 Add 패턴에서 N+1번 발화된다.
+            // (ExitBatch가 종료 시 Count/Item[]을 한 번 명시 발화함.)
+            if (_batchDepth > 0)
+            {
+                _hasChanges = true;
+                return;
+            }
+
+            base.OnPropertyChanged(e);
+        }
+
         #endregion
 
         #region Private Methods

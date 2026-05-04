@@ -65,43 +65,51 @@ namespace VSMVVM.Core.Guard
 
         public static void IsEqualTo<T>(T value, T expected, string parameterName) where T : IEquatable<T>
         {
-            if (!value.Equals(expected))
+            // EqualityComparer<T>.Default는 null 입력에도 NRE 없이 정상 동작한다.
+            if (!EqualityComparer<T>.Default.Equals(value, expected))
                 throw new ArgumentException($"Parameter '{parameterName}' must be equal to '{expected}', but was '{value}'.", parameterName);
         }
 
         public static void IsNotEqualTo<T>(T value, T unexpected, string parameterName) where T : IEquatable<T>
         {
-            if (value.Equals(unexpected))
+            if (EqualityComparer<T>.Default.Equals(value, unexpected))
                 throw new ArgumentException($"Parameter '{parameterName}' must not be equal to '{unexpected}'.", parameterName);
         }
 
         public static void IsGreaterThan<T>(T value, T minimum, string parameterName) where T : IComparable<T>
         {
-            if (value.CompareTo(minimum) <= 0)
+            // 비교 메서드는 null 인자에 의미가 없으므로 명시적으로 ArgumentNullException으로 거른다.
+            if (value == null) throw new ArgumentNullException(parameterName);
+            if (Comparer<T>.Default.Compare(value, minimum) <= 0)
                 throw new ArgumentOutOfRangeException(parameterName, value, $"Parameter '{parameterName}' must be greater than '{minimum}'.");
         }
 
         public static void IsGreaterThanOrEqualTo<T>(T value, T minimum, string parameterName) where T : IComparable<T>
         {
-            if (value.CompareTo(minimum) < 0)
+            if (value == null) throw new ArgumentNullException(parameterName);
+            if (Comparer<T>.Default.Compare(value, minimum) < 0)
                 throw new ArgumentOutOfRangeException(parameterName, value, $"Parameter '{parameterName}' must be greater than or equal to '{minimum}'.");
         }
 
         public static void IsLessThan<T>(T value, T maximum, string parameterName) where T : IComparable<T>
         {
-            if (value.CompareTo(maximum) >= 0)
+            if (value == null) throw new ArgumentNullException(parameterName);
+            if (Comparer<T>.Default.Compare(value, maximum) >= 0)
                 throw new ArgumentOutOfRangeException(parameterName, value, $"Parameter '{parameterName}' must be less than '{maximum}'.");
         }
 
         public static void IsLessThanOrEqualTo<T>(T value, T maximum, string parameterName) where T : IComparable<T>
         {
-            if (value.CompareTo(maximum) > 0)
+            if (value == null) throw new ArgumentNullException(parameterName);
+            if (Comparer<T>.Default.Compare(value, maximum) > 0)
                 throw new ArgumentOutOfRangeException(parameterName, value, $"Parameter '{parameterName}' must be less than or equal to '{maximum}'.");
         }
 
         public static void IsInRange<T>(T value, T minimum, T maximum, string parameterName) where T : IComparable<T>
         {
-            if (value.CompareTo(minimum) < 0 || value.CompareTo(maximum) > 0)
+            if (value == null) throw new ArgumentNullException(parameterName);
+            var cmp = Comparer<T>.Default;
+            if (cmp.Compare(value, minimum) < 0 || cmp.Compare(value, maximum) > 0)
                 throw new ArgumentOutOfRangeException(parameterName, value, $"Parameter '{parameterName}' must be between '{minimum}' and '{maximum}'.");
         }
 

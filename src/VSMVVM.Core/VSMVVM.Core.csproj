@@ -12,7 +12,7 @@
 		<RootNamespace>VSMVVM.Core</RootNamespace>
 		<AssemblyName>VSMVVM.Core</AssemblyName>
 		<PackageId>VSMVVM.Core</PackageId>
-		<Version>1.0.2</Version>
+		<Version>1.0.3</Version>
 		<Title>VSMVVM.Core</Title>
 		<Description>Lightweight MVVM core framework with built-in Source Generator, DI container, Messenger, and Guard utilities. Targets .NET Standard 2.0.</Description>
 		<PackageTags>mvvm;ioc;di;source-generator;messenger;vsmvvm</PackageTags>

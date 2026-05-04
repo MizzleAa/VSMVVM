@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.ComponentModel;
 
 namespace VSMVVM.Core.MVVM
 {
@@ -127,6 +128,11 @@ namespace VSMVVM.Core.MVVM
             if (_batchDepth == 0 && _hasChanges)
             {
                 _hasChanges = false;
+                // ObservableCollection<T>는 Add/Remove마다 Count/Item[] PropertyChanged도 자동 발화하지만,
+                // 배치 중에는 OnCollectionChanged를 가로채면서 같이 묻혀버린다.
+                // Count나 Item[]에 직접 바인딩한 UI가 갱신되도록 명시적으로 함께 발화한다.
+                OnPropertyChanged(new PropertyChangedEventArgs(nameof(Count)));
+                OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
                 base.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
             }
         }

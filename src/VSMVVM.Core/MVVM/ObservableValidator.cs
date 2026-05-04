@@ -80,20 +80,38 @@ namespace VSMVVM.Core.MVVM
             var results = new List<ValidationResult>();
             var context = new ValidationContext(this);
 
+            // 직전에 에러가 있던 프로퍼티들을 보존해야, 새 검증 결과에서 에러가 사라진 프로퍼티들에 대해서도
+            // ErrorsChanged를 발화할 수 있다. 그렇지 않으면 WPF Validation 빨간 테두리가 stale 상태로 남는다.
+            var previousKeys = _errors.Keys.ToList();
             _errors.Clear();
             Validator.TryValidateObject(this, context, results, validateAllProperties: true);
 
+            var newKeys = new HashSet<string>();
             foreach (var result in results)
             {
                 foreach (var memberName in result.MemberNames)
                 {
-                    if (!_errors.ContainsKey(memberName))
+                    if (!_errors.TryGetValue(memberName, out var list))
                     {
-                        _errors[memberName] = new List<string>();
+                        list = new List<string>();
+                        _errors[memberName] = list;
                     }
 
-                    _errors[memberName].Add(result.ErrorMessage);
-                    OnErrorsChanged(memberName);
+                    list.Add(result.ErrorMessage);
+                    newKeys.Add(memberName);
+                }
+            }
+
+            foreach (var key in newKeys)
+            {
+                OnErrorsChanged(key);
+            }
+
+            foreach (var key in previousKeys)
+            {
+                if (!newKeys.Contains(key))
+                {
+                    OnErrorsChanged(key);
                 }
             }
 

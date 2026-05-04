@@ -102,5 +102,44 @@ namespace VSMVVM.Core.Tests.DI
 
             resolved.Should().BeOfType<TestServiceA>();
         }
+
+        public class MultiCtorService
+        {
+            public ITestService Inner { get; }
+            public bool UsedSimple { get; }
+
+            public MultiCtorService() { UsedSimple = true; }
+            public MultiCtorService(ITestService inner) { Inner = inner; }
+        }
+
+        [Fact]
+        public void ConstructorSelection_FallsBackToResolvableCtor()
+        {
+            // 회귀 테스트: 가장 큰 ctor가 미등록 의존성을 요구하면, resolvable한 더 작은 ctor로 fallback해야 한다.
+            // ITestService를 일부러 등록하지 않는다.
+            var sc = new ServiceCollection();
+            sc.AddSingleton<MultiCtorService>();
+            var container = sc.CreateContainer();
+
+            var resolved = container.GetService<MultiCtorService>();
+
+            resolved.UsedSimple.Should().BeTrue("ITestService가 미등록이므로 0-param ctor로 fallback해야 한다");
+            resolved.Inner.Should().BeNull();
+        }
+
+        [Fact]
+        public void ConstructorSelection_PrefersLargestSatisfiableCtor()
+        {
+            // ITestService가 등록되면 더 큰 ctor를 선택해야 한다.
+            var sc = new ServiceCollection();
+            sc.AddSingleton<ITestService, TestServiceA>();
+            sc.AddSingleton<MultiCtorService>();
+            var container = sc.CreateContainer();
+
+            var resolved = container.GetService<MultiCtorService>();
+
+            resolved.UsedSimple.Should().BeFalse();
+            resolved.Inner.Should().NotBeNull();
+        }
     }
 }

@@ -121,6 +121,13 @@ namespace VSMVVM.Core.MVVM
                 return;
             }
 
+            // 새 View가 navigation을 받아들이는지 먼저 확인.
+            // 거부될 경우 prevView를 정리/히스토리를 변경하지 않아야 region이 좀비 상태가 되지 않는다.
+            if (!CanNavigateTo(nextView, navigationContext))
+            {
+                return;
+            }
+
             // 현재 View의 DataContext에서 INavigateAware 통지
             var prevView = state.Region.Content;
             NotifyNavigatedFrom(prevView, navigationContext);
@@ -133,12 +140,6 @@ namespace VSMVVM.Core.MVVM
             {
                 state.BackStack.Push(state.CurrentViewType);
                 state.ForwardStack.Clear();
-            }
-
-            // 새 View의 DataContext에서 INavigateAware 통지
-            if (!CanNavigateTo(nextView, navigationContext))
-            {
-                return;
             }
 
             state.Region.Content = nextView;
@@ -188,8 +189,10 @@ namespace VSMVVM.Core.MVVM
 
             var context = new NavigationContext();
 
-            InvokeCleanup(state.Region.Content);
+            // Navigate()와 동일하게 OnNavigatedFrom → Cleanup 순서. 거꾸로 호출하면
+            // ICleanup으로 dispose된 ViewModel에 OnNavigatedFrom이 들어가 ObjectDisposedException 발생.
             NotifyNavigatedFrom(state.Region.Content, context);
+            InvokeCleanup(state.Region.Content);
 
             state.Region.Content = previousView;
             state.CurrentViewType = previousViewType;
@@ -223,8 +226,9 @@ namespace VSMVVM.Core.MVVM
 
             var context = new NavigationContext();
 
-            InvokeCleanup(state.Region.Content);
+            // Navigate()와 동일하게 OnNavigatedFrom → Cleanup 순서.
             NotifyNavigatedFrom(state.Region.Content, context);
+            InvokeCleanup(state.Region.Content);
 
             state.Region.Content = forwardView;
             state.CurrentViewType = forwardViewType;

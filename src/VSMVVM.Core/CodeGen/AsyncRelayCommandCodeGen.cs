@@ -97,7 +97,7 @@ namespace VSMVVM.Core.CodeGen
             return string.Empty;
         }
 
-        private static List<AutoMethodInfo> GetMethodList(Compilation compilation, MemberDeclarationSyntax cls)
+        private static List<AutoMethodInfo> GetMethodList(Compilation compilation, MemberDeclarationSyntax cls, SourceProductionContext context, string clsNamespace, string clsName)
         {
             var methodList = new List<AutoMethodInfo>();
             var model = compilation.GetSemanticModel(cls.SyntaxTree);
@@ -154,17 +154,53 @@ namespace VSMVVM.Core.CodeGen
                     continue;
                 }
 
-                // 파라미터 타입 확인
+                // [AsyncRelayCommand]는 Task 또는 Task<T> 반환 메서드여야 한다. Func<Task>로 wrap하므로
+                // void 메서드 등은 컴파일 에러를 유발한다.
+                var returnType = method.ReturnType.ToString();
+                var isTaskReturning = returnType == "Task"
+                    || returnType == "System.Threading.Tasks.Task"
+                    || returnType.StartsWith("Task<")
+                    || returnType.StartsWith("System.Threading.Tasks.Task<")
+                    || returnType == "ValueTask"
+                    || returnType.StartsWith("ValueTask<");
+                if (!isTaskReturning)
+                {
+                    ReportDiagnostic(context, "VSMVVM0020", "[AsyncRelayCommand] method must return Task",
+                        $"{clsNamespace}.{clsName}.{method.Identifier.ValueText} must return Task or Task<T> to be wrapped as AsyncRelayCommand. Use [RelayCommand] for void methods.");
+                    continue;
+                }
+
+                // 파라미터 타입 확인 + ref/out/in 한정자 금지
                 string parameterType = null;
+                if (method.ParameterList.Parameters.Count > 1)
+                {
+                    ReportDiagnostic(context, "VSMVVM0021", "[AsyncRelayCommand] method must have 0 or 1 parameter",
+                        $"{clsNamespace}.{clsName}.{method.Identifier.ValueText} has {method.ParameterList.Parameters.Count} parameters; AsyncRelayCommand supports only 0 or 1.");
+                    continue;
+                }
                 if (method.ParameterList.Parameters.Count == 1)
                 {
-                    parameterType = method.ParameterList.Parameters[0].Type?.ToString();
+                    var p = method.ParameterList.Parameters[0];
+                    if (p.Modifiers.Any(m => m.IsKind(SyntaxKind.RefKeyword) || m.IsKind(SyntaxKind.OutKeyword) || m.IsKind(SyntaxKind.InKeyword)))
+                    {
+                        ReportDiagnostic(context, "VSMVVM0022", "[AsyncRelayCommand] parameter must not be ref/out/in",
+                            $"{clsNamespace}.{clsName}.{method.Identifier.ValueText} parameter '{p.Identifier.ValueText}' must not have ref/out/in modifier.");
+                        continue;
+                    }
+                    parameterType = p.Type?.ToString();
+                }
+
+                if (methodList.Any(m => m.MethodName == method.Identifier.ValueText))
+                {
+                    ReportDiagnostic(context, "VSMVVM0023", "[AsyncRelayCommand] does not support method overloads",
+                        $"{clsNamespace}.{clsName} has multiple [AsyncRelayCommand] methods named '{method.Identifier.ValueText}'. Rename one to avoid backing-field conflict.");
+                    continue;
                 }
 
                 methodList.Add(new AutoMethodInfo
                 {
                     MethodName = method.Identifier.ValueText,
-                    ReturnType = method.ReturnType.ToString(),
+                    ReturnType = returnType,
                     CanExecuteName = canExecuteName,
                     IsAsync = true,
                     ParameterType = parameterType
@@ -172,6 +208,12 @@ namespace VSMVVM.Core.CodeGen
             }
 
             return methodList;
+        }
+
+        private static void ReportDiagnostic(SourceProductionContext context, string id, string title, string message)
+        {
+            var descriptor = new DiagnosticDescriptor(id, title, message, "VSMVVM", DiagnosticSeverity.Error, true);
+            context.ReportDiagnostic(Diagnostic.Create(descriptor, Location.None));
         }
 
         private static void Execute(Compilation compilation, ImmutableArray<ClassDeclarationSyntax> classes, SourceProductionContext context)
@@ -189,7 +231,7 @@ namespace VSMVVM.Core.CodeGen
                 var usingText = usingDirectives.ToString();
 
                 var clsNamespace = GetNamespace(compilation, cls);
-                var methodList = GetMethodList(compilation, cls);
+                var methodList = GetMethodList(compilation, cls, context, clsNamespace, cls.Identifier.ValueText);
 
                 if (methodList.Count == 0)
                 {

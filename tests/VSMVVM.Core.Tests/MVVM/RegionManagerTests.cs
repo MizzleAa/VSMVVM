@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Xunit;
 using FluentAssertions;
 using VSMVVM.Core.MVVM;
@@ -22,6 +23,24 @@ namespace VSMVVM.Core.Tests.MVVM
         private class DefaultDesignView { }
         private class SourceGenView { }
         private class MultiWindowView { }
+
+        private sealed class TrackingNavigateAwareVm : INavigateAware
+        {
+            public bool AllowNavigateIn { get; set; } = true;
+            public int OnNavigatedFromCount { get; private set; }
+            public int OnNavigatedToCount { get; private set; }
+
+            public bool CanNavigate(NavigationContext context) => AllowNavigateIn;
+            public void OnNavigatedFrom(NavigationContext context) => OnNavigatedFromCount++;
+            public void OnNavigatedTo(NavigationContext context) => OnNavigatedToCount++;
+        }
+
+        // RegionManager가 view.GetType().GetProperty("DataContext")로 읽으므로
+        // 테스트용 view에 DataContext 프로퍼티가 필요하다.
+        private sealed class ViewWithVm
+        {
+            public object DataContext { get; set; }
+        }
 
         #endregion
 
@@ -271,6 +290,92 @@ namespace VSMVVM.Core.Tests.MVVM
             region.Content.Should().BeOfType<ViewC>();
             rm.CanGoForward("TestRegion").Should().BeFalse();
             rm.CanGoBack("TestRegion").Should().BeTrue();
+        }
+
+        #endregion
+
+        #region CanNavigate gating
+
+        [Fact]
+        public void Navigate_NextViewRefuses_DoesNotTearDownPrevView()
+        {
+            // CanNavigate 체크가 prevView 정리/히스토리 변경 *전*에 일어나야 한다는 회귀 테스트.
+            var sc = new ServiceCollection();
+
+            var prevVm = new TrackingNavigateAwareVm();
+            var nextVm = new TrackingNavigateAwareVm { AllowNavigateIn = false };
+
+            sc.AddTransient<ViewWithVm>(_ => new ViewWithVm { DataContext = prevVm });
+            // 두 view 타입을 따로 등록해야 하므로 일회성 서로게이트 타입 사용.
+            sc.AddTransient<NextViewSurrogate>(_ => new NextViewSurrogate { DataContext = nextVm });
+
+            var container = sc.CreateContainer();
+            ServiceLocator.SetServiceProvider(container);
+
+            var rmType = typeof(IRegionManager).Assembly.GetType("VSMVVM.Core.MVVM.RegionManager");
+            var rm = (IRegionManager)System.Activator.CreateInstance(rmType);
+
+            var region = new MockRegion();
+            rm.Register("TestRegion", region);
+
+            rm.Navigate("TestRegion", typeof(ViewWithVm));
+            region.Content.Should().BeOfType<ViewWithVm>();
+            prevVm.OnNavigatedToCount.Should().Be(1);
+
+            // 새 뷰가 거부 → prevView는 그대로 유지되어야 한다.
+            rm.Navigate("TestRegion", typeof(NextViewSurrogate));
+
+            region.Content.Should().BeOfType<ViewWithVm>("새 뷰가 거부했으므로 region content는 변경되지 않아야 한다");
+            prevVm.OnNavigatedFromCount.Should().Be(0, "새 뷰가 거부했으므로 OnNavigatedFrom이 호출되지 않아야 한다");
+            rm.CanGoBack("TestRegion").Should().BeFalse("새 뷰가 거부했으므로 BackStack이 변경되지 않아야 한다");
+        }
+
+        private sealed class NextViewSurrogate
+        {
+            public object DataContext { get; set; }
+        }
+
+        private sealed class OrderTrackingVm : INavigateAware, ICleanup
+        {
+            public List<string> Events { get; } = new List<string>();
+
+            public bool CanNavigate(NavigationContext context) => true;
+            public void OnNavigatedTo(NavigationContext context) => Events.Add("OnNavigatedTo");
+            public void OnNavigatedFrom(NavigationContext context) => Events.Add("OnNavigatedFrom");
+            public void Cleanup() => Events.Add("Cleanup");
+        }
+
+        [Fact]
+        public void GoBack_ICleanupAndINavigateAware_OrderIsCorrect()
+        {
+            // current view가 ICleanup + INavigateAware일 때 OnNavigatedFrom → Cleanup 순서.
+            var sc = new ServiceCollection();
+            var firstVm = new OrderTrackingVm();
+            var secondVm = new OrderTrackingVm();
+
+            sc.AddTransient<ViewWithVm>(_ => new ViewWithVm { DataContext = firstVm });
+            sc.AddTransient<NextViewSurrogate>(_ => new NextViewSurrogate { DataContext = secondVm });
+
+            var container = sc.CreateContainer();
+            ServiceLocator.SetServiceProvider(container);
+
+            var rmType = typeof(IRegionManager).Assembly.GetType("VSMVVM.Core.MVVM.RegionManager");
+            var rm = (IRegionManager)System.Activator.CreateInstance(rmType);
+            var region = new MockRegion();
+            rm.Register("TestRegion", region);
+
+            rm.Navigate("TestRegion", typeof(ViewWithVm));
+            rm.Navigate("TestRegion", typeof(NextViewSurrogate));
+            secondVm.Events.Clear();
+
+            rm.GoBack("TestRegion");
+
+            // GoBack 시 secondVm이 current → prev. OnNavigatedFrom이 Cleanup보다 먼저 와야 함.
+            var fromIdx = secondVm.Events.IndexOf("OnNavigatedFrom");
+            var cleanupIdx = secondVm.Events.IndexOf("Cleanup");
+            fromIdx.Should().BeGreaterOrEqualTo(0);
+            cleanupIdx.Should().BeGreaterOrEqualTo(0);
+            fromIdx.Should().BeLessThan(cleanupIdx, "OnNavigatedFrom이 Cleanup보다 먼저 호출되어야 한다");
         }
 
         #endregion

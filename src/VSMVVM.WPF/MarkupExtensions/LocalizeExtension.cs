@@ -21,6 +21,12 @@ namespace VSMVVM.WPF.MarkupExtensions
         [ConstructorArgument("key")]
         public string Key { get; set; }
 
+        /// <summary>
+        /// 선택적 string.Format 패턴. 지정 시 GetString(Key) 결과를 string.Format(StringFormat, value)로 감쌉니다.
+        /// 예: StringFormat="[{0}]"
+        /// </summary>
+        public string StringFormat { get; set; }
+
         #endregion
 
         #region Constructors
@@ -57,7 +63,12 @@ namespace VSMVVM.WPF.MarkupExtensions
             try
             {
                 var localizeService = ServiceLocator.GetServiceProvider().GetService<ILocalizeService>();
-                return localizeService.GetString(Key);
+                var value = localizeService.GetString(Key);
+                if (!string.IsNullOrEmpty(StringFormat))
+                {
+                    return string.Format(StringFormat, value);
+                }
+                return value;
             }
             catch
             {

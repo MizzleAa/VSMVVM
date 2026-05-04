@@ -39,14 +39,14 @@ namespace VSMVVM.WPF.Behaviors.Base
         }
 
         /// <summary>
-        /// 연결 시 호출됩니다.
+        /// 연결 시 호출됩니다. 자식 클래스가 base.OnAttached()를 호출할 수 있도록 virtual.
         /// </summary>
-        protected abstract void OnAttached();
+        protected virtual void OnAttached() { }
 
         /// <summary>
-        /// 해제 시 호출됩니다.
+        /// 해제 시 호출됩니다. 자식 클래스가 base.OnDetaching()을 호출할 수 있도록 virtual.
         /// </summary>
-        protected abstract void OnDetaching();
+        protected virtual void OnDetaching() { }
 
         #endregion
 

@@ -39,6 +39,12 @@ namespace VSMVVM.Core.MVVM
         /// </summary>
         public event Action<string, string> OnModuleAddEvent;
 
+        /// <summary>
+        /// 모듈 어셈블리 로드가 실패할 때 발생하는 이벤트. (assemblyPath, exception)
+        /// 구독하지 않으면 Debug.WriteLine으로 폴백된다. 절대로 silent swallow하지 않는다.
+        /// </summary>
+        public event Action<string, Exception> OnModuleLoadFailedEvent;
+
         #endregion
 
         #region Abstract Methods
@@ -266,9 +272,18 @@ namespace VSMVVM.Core.MVVM
 
                         _loadedAssemblyNames.Add(assemblyName);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // 로드 실패한 어셈블리는 무시합니다.
+                        // 어셈블리 로드 실패는 디버깅이 매우 어려운 silent failure가 되기 쉬우므로
+                        // 진단 hook으로 노출하고, 미구독 시에도 Debug 출력은 남긴다.
+                        if (OnModuleLoadFailedEvent != null)
+                        {
+                            OnModuleLoadFailedEvent.Invoke(moduleFile, ex);
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[AppBootstrapper] Failed to load module assembly '{moduleFile}': {ex}");
+                        }
                     }
                 }
             }

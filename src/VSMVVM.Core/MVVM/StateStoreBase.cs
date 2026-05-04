@@ -93,13 +93,15 @@ namespace VSMVVM.Core.MVVM
                 throw new ArgumentNullException(nameof(callback));
             }
 
+            // Add + 즉시 통지를 같은 lock 안에서 처리해야 UpdateState와 순서가 어긋나지 않는다.
+            // (이전 구현은 add 후 lock 밖에서 callback을 호출했고, 그 사이 다른 스레드의 UpdateState가
+            //  먼저 NotifySubscribers를 끝내면 subscriber가 newState → initialState 순으로 받는 역순 race가 있었음.)
+            // 주의: callback이 다시 store에 접근(Subscribe/UpdateState)하면 deadlock 위험 — 사용자에게 그 제약을 두는 게 일반적.
             lock (_lock)
             {
                 _subscribers.Add(new WeakReference<Action<TState>>(callback));
+                callback(_state);
             }
-
-            // 현재 상태를 즉시 통지
-            callback(_state);
         }
 
         /// <summary>

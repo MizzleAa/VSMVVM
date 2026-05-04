@@ -62,5 +62,30 @@ namespace VSMVVM.Core.Tests.Collections
             changedProperties.Should().Contain(nameof(collection.Count));
             changedProperties.Should().Contain("Item[]");
         }
+
+        [Fact]
+        public void BeginBatchWithRegularAdd_DoesNotLeakPropertyChangedDuringBatch()
+        {
+            // 회귀 테스트: BeginBatch 안에서 일반 Add를 호출하면 부모 ObservableCollection의
+            // OnPropertyChanged가 누설되어 N+1번 발화되던 버그.
+            var collection = new BatchObservableCollection<int>();
+            var changedProperties = new List<string>();
+            ((INotifyPropertyChanged)collection).PropertyChanged += (s, e) => changedProperties.Add(e.PropertyName);
+            int collectionChangedCount = 0;
+            collection.CollectionChanged += (s, e) => collectionChangedCount++;
+
+            using (collection.BeginBatch())
+            {
+                collection.Add(1);
+                collection.Add(2);
+                collection.Add(3);
+                changedProperties.Should().BeEmpty("배치 중에는 PropertyChanged도 묻혀야 한다");
+                collectionChangedCount.Should().Be(0, "배치 중에는 CollectionChanged도 묻혀야 한다");
+            }
+
+            collectionChangedCount.Should().Be(1, "배치 종료 시 CollectionChanged는 정확히 한 번만 발화");
+            changedProperties.Should().ContainSingle(p => p == nameof(collection.Count));
+            changedProperties.Should().ContainSingle(p => p == "Item[]");
+        }
     }
 }

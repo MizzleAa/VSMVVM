@@ -10,7 +10,7 @@
 		<RootNamespace>VSMVVM.WPF</RootNamespace>
 		<AssemblyName>VSMVVM.WPF</AssemblyName>
 		<PackageId>VSMVVM.WPF</PackageId>
-		<Version>1.0.2</Version>
+		<Version>1.0.3</Version>
 		<Title>VSMVVM.WPF</Title>
 		<Description>WPF module for VSMVVM framework. Provides Host, Services, Controls, Behaviors, MarkupExtensions, and SVG support built on top of VSMVVM.Core.</Description>
 		<PackageTags>mvvm;wpf;ioc;behaviors;markup-extensions;vsmvvm</PackageTags>

@@ -13,7 +13,9 @@ namespace VSMVVM.Core.MVVM
     {
         #region Fields
 
-        private bool _isBatchActive;
+        // 재진입 안전을 위해 depth counter 사용.
+        // BeginBatch/AddRange/RemoveRange가 중첩 호출되어도 깊이가 0이 될 때만 최종 발화한다.
+        private int _batchDepth;
         private bool _hasChanges;
 
         #endregion
@@ -34,11 +36,11 @@ namespace VSMVVM.Core.MVVM
 
         /// <summary>
         /// 배치 작업을 시작합니다. using 블록과 함께 사용하세요.
+        /// 중첩 호출 안전: BatchScope가 모두 dispose되어 깊이가 0이 될 때만 발화합니다.
         /// </summary>
         public IDisposable BeginBatch()
         {
-            _isBatchActive = true;
-            _hasChanges = false;
+            EnterBatch();
             return new BatchScope(this);
         }
 
@@ -51,9 +53,7 @@ namespace VSMVVM.Core.MVVM
             if (items == null)
                 throw new ArgumentNullException(nameof(items));
 
-            _isBatchActive = true;
-            _hasChanges = false;
-
+            EnterBatch();
             try
             {
                 foreach (var item in items)
@@ -64,11 +64,7 @@ namespace VSMVVM.Core.MVVM
             }
             finally
             {
-                _isBatchActive = false;
-                if (_hasChanges)
-                {
-                    OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-                }
+                ExitBatch();
             }
         }
 
@@ -80,9 +76,7 @@ namespace VSMVVM.Core.MVVM
             if (items == null)
                 throw new ArgumentNullException(nameof(items));
 
-            _isBatchActive = true;
-            _hasChanges = false;
-
+            EnterBatch();
             try
             {
                 foreach (var item in items)
@@ -95,11 +89,7 @@ namespace VSMVVM.Core.MVVM
             }
             finally
             {
-                _isBatchActive = false;
-                if (_hasChanges)
-                {
-                    OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-                }
+                ExitBatch();
             }
         }
 
@@ -109,13 +99,36 @@ namespace VSMVVM.Core.MVVM
 
         protected override void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
         {
-            if (_isBatchActive)
+            if (_batchDepth > 0)
             {
                 _hasChanges = true;
                 return;
             }
 
             base.OnCollectionChanged(e);
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private void EnterBatch()
+        {
+            _batchDepth++;
+        }
+
+        private void ExitBatch()
+        {
+            if (_batchDepth <= 0)
+                return;
+
+            _batchDepth--;
+
+            if (_batchDepth == 0 && _hasChanges)
+            {
+                _hasChanges = false;
+                base.OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+            }
         }
 
         #endregion
@@ -137,12 +150,7 @@ namespace VSMVVM.Core.MVVM
                 if (_disposed) return;
                 _disposed = true;
 
-                _collection._isBatchActive = false;
-                if (_collection._hasChanges)
-                {
-                    _collection.OnCollectionChanged(
-                        new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
-                }
+                _collection.ExitBatch();
             }
         }
 

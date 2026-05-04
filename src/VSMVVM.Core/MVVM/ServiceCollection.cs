@@ -36,6 +36,17 @@ namespace VSMVVM.Core.MVVM
 
         private void Register(Type serviceType, Type implementationType, ServiceLifetime lifetime, object instance, Func<IServiceContainer, object> factory)
         {
+            // 단순명(Type.Name) 키는 GetService(string) / Navigate(string viewName) 등에서 사용된다.
+            // 서로 다른 네임스페이스의 동일 이름 타입이 등록되면 조용히 덮어써져 잘못된 타입이 해석되는
+            // 사일런트 버그가 발생하므로, 충돌 시 명확하게 throw한다.
+            if (_keyTypes.TryGetValue(serviceType.Name, out var existing) && existing != serviceType)
+            {
+                throw new InvalidOperationException(
+                    $"Service name conflict: '{serviceType.Name}' is already registered as '{existing.FullName}', " +
+                    $"cannot register '{serviceType.FullName}' with the same simple name. " +
+                    $"Rename one of the types or use a distinct namespace.");
+            }
+
             _keyTypes[serviceType.Name] = serviceType;
             _descriptors[serviceType] = new ServiceDescriptor(serviceType, implementationType, lifetime, instance, factory);
         }

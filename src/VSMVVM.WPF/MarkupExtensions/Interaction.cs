@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Windows;
+using VSMVVM.WPF.Behaviors.Base;
 
 namespace VSMVVM.WPF.MarkupExtensions
 {
@@ -78,6 +79,52 @@ namespace VSMVVM.WPF.MarkupExtensions
         public static void SetBehaviors(DependencyObject obj, List<Behaviors.Behaviors.EventToCommandBehavior> value)
         {
             obj.SetValue(BehaviorsProperty, value);
+        }
+
+        #endregion
+
+        #region GeneralBehaviors — 일반 Behavior&lt;T&gt; 컬렉션
+
+        /// <summary>
+        /// GeneralBehaviors 부착 프로퍼티. 모든 <see cref="BehaviorBase"/> 파생 베비어를 받는다.
+        /// EventToCommandBehavior 외 일반 Behavior&lt;T&gt; 들 (마우스/키보드/사이즈 베비어 등)을
+        /// XAML에서 attach 하기 위한 컬렉션.
+        /// </summary>
+        public static readonly DependencyProperty GeneralBehaviorsProperty =
+            DependencyProperty.RegisterAttached(
+                "GeneralBehaviors",
+                typeof(List<BehaviorBase>),
+                typeof(Interaction),
+                new PropertyMetadata(null, OnGeneralBehaviorsChanged));
+
+        /// <summary>GeneralBehaviors를 가져옵니다.</summary>
+        public static List<BehaviorBase> GetGeneralBehaviors(DependencyObject obj)
+        {
+            var list = (List<BehaviorBase>)obj.GetValue(GeneralBehaviorsProperty);
+            if (list == null)
+            {
+                list = new List<BehaviorBase>();
+                obj.SetValue(GeneralBehaviorsProperty, list);
+            }
+
+            return list;
+        }
+
+        /// <summary>GeneralBehaviors를 설정합니다.</summary>
+        public static void SetGeneralBehaviors(DependencyObject obj, List<BehaviorBase> value)
+        {
+            obj.SetValue(GeneralBehaviorsProperty, value);
+        }
+
+        private static void OnGeneralBehaviorsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (e.NewValue is List<BehaviorBase> behaviors)
+            {
+                foreach (var behavior in behaviors)
+                {
+                    behavior.AttachInternal(d);
+                }
+            }
         }
 
         #endregion

@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Windows;
 using VSMVVM.Core.MVVM;
 
@@ -83,23 +84,84 @@ namespace VSMVVM.WPF.MarkupExtensions
                 return;
             }
 
+            // Designer 모드에서는 동작하지 않음 (Visual Studio Designer가 ServiceLocator 없이 XAML 파싱)
+            if (DesignerProperties.GetIsInDesignMode(element))
+            {
+                return;
+            }
+
+            // 이미 DataContext가 설정되어 있으면 덮어쓰지 않음 (재진입/재사용 시 ViewModel 누수 방지)
+            if (element.DataContext != null)
+            {
+                return;
+            }
+
+            // 즉시 시도. XAML에서 AutoWireViewModel을 다른 binding 속성보다 앞에 선언하면
+            // 자식 컨트롤의 binding 평가 전에 DataContext가 설정되어 binding 에러 누적이 방지됨.
+            if (TryAssignDataContext(element))
+            {
+                return;
+            }
+
+            // 즉시 할당이 실패한 경우 (ServiceLocator 미초기화 등) Initialized 이벤트에서 재시도.
+            // 자식 binding의 1차 평가 전에 DataContext를 채울 수 있는 마지막 시점.
+            element.Initialized += OnElementInitialized;
+        }
+
+        private static void OnElementInitialized(object sender, EventArgs e)
+        {
+            if (!(sender is FrameworkElement element))
+            {
+                return;
+            }
+
+            element.Initialized -= OnElementInitialized;
+
+            if (element.DataContext != null)
+            {
+                return;
+            }
+
+            TryAssignDataContext(element);
+        }
+
+        /// <summary>
+        /// View 타입에 대응하는 ViewModel을 resolve하여 DataContext에 설정합니다.
+        /// 성공 시 true, ServiceLocator 미초기화/매핑 없음 등으로 실패 시 false를 반환합니다.
+        /// </summary>
+        private static bool TryAssignDataContext(FrameworkElement element)
+        {
+            IServiceContainer serviceProvider;
+            try
+            {
+                serviceProvider = ServiceLocator.GetServiceProvider();
+            }
+            catch (InvalidOperationException)
+            {
+                // ServiceLocator가 아직 초기화되지 않음 (앱 시작 매우 이른 시점 등)
+                return false;
+            }
+
             var viewType = element.GetType();
-            var serviceProvider = ServiceLocator.GetServiceProvider();
 
             // 1. IViewModelMapper 매핑 우선
             var viewModelMapper = serviceProvider.GetService<IViewModelMapper>();
-            if (viewModelMapper.HasMapping(viewType))
+            if (viewModelMapper != null && viewModelMapper.HasMapping(viewType))
             {
                 var vmType = viewModelMapper.GetViewModelType(viewType);
                 if (vmType != null)
                 {
-                    element.DataContext = serviceProvider.GetService(vmType);
-                    return;
+                    var vm = serviceProvider.GetService(vmType);
+                    if (vm != null)
+                    {
+                        element.DataContext = vm;
+                        return true;
+                    }
                 }
             }
 
             // 2. UseNamePatternMapper가 활성화된 경우 이름 패턴 매핑
-            if (GetUseNamePatternMapper(d))
+            if (GetUseNamePatternMapper(element))
             {
                 var viewName = viewType.Name;
                 var viewModelName = ResolveViewModelName(viewName);
@@ -109,10 +171,17 @@ namespace VSMVVM.WPF.MarkupExtensions
                     var vmKeyType = serviceProvider.KeyType(viewModelName);
                     if (vmKeyType != null)
                     {
-                        element.DataContext = serviceProvider.GetService(vmKeyType);
+                        var vm = serviceProvider.GetService(vmKeyType);
+                        if (vm != null)
+                        {
+                            element.DataContext = vm;
+                            return true;
+                        }
                     }
                 }
             }
+
+            return false;
         }
 
         /// <summary>

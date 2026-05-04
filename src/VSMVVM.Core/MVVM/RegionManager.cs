@@ -351,10 +351,19 @@ namespace VSMVVM.Core.MVVM
 
         private static async void InvokeAsyncInitializable(object view)
         {
-            var dataContext = GetDataContext(view);
-            if (dataContext is IAsyncInitializable initializable)
+            // async void: 호출부에서 try/catch가 불가능하므로 여기서 예외를 swallow.
+            // 미처리 예외가 SynchronizationContext로 전파되어 앱이 크래시되는 것을 방지한다.
+            try
             {
-                await initializable.InitializeAsync();
+                var dataContext = GetDataContext(view);
+                if (dataContext is IAsyncInitializable initializable)
+                {
+                    await initializable.InitializeAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[RegionManager] InitializeAsync failed: {ex}");
             }
         }
 

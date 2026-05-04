@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace VSMVVM.Core.MVVM
 {
@@ -10,7 +10,8 @@ namespace VSMVVM.Core.MVVM
     {
         #region Fields
 
-        private readonly Dictionary<Type, Type> _mappings = new Dictionary<Type, Type>();
+        // 모듈 hot-load 또는 Initialized 콜백에서의 동시 조회/등록에 대비해 ConcurrentDictionary 사용.
+        private readonly ConcurrentDictionary<Type, Type> _mappings = new ConcurrentDictionary<Type, Type>();
 
         #endregion
 

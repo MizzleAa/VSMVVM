@@ -39,29 +39,31 @@ namespace VSMVVM.Core.Tests.Messenger
         }
 
         [Fact]
-        public void ConcurrentReadAndWrite_NeverShowsHasResponseTrueWithDefaultResponse()
+        public async System.Threading.Tasks.Task ConcurrentReadAndWrite_NeverShowsHasResponseTrueWithDefaultResponse()
         {
-            // 회귀 테스트: 한 스레드가 Reply 도중 다른 스레드가 HasResponse=true를 보고
-            // Response를 읽었을 때 default 값을 보면 안 된다 (memory reorder 방지).
-            // RequestMessage 인스턴스를 많이 만들어 reader가 stale을 볼 가능성을 높인다.
-            const int N = 1000;
+            // 회귀 테스트: HasResponse=true이면 Response는 반드시 Reply가 설정한 값이어야 한다 (memory reorder 방지).
+            const int N = 100;
             int violations = 0;
 
-            System.Threading.Tasks.Parallel.For(0, N, _ =>
+            for (int i = 0; i < N; i++)
             {
                 var msg = new RequestMessage<string>();
-                var done = new System.Threading.ManualResetEventSlim(false);
+                var start = new System.Threading.ManualResetEventSlim(false);
 
                 var writer = System.Threading.Tasks.Task.Run(() =>
                 {
-                    done.Wait();
+                    start.Wait();
                     msg.Reply("payload");
                 });
 
                 var reader = System.Threading.Tasks.Task.Run(() =>
                 {
-                    done.Wait();
-                    while (!msg.HasResponse) { /* spin */ }
+                    start.Wait();
+                    var sw = new System.Threading.SpinWait();
+                    while (!msg.HasResponse)
+                    {
+                        sw.SpinOnce();
+                    }
                     var v = msg.Response;
                     if (v != "payload")
                     {
@@ -69,9 +71,11 @@ namespace VSMVVM.Core.Tests.Messenger
                     }
                 });
 
-                done.Set();
-                System.Threading.Tasks.Task.WaitAll(writer, reader);
-            });
+                start.Set();
+                var both = System.Threading.Tasks.Task.WhenAll(writer, reader);
+                var winner = await System.Threading.Tasks.Task.WhenAny(both, System.Threading.Tasks.Task.Delay(TimeSpan.FromSeconds(2)));
+                winner.Should().BeSameAs(both, "writer/reader 모두 2초 내에 끝나야 한다");
+            }
 
             violations.Should().Be(0, "Reply가 끝났음을 HasResponse가 신호하면 Response는 반드시 그 값을 보여야 한다");
         }

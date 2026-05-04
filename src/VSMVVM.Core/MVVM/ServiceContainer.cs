@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -13,8 +14,10 @@ namespace VSMVVM.Core.MVVM
         #region Fields
 
         private readonly IServiceCollection _serviceCollection;
-        private readonly Dictionary<Type, object> _singletonCache = new Dictionary<Type, object>();
-        private readonly Dictionary<Type, object> _scopedCache = new Dictionary<Type, object>();
+        // Lazy<object>로 감싸서 ConcurrentDictionary.GetOrAdd factory가 race로 두 번 실행되더라도
+        // 실제 인스턴스 생성은 단 한 번만 일어나도록 보장한다.
+        private readonly ConcurrentDictionary<Type, Lazy<object>> _singletonCache = new ConcurrentDictionary<Type, Lazy<object>>();
+        private readonly ConcurrentDictionary<Type, Lazy<object>> _scopedCache = new ConcurrentDictionary<Type, Lazy<object>>();
 
         #endregion
 
@@ -56,30 +59,27 @@ namespace VSMVVM.Core.MVVM
 
         private object ResolveSingleton(Type serviceType, ServiceDescriptor descriptor)
         {
-            if (_singletonCache.TryGetValue(serviceType, out var cached))
-                return cached;
-
-            // 이미 등록된 인스턴스가 있으면 사용
-            if (descriptor.Instance != null)
+            var lazy = _singletonCache.GetOrAdd(serviceType, _ => new Lazy<object>(() =>
             {
-                _singletonCache[serviceType] = descriptor.Instance;
-                InvokeServiceInitialized(descriptor.Instance);
-                return descriptor.Instance;
-            }
+                if (descriptor.Instance != null)
+                {
+                    InvokeServiceInitialized(descriptor.Instance);
+                    return descriptor.Instance;
+                }
 
-            var instance = CreateInstance(descriptor);
-            _singletonCache[serviceType] = instance;
-            return instance;
+                return CreateInstance(descriptor);
+            }, System.Threading.LazyThreadSafetyMode.ExecutionAndPublication));
+
+            return lazy.Value;
         }
 
         private object ResolveScoped(Type serviceType, ServiceDescriptor descriptor)
         {
-            if (_scopedCache.TryGetValue(serviceType, out var cached))
-                return cached;
+            var lazy = _scopedCache.GetOrAdd(serviceType, _ => new Lazy<object>(
+                () => CreateInstance(descriptor),
+                System.Threading.LazyThreadSafetyMode.ExecutionAndPublication));
 
-            var instance = CreateInstance(descriptor);
-            _scopedCache[serviceType] = instance;
-            return instance;
+            return lazy.Value;
         }
 
         private object CreateInstance(ServiceDescriptor descriptor)

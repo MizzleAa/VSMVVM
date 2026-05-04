@@ -9,6 +9,7 @@
 		<AssemblyName>VSMVVM.WPF.Design</AssemblyName>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<PackageId>VSMVVM.WPF.Design</PackageId>
+		<Version>1.0.1</Version>
 		<Title>VSMVVM.WPF.Design</Title>
 		<Description>Tailwind-inspired design system for WPF. Ships design tokens, color palettes, themed controls, and reusable components for VSMVVM-based applications.</Description>
 		<PackageTags>wpf;design-system;tokens;theme;tailwind;vsmvvm</PackageTags>

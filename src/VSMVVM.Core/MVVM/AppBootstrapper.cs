@@ -166,14 +166,19 @@ namespace VSMVVM.Core.MVVM
         public void Run()
         {
             var container = _serviceCollection.CreateContainer();
-            ServiceLocator.SetServiceProvider(container);
 
-            // 프레임워크 핵심 서비스 등록
+            // 프레임워크 핵심 서비스를 먼저 등록한다.
+            // ServiceLocator publish가 등록보다 앞설 경우, 조기에 ServiceLocator를 통해
+            // IViewModelMapper 등을 조회하는 코드(ViewModelLocator 등)가 미등록 상태와 만나
+            // InvalidOperationException을 받게 된다.
             _serviceCollection.AddSingleton<IRegionManager, RegionManager>();
             _serviceCollection.AddSingleton<ILocalizeService, LocalizeService>();
             _serviceCollection.AddSingleton<IViewModelMapper, ViewModelMapper>();
             _serviceCollection.AddSingleton<IMessenger, Messenger>();
             _serviceCollection.AddSingleton<IServiceContainer>(container);
+
+            // 핵심 서비스가 모두 등록된 후에 ServiceLocator publish.
+            ServiceLocator.SetServiceProvider(container);
 
             var regionManager = container.GetService<IRegionManager>();
             var viewModelMapper = container.GetService<IViewModelMapper>();

@@ -1,3 +1,4 @@
+using System;
 using System.Resources;
 
 namespace VSMVVM.Core.MVVM
@@ -28,8 +29,9 @@ namespace VSMVVM.Core.MVVM
         string GetString(string key);
 
         /// <summary>
-        /// 로케일 변경 시 발생하는 이벤트.
+        /// 로케일 변경을 구독합니다. 반환된 IDisposable.Dispose() 호출 시 구독 해제됩니다.
+        /// 콜백은 strong-ref 로 보관되므로 호출자가 IDisposable 을 보관하지 않으면 메모리 누수 가능 — Subscriptions 컬렉션 사용 권장.
         /// </summary>
-        event System.Action<string> LocaleChanged;
+        IDisposable Subscribe(Action<string> callback);
     }
 }

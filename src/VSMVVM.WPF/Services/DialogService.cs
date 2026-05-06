@@ -44,6 +44,12 @@ namespace VSMVVM.WPF.Services
             window.Closed += (sender, args) =>
             {
                 resultData = GetDialogResultData<TResult>(view);
+                // ViewModel 이 IDisposable 이면 Subscriptions 자동 정리.
+                var dataContext = (view as System.Windows.FrameworkElement)?.DataContext;
+                if (dataContext is System.IDisposable disposable)
+                {
+                    try { disposable.Dispose(); } catch { }
+                }
             };
 
             var wpfResult = window.ShowDialog();

@@ -63,6 +63,11 @@ namespace VSMVVM.WPF.Services
                 {
                     requestCloseEvent.RemoveEventHandler(dataContext, closeHandler);
                 }
+                // ViewModel 이 IDisposable 이면 Subscriptions 자동 정리.
+                if (dataContext is IDisposable disposable)
+                {
+                    try { disposable.Dispose(); } catch { }
+                }
             };
 
             var wpfResult = window.ShowDialog();

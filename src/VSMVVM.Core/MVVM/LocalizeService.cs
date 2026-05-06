@@ -7,6 +7,7 @@ namespace VSMVVM.Core.MVVM
 {
     /// <summary>
     /// ResourceManager 기반 로컬라이제이션 서비스 구현체.
+    /// Subscribe → IDisposable 패턴 (strong-ref). 호출자가 IDisposable 보관 책임.
     /// </summary>
     internal sealed class LocalizeService : ILocalizeService
     {
@@ -15,44 +16,14 @@ namespace VSMVVM.Core.MVVM
         private ResourceManager _resourceManager;
         private CultureInfo _currentCulture;
 
-        // LocalizeService는 싱글톤이라 strong-ref 이벤트는 구독한 View들을 영구히 잡아 메모리 누수를 일으킨다.
-        // 동일 이벤트 시그니처를 유지하면서 내부적으로 약참조 subscription 리스트로 보관한다.
-        private readonly List<WeakReference<Action<string>>> _localeChangedSubscribers = new List<WeakReference<Action<string>>>();
-        private readonly object _subscribersLock = new object();
+        private readonly List<Action<string>> _subscribers = new();
+        private readonly object _lock = new();
 
         #endregion
 
         #region Properties
 
         public string CurrentLocale => _currentCulture?.Name ?? CultureInfo.CurrentUICulture.Name;
-
-        #endregion
-
-        #region Events
-
-        public event Action<string> LocaleChanged
-        {
-            add
-            {
-                if (value == null) return;
-                lock (_subscribersLock)
-                {
-                    _localeChangedSubscribers.Add(new WeakReference<Action<string>>(value));
-                }
-            }
-            remove
-            {
-                if (value == null) return;
-                lock (_subscribersLock)
-                {
-                    _localeChangedSubscribers.RemoveAll(wr =>
-                    {
-                        if (!wr.TryGetTarget(out var target)) return true;
-                        return ReferenceEquals(target, value);
-                    });
-                }
-            }
-        }
 
         #endregion
 
@@ -86,47 +57,70 @@ namespace VSMVVM.Core.MVVM
             return _resourceManager.GetString(key, culture) ?? key;
         }
 
+        public IDisposable Subscribe(Action<string> callback)
+        {
+            if (callback == null) throw new ArgumentNullException(nameof(callback));
+
+            lock (_lock)
+            {
+                _subscribers.Add(callback);
+            }
+
+            return new Subscription(this, callback);
+        }
+
         #endregion
 
         #region Private Methods
 
+        private void Unsubscribe(Action<string> callback)
+        {
+            lock (_lock)
+            {
+                _subscribers.Remove(callback);
+            }
+        }
+
         private void RaiseLocaleChanged(string locale)
         {
-            List<WeakReference<Action<string>>> snapshot;
-            lock (_subscribersLock)
+            List<Action<string>> snapshot;
+            lock (_lock)
             {
-                snapshot = new List<WeakReference<Action<string>>>(_localeChangedSubscribers);
+                snapshot = new List<Action<string>>(_subscribers);
             }
 
-            List<WeakReference<Action<string>>> dead = null;
-            foreach (var weakRef in snapshot)
+            foreach (var callback in snapshot)
             {
-                if (weakRef.TryGetTarget(out var callback))
+                // 한 핸들러의 예외가 다른 모든 핸들러를 막지 않도록 격리.
+                try
                 {
-                    // 한 핸들러의 예외가 다른 모든 핸들러를 막거나 dead-ref 정리를 건너뛰지 않도록 격리.
-                    try
-                    {
-                        callback(locale);
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[LocalizeService] LocaleChanged handler threw: {ex}");
-                    }
+                    callback(locale);
                 }
-                else
+                catch (Exception ex)
                 {
-                    (dead ??= new List<WeakReference<Action<string>>>()).Add(weakRef);
+                    System.Diagnostics.Debug.WriteLine($"[LocalizeService] Locale callback threw: {ex}");
                 }
             }
+        }
 
-            if (dead != null)
+        private sealed class Subscription : IDisposable
+        {
+            private LocalizeService _service;
+            private Action<string> _callback;
+
+            public Subscription(LocalizeService service, Action<string> callback)
             {
-                lock (_subscribersLock)
+                _service = service;
+                _callback = callback;
+            }
+
+            public void Dispose()
+            {
+                var service = System.Threading.Interlocked.Exchange(ref _service, null);
+                var callback = System.Threading.Interlocked.Exchange(ref _callback, null);
+                if (service != null && callback != null)
                 {
-                    foreach (var d in dead)
-                    {
-                        _localeChangedSubscribers.Remove(d);
-                    }
+                    service.Unsubscribe(callback);
                 }
             }
         }

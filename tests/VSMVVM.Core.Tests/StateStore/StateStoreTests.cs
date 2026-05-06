@@ -54,13 +54,13 @@ namespace VSMVVM.Core.Tests.StateStore
         }
 
         [Fact]
-        public void Unsubscribe_StopsNotification()
+        public void DisposeSubscription_StopsNotification()
         {
             var store = new TestStateStore();
             int notifiedCounter = -1;
             Action<TestState> callback = state => notifiedCounter = state.Counter;
-            store.Subscribe(callback);
-            store.Unsubscribe(callback);
+            var sub = store.Subscribe(callback);
+            sub.Dispose();
 
             store.Increment();
 

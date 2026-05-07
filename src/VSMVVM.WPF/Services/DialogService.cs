@@ -14,12 +14,12 @@ namespace VSMVVM.WPF.Services
     {
         #region IDialogService
 
-        public DialogResult<TResult> ShowDialog<TResult>(string viewName, double width, double height, DialogButtons buttons = DialogButtons.OKCancel)
+        public DialogResult<TResult> ShowDialog<TResult>(string viewName, double width, double height, DialogButtons buttons = DialogButtons.OKCancel, string title = null)
         {
-            return ShowDialog<TResult, object>(viewName, width, height, null, buttons);
+            return ShowDialog<TResult, object>(viewName, width, height, null, buttons, title);
         }
 
-        public DialogResult<TResult> ShowDialog<TResult, TParam>(string viewName, double width, double height, TParam param, DialogButtons buttons = DialogButtons.OKCancel)
+        public DialogResult<TResult> ShowDialog<TResult, TParam>(string viewName, double width, double height, TParam param, DialogButtons buttons = DialogButtons.OKCancel, string title = null)
         {
             var serviceProvider = ServiceLocator.GetServiceProvider();
             var view = serviceProvider.GetService(viewName);
@@ -29,7 +29,7 @@ namespace VSMVVM.WPF.Services
                 throw new InvalidOperationException($"View not found: {viewName}");
             }
 
-            var window = CreateDialogWindow(view, width, height, buttons);
+            var window = CreateDialogWindow(view, width, height, buttons, title);
             var dialogResult = DialogResultType.None;
 
             // ViewModel에 파라미터 전달
@@ -148,7 +148,7 @@ namespace VSMVVM.WPF.Services
 
         #region Private Methods
 
-        private static Window CreateDialogWindow(object view, double width, double height, DialogButtons buttons)
+        private static Window CreateDialogWindow(object view, double width, double height, DialogButtons buttons, string title = null)
         {
             var grid = new Grid();
             grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -171,6 +171,7 @@ namespace VSMVVM.WPF.Services
                 Content = grid,
                 Width = width,
                 Height = height,
+                Title = title ?? string.Empty,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 Owner = GetActiveWindow(),
                 ResizeMode = System.Windows.ResizeMode.NoResize

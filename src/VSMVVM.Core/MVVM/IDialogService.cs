@@ -6,14 +6,14 @@ namespace VSMVVM.Core.MVVM
     public interface IDialogService
     {
         /// <summary>
-        /// 모달 다이얼로그를 표시합니다.
+        /// 모달 다이얼로그를 표시합니다. <paramref name="title"/> 가 지정되면 다이얼로그 타이틀바에 표시됩니다.
         /// </summary>
-        DialogResult<TResult> ShowDialog<TResult>(string viewName, double width, double height, DialogButtons buttons = DialogButtons.OKCancel);
+        DialogResult<TResult> ShowDialog<TResult>(string viewName, double width, double height, DialogButtons buttons = DialogButtons.OKCancel, string title = null);
 
         /// <summary>
-        /// 파라미터와 함께 모달 다이얼로그를 표시합니다.
+        /// 파라미터와 함께 모달 다이얼로그를 표시합니다. <paramref name="title"/> 가 지정되면 다이얼로그 타이틀바에 표시됩니다.
         /// </summary>
-        DialogResult<TResult> ShowDialog<TResult, TParam>(string viewName, double width, double height, TParam param, DialogButtons buttons = DialogButtons.OKCancel);
+        DialogResult<TResult> ShowDialog<TResult, TParam>(string viewName, double width, double height, TParam param, DialogButtons buttons = DialogButtons.OKCancel, string title = null);
 
         /// <summary>
         /// 모덜리스(비차단) 팝업을 표시합니다.

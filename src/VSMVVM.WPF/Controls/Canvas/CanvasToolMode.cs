@@ -15,6 +15,7 @@ namespace VSMVVM.WPF.Controls
         // 마스크 기반
         Brush,
         Eraser,
+        EraseInstance,
         Fill,
         RectangleMask,
         EllipseMask,

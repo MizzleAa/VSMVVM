@@ -545,6 +545,25 @@ namespace VSMVVM.WPF.Controls
             SplitIfDisconnected(id);
         }
 
+        /// <summary>
+        /// 마스크 픽셀 좌표 (px, py) 에서 가장 위(Z-order 최상단) 인스턴스 ID 를 반환.
+        /// 비어 있거나 범위 밖이면 0.
+        /// </summary>
+        public uint GetInstanceIdAt(int px, int py)
+        {
+            if (_width == 0 || _height == 0) return 0;
+            if ((uint)px >= (uint)_width || (uint)py >= (uint)_height) return 0;
+            int idx = py * _width + px;
+            // Z-order 역순: 라벨 인덱스가 큰 것이 위에 그려짐.
+            foreach (var label in _layers.Keys.OrderByDescending(k => k))
+            {
+                var mask = _layers[label];
+                uint id = mask[idx];
+                if (id != 0) return id;
+            }
+            return 0;
+        }
+
         public void DeleteInstance(uint id)
         {
             var inst = _instances.GetById(id);

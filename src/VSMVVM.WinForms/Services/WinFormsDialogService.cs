@@ -18,12 +18,12 @@ namespace VSMVVM.WinForms.Services
     {
         #region IDialogService
 
-        public DialogResult<TResult> ShowDialog<TResult>(string viewName, double width, double height, DialogButtons buttons = DialogButtons.OKCancel)
+        public DialogResult<TResult> ShowDialog<TResult>(string viewName, double width, double height, DialogButtons buttons = DialogButtons.OKCancel, string title = null)
         {
-            return ShowDialog<TResult, object>(viewName, width, height, null, buttons);
+            return ShowDialog<TResult, object>(viewName, width, height, null, buttons, title);
         }
 
-        public DialogResult<TResult> ShowDialog<TResult, TParam>(string viewName, double width, double height, TParam param, DialogButtons buttons = DialogButtons.OKCancel)
+        public DialogResult<TResult> ShowDialog<TResult, TParam>(string viewName, double width, double height, TParam param, DialogButtons buttons = DialogButtons.OKCancel, string title = null)
         {
             var serviceProvider = ServiceLocator.GetServiceProvider();
             var view = serviceProvider.GetService(viewName);
@@ -31,7 +31,7 @@ namespace VSMVVM.WinForms.Services
             if (view == null)
                 throw new InvalidOperationException($"View not found: {viewName}");
 
-            var form = CreateDialogForm(view, (int)width, (int)height, buttons);
+            var form = CreateDialogForm(view, (int)width, (int)height, buttons, title);
             var dialogResult = DialogResultType.None;
 
             // ViewModel에 파라미터 전달
@@ -138,11 +138,11 @@ namespace VSMVVM.WinForms.Services
         /// WPF DialogService.CreateDialogWindow에 대응합니다.
         /// Design 시스템의 VSForm을 사용하여 일관된 디자인을 유지합니다.
         /// </summary>
-        private static VSForm CreateDialogForm(object view, int width, int height, DialogButtons buttons)
+        private static VSForm CreateDialogForm(object view, int width, int height, DialogButtons buttons, string title = null)
         {
             var form = new VSForm
             {
-                Text = "",
+                Text = title ?? string.Empty,
                 Width = width,
                 Height = height,
                 StartPosition = FormStartPosition.CenterParent,

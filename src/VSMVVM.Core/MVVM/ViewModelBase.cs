@@ -7,15 +7,44 @@ namespace VSMVVM.Core.MVVM
 {
     /// <summary>
     /// MVVM 패턴의 ViewModel 기본 클래스.
-    /// INotifyPropertyChanged, INotifyPropertyChanging 구현.
-    /// ConvMVVM2 대비 Undo/Redo 제거 (프로젝트별 구현 권장).
+    /// INotifyPropertyChanged, INotifyPropertyChanging, IDisposable 구현.
+    /// Subscriptions 컬렉션을 통해 ILocalizeService.Subscribe / StateStoreBase.Subscribe 등의 IDisposable
+    /// 토큰을 일괄 관리하고, ViewModel Dispose 시 자동 정리합니다.
     /// </summary>
-    public class ViewModelBase : INotifyPropertyChanged, INotifyPropertyChanging
+    public class ViewModelBase : INotifyPropertyChanged, INotifyPropertyChanging, IDisposable
     {
         #region Events
 
         public event PropertyChangedEventHandler PropertyChanged;
         public event PropertyChangingEventHandler PropertyChanging;
+
+        #endregion
+
+        #region Subscriptions
+
+        /// <summary>
+        /// 이 ViewModel 의 라이프사이클에 묶인 IDisposable 구독 토큰들.
+        /// Dispose() 시 자동으로 모두 해제됩니다.
+        /// </summary>
+        protected Subscriptions Subscriptions { get; } = new Subscriptions();
+
+        #endregion
+
+        #region IDisposable
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                Subscriptions.Dispose();
+            }
+        }
 
         #endregion
 

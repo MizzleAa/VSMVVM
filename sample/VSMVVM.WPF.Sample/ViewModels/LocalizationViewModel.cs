@@ -29,7 +29,7 @@ namespace VSMVVM.WPF.Sample.ViewModels
             _localize.SetResourceManager(new ResourceManager(
                 "VSMVVM.WPF.Sample.Resources.Resource",
                 typeof(LocalizationViewModel).Assembly));
-            _localize.LocaleChanged += OnLocaleChanged;
+            Subscriptions.Add(_localize.Subscribe(OnLocaleChanged));
 
             UpdateDisplayTexts();
         }

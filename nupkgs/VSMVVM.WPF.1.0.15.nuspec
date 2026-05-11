@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>VSMVVM.WPF</id>
+    <version>1.0.15</version>
+    <title>VSMVVM.WPF</title>
+    <authors>ca-cy</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/MizzleAa/VSMVVM</projectUrl>
+    <description>WPF module for VSMVVM framework. Provides Host, Services, Controls, Behaviors, MarkupExtensions, and SVG support built on top of VSMVVM.Core.</description>
+    <copyright>@ 2026 ca-cy</copyright>
+    <tags>mvvm wpf ioc behaviors markup-extensions vsmvvm</tags>
+    <repository type="git" url="https://github.com/MizzleAa/VSMVVM" branch="refs/heads/develop" commit="d6747ce3493dde8ab8399df50e843a26b826a6ce" />
+    <dependencies>
+      <group targetFramework="net8.0-windows7.0">
+        <dependency id="VSMVVM.Core" version="1.0.15" exclude="Build,Analyzers" />
+        <dependency id="Microsoft.Xaml.Behaviors.Wpf" version="1.1.135" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+    <frameworkReferences>
+      <group targetFramework="net8.0-windows7.0">
+        <frameworkReference name="Microsoft.WindowsDesktop.App.WPF" />
+      </group>
+    </frameworkReferences>
+  </metadata>
+  <files>
+    <file src="C:\workspace\VSMVVM\src\VSMVVM.WPF\bin\Release\net8.0-windows\VSMVVM.WPF.dll" target="lib\net8.0-windows7.0\VSMVVM.WPF.dll" />
+    <file src="C:\workspace\VSMVVM\README.md" target="\README.md" />
+  </files>
+</package>

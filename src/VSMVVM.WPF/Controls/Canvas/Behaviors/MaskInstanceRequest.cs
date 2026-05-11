@@ -42,4 +42,34 @@ namespace VSMVVM.WPF.Controls.Behaviors
 
         public IReadOnlyList<uint> InstanceIds { get; }
     }
+
+    /// <summary>
+    /// 단일 인스턴스의 라벨 변경 요청 토큰. MaskLayer.ChangeInstanceLabel 로 픽셀을 새 라벨 layer 로 이동.
+    /// </summary>
+    public sealed class MaskInstanceRelabelRequest
+    {
+        public MaskInstanceRelabelRequest(uint instanceId, int newLabelIndex)
+        {
+            InstanceId = instanceId;
+            NewLabelIndex = newLabelIndex;
+        }
+
+        public uint InstanceId { get; }
+        public int NewLabelIndex { get; }
+    }
+
+    /// <summary>
+    /// 다중 인스턴스 일괄 라벨 변경 요청 토큰. 모든 인스턴스를 동일 newLabelIndex 로 이동.
+    /// </summary>
+    public sealed class MaskInstancesRelabelRequest
+    {
+        public MaskInstancesRelabelRequest(IReadOnlyList<uint> instanceIds, int newLabelIndex)
+        {
+            InstanceIds = instanceIds;
+            NewLabelIndex = newLabelIndex;
+        }
+
+        public IReadOnlyList<uint> InstanceIds { get; }
+        public int NewLabelIndex { get; }
+    }
 }

@@ -17,6 +17,9 @@ namespace VSMVVM.WPF.Controls.Tools
 
         private readonly List<Point> _points = new();
         private bool _active;
+        // BeginStroke 가 발번한 tentative 인스턴스 ID. EndStroke 후 LastCreatedInstanceId 와 비교해
+        // 새 인스턴스(=일치) vs 기존 인스턴스에 합쳐짐(=불일치) 을 판정한다.
+        private uint _tentativeId;
 
         public bool IsInputSessionActive => _active;
 
@@ -33,8 +36,8 @@ namespace VSMVVM.WPF.Controls.Tools
             if (mask == null) return false;
 
             _points.Clear();
-            _points.Add(BrushTool.ToMaskPixel(ctx, position));
-            mask.BeginStroke(ResolveLabelIndex(ctx));
+            _points.Add(ClampToMask(BrushTool.ToMaskPixel(ctx, position), mask));
+            _tentativeId = mask.BeginStroke(ResolveLabelIndex(ctx));
             _active = true;
             RaisePreviewChanged();
             return true;
@@ -43,7 +46,9 @@ namespace VSMVVM.WPF.Controls.Tools
         public override void OnMouseMove(CanvasToolContext ctx, Point position, MouseEventArgs e)
         {
             if (!_active) return;
-            _points.Add(BrushTool.ToMaskPixel(ctx, position));
+            var mask = ctx.TargetMaskLayer;
+            if (mask == null) return;
+            _points.Add(ClampToMask(BrushTool.ToMaskPixel(ctx, position), mask));
             RaisePreviewChanged();
         }
 
@@ -53,7 +58,7 @@ namespace VSMVVM.WPF.Controls.Tools
             var mask = ctx.TargetMaskLayer;
             if (mask == null) { _active = false; return; }
 
-            _points.Add(BrushTool.ToMaskPixel(ctx, position));
+            _points.Add(ClampToMask(BrushTool.ToMaskPixel(ctx, position), mask));
             int label = ResolveLabelIndex(ctx);
             if (_points.Count >= 3)
             {
@@ -61,8 +66,15 @@ namespace VSMVVM.WPF.Controls.Tools
                 var savedPoints = Simplify(_points, minSpacing: 6.0);
                 mask.PaintPolygon(_points, label);
                 mask.EndStroke(label);
-                var inst = mask.Instances.GetById(mask.LastCreatedInstanceId);
-                if (inst != null) inst.PolygonPoints = savedPoints;
+                // 같은 라벨 위에 stroke 가 겹치면 EndStroke 가 기존 인스턴스로 합치고 PolygonContours=null 로 무효화.
+                // 이때 새 polygon 외곽만 PolygonPoints 에 박으면 합쳐진 모양 vertex 편집이 깨진다.
+                // 새 인스턴스(tentativeId 가 그대로 LastCreatedInstanceId) 일 때만 freehand 외곽 보존.
+                if (mask.LastCreatedInstanceId == _tentativeId)
+                {
+                    var inst = mask.Instances.GetById(mask.LastCreatedInstanceId);
+                    if (inst != null) inst.PolygonPoints = savedPoints;
+                }
+                // else: PolygonContours=null 유지 → 다음 더블클릭 시 EnsurePolygonPoints 가 합쳐진 마스크에서 새로 추출.
             }
             else
             {
@@ -70,8 +82,20 @@ namespace VSMVVM.WPF.Controls.Tools
             }
             _points.Clear();
             _active = false;
+            _tentativeId = 0;
             RaisePreviewChanged();
             ctx.NotifyDrawingCompleted();
+        }
+
+        // 마우스가 마스크 영역 밖으로 나가도 polygon 점이 마스크 범위로 clamp 되도록.
+        // PaintPolygon 이 음수/초과 좌표를 받으면 fill scan 이 가장자리에 잘못된 띠를 칠하는 버그를 차단.
+        private static Point ClampToMask(Point p, VSMVVM.WPF.Controls.MaskLayer mask)
+        {
+            double maxX = Math.Max(0, mask.MaskWidth - 1);
+            double maxY = Math.Max(0, mask.MaskHeight - 1);
+            return new Point(
+                Math.Max(0, Math.Min(maxX, p.X)),
+                Math.Max(0, Math.Min(maxY, p.Y)));
         }
 
         // Enter / DblClick 제거 — MouseUp 만으로 완성.
@@ -84,6 +108,7 @@ namespace VSMVVM.WPF.Controls.Tools
             ctx.TargetMaskLayer?.CancelStroke();
             _points.Clear();
             _active = false;
+            _tentativeId = 0;
             RaisePreviewChanged();
             return true;
         }

@@ -608,6 +608,78 @@ namespace VSMVVM.WPF.Controls
             MemoryHelper.CompactAndCollect();
         }
 
+        /// <summary>
+        /// 인스턴스의 소속 라벨을 변경. 픽셀들을 oldLabel layer 에서 newLabel layer 로 옮긴다.
+        /// newLabel == BackgroundIndex 이면 DeleteInstance 와 의미상 동일 — 위임.
+        /// newLabel layer 에 동일 ID 가 이미 있을 가능성은 NextId 단조증가로 사실상 0 이지만, 안전을 위해
+        /// 기존 인스턴스 컬렉션에서 동일 ID 가 다른 라벨에 있으면 LabelIndex 만 갱신한다.
+        /// 변경 후 메타 재계산 + DisplayRect 갱신.
+        /// </summary>
+        public void ChangeInstanceLabel(uint instanceId, int newLabelIndex)
+        {
+            var inst = _instances.GetById(instanceId);
+            if (inst == null) return;
+            int oldLabel = inst.LabelIndex;
+            if (oldLabel == newLabelIndex) return;
+            if (newLabelIndex == LabelClassCollection.BackgroundIndex)
+            {
+                DeleteInstance(instanceId);
+                return;
+            }
+            if (!_layers.TryGetValue(oldLabel, out var oldMask))
+            {
+                // 레이어가 사라진 비정상 상태 — 그냥 LabelIndex 만 정리.
+                inst.LabelIndex = newLabelIndex;
+                AssignLabelRef(inst);
+                return;
+            }
+
+            var newMask = GetOrCreateLayer(newLabelIndex);
+            int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+            // Sparse 타일 enumerate — 빈 타일 skip, inner loop dense (DeleteInstance 와 동일 패턴).
+            foreach (var (tileX, tileY, tile) in oldMask.EnumerateAllocatedTiles())
+            {
+                int tileBaseX = tileX * SparseTileLayer.TileSize;
+                int tileBaseY = tileY * SparseTileLayer.TileSize;
+                int yEnd = Math.Min(SparseTileLayer.TileSize, _height - tileBaseY);
+                int xEnd = Math.Min(SparseTileLayer.TileSize, _width - tileBaseX);
+                for (int ly = 0; ly < yEnd; ly++)
+                {
+                    int tileRowBase = ly * SparseTileLayer.TileSize;
+                    int gy = tileBaseY + ly;
+                    int gRow = gy * _width;
+                    for (int lx = 0; lx < xEnd; lx++)
+                    {
+                        if (tile[tileRowBase + lx] != instanceId) continue;
+                        int gx = tileBaseX + lx;
+                        int gIdx = gRow + gx;
+                        // oldLabel: id → 0
+                        RecordPixelChange(oldLabel, gIdx, instanceId, 0);
+                        tile[tileRowBase + lx] = 0;
+                        // newLabel: 기존값(보통 0) → id
+                        uint prevNew = newMask.Get(gx, gy);
+                        if (prevNew != instanceId)
+                        {
+                            RecordPixelChange(newLabelIndex, gIdx, prevNew, instanceId);
+                            newMask.Set(gx, gy, instanceId);
+                        }
+                        if (gx < minX) minX = gx;
+                        if (gx > maxX) maxX = gx;
+                        if (gy < minY) minY = gy;
+                        if (gy > maxY) maxY = gy;
+                    }
+                }
+            }
+
+            inst.LabelIndex = newLabelIndex;
+            AssignLabelRef(inst);
+            // contour 캐시 무효화 — 다음 vertex 편집 시 재추출.
+            inst.PolygonContours = null;
+
+            RecomputeInstanceMetadata(instanceId);
+            if (minX <= maxX) UpdateDisplayRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+        }
+
         /// <summary>여러 인스턴스를 한 번에 삭제. RefreshAll 단일 호출로 최적화.</summary>
         public void DeleteInstances(System.Collections.Generic.IEnumerable<uint> ids)
         {

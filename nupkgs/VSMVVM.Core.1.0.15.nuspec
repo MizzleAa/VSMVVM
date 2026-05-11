@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>VSMVVM.Core</id>
+    <version>1.0.15</version>
+    <title>VSMVVM.Core</title>
+    <authors>ca-cy</authors>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/MizzleAa/VSMVVM</projectUrl>
+    <description>Lightweight MVVM core framework with built-in Source Generator, DI container, Messenger, and Guard utilities. Targets .NET Standard 2.0.</description>
+    <copyright>@ 2026 ca-cy</copyright>
+    <tags>mvvm ioc di source-generator messenger vsmvvm</tags>
+    <repository type="git" url="https://github.com/MizzleAa/VSMVVM" branch="refs/heads/develop" commit="d6747ce3493dde8ab8399df50e843a26b826a6ce" />
+    <dependencies>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="Microsoft.CodeAnalysis.CSharp" version="4.12.0" exclude="Build,Analyzers" />
+        <dependency id="System.ComponentModel.Annotations" version="5.0.0" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="C:\workspace\VSMVVM\src\VSMVVM.Core\bin\Release\netstandard2.0\VSMVVM.Core.dll" target="lib\netstandard2.0\VSMVVM.Core.dll" />
+    <file src="C:\workspace\VSMVVM\README.md" target="\README.md" />
+    <file src="C:\workspace\VSMVVM\src\VSMVVM.Core\bin\Release\netstandard2.0\VSMVVM.Core.dll" target="analyzers\dotnet\cs\VSMVVM.Core.dll" />
+  </files>
+</package>

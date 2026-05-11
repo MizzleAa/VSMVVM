@@ -168,6 +168,20 @@ namespace VSMVVM.WPF.Controls.Behaviors
                 typeof(MaskBehavior),
                 new PropertyMetadata(null, OnMergeInstancesRequestChanged));
 
+        public static readonly DependencyProperty RelabelInstanceRequestProperty =
+            DependencyProperty.Register(
+                nameof(RelabelInstanceRequest),
+                typeof(MaskInstanceRelabelRequest),
+                typeof(MaskBehavior),
+                new PropertyMetadata(null, OnRelabelInstanceRequestChanged));
+
+        public static readonly DependencyProperty RelabelInstancesRequestProperty =
+            DependencyProperty.Register(
+                nameof(RelabelInstancesRequest),
+                typeof(MaskInstancesRelabelRequest),
+                typeof(MaskBehavior),
+                new PropertyMetadata(null, OnRelabelInstancesRequestChanged));
+
         /// <summary>대상 <see cref="MaskLayer"/> 인스턴스. XAML에서 ElementName 또는 리소스로 바인딩한다.</summary>
         public MaskLayer? MaskLayer
         {
@@ -222,6 +236,20 @@ namespace VSMVVM.WPF.Controls.Behaviors
         {
             get => (MaskInstancesMergeRequest?)GetValue(MergeInstancesRequestProperty);
             set => SetValue(MergeInstancesRequestProperty, value);
+        }
+
+        /// <summary>VM이 단일 인스턴스의 라벨 변경을 요청하기 위해 새 요청 토큰을 set 한다.</summary>
+        public MaskInstanceRelabelRequest? RelabelInstanceRequest
+        {
+            get => (MaskInstanceRelabelRequest?)GetValue(RelabelInstanceRequestProperty);
+            set => SetValue(RelabelInstanceRequestProperty, value);
+        }
+
+        /// <summary>VM이 다중 인스턴스 일괄 라벨 변경을 요청하기 위해 새 요청 토큰을 set 한다.</summary>
+        public MaskInstancesRelabelRequest? RelabelInstancesRequest
+        {
+            get => (MaskInstancesRelabelRequest?)GetValue(RelabelInstancesRequestProperty);
+            set => SetValue(RelabelInstancesRequestProperty, value);
         }
 
         #endregion
@@ -358,6 +386,18 @@ namespace VSMVVM.WPF.Controls.Behaviors
                 self.HandleInstancesMerge(req.InstanceIds);
         }
 
+        private static void OnRelabelInstanceRequestChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is MaskBehavior self && e.NewValue is MaskInstanceRelabelRequest req)
+                self.HandleInstanceRelabel(req.InstanceId, req.NewLabelIndex);
+        }
+
+        private static void OnRelabelInstancesRequestChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is MaskBehavior self && e.NewValue is MaskInstancesRelabelRequest req)
+                self.HandleInstancesRelabel(req.InstanceIds, req.NewLabelIndex);
+        }
+
         private void HandleInstanceOp(uint instanceId, bool split)
         {
             var mask = MaskLayer;
@@ -379,6 +419,31 @@ namespace VSMVVM.WPF.Controls.Behaviors
 
             mask.BeginDiffRecording();
             mask.DeleteInstances(ids);
+            var diff = mask.EndDiffRecording();
+            InvokeStrokeCommandFromDiff(diff, mask);
+        }
+
+        private void HandleInstanceRelabel(uint instanceId, int newLabelIndex)
+        {
+            var mask = MaskLayer;
+            if (mask == null || mask.MaskWidth <= 0 || mask.MaskHeight <= 0) return;
+            if (instanceId == 0) return;
+
+            mask.BeginDiffRecording();
+            mask.ChangeInstanceLabel(instanceId, newLabelIndex);
+            var diff = mask.EndDiffRecording();
+            InvokeStrokeCommandFromDiff(diff, mask);
+        }
+
+        private void HandleInstancesRelabel(System.Collections.Generic.IReadOnlyList<uint> ids, int newLabelIndex)
+        {
+            var mask = MaskLayer;
+            if (mask == null || mask.MaskWidth <= 0 || mask.MaskHeight <= 0) return;
+            if (ids.Count == 0) return;
+
+            mask.BeginDiffRecording();
+            foreach (var id in ids)
+                mask.ChangeInstanceLabel(id, newLabelIndex);
             var diff = mask.EndDiffRecording();
             InvokeStrokeCommandFromDiff(diff, mask);
         }

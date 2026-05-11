@@ -608,6 +608,78 @@ namespace VSMVVM.WPF.Controls
             MemoryHelper.CompactAndCollect();
         }
 
+        /// <summary>
+        /// 인스턴스의 소속 라벨을 변경. 픽셀들을 oldLabel layer 에서 newLabel layer 로 옮긴다.
+        /// newLabel == BackgroundIndex 이면 DeleteInstance 와 의미상 동일 — 위임.
+        /// newLabel layer 에 동일 ID 가 이미 있을 가능성은 NextId 단조증가로 사실상 0 이지만, 안전을 위해
+        /// 기존 인스턴스 컬렉션에서 동일 ID 가 다른 라벨에 있으면 LabelIndex 만 갱신한다.
+        /// 변경 후 메타 재계산 + DisplayRect 갱신.
+        /// </summary>
+        public void ChangeInstanceLabel(uint instanceId, int newLabelIndex)
+        {
+            var inst = _instances.GetById(instanceId);
+            if (inst == null) return;
+            int oldLabel = inst.LabelIndex;
+            if (oldLabel == newLabelIndex) return;
+            if (newLabelIndex == LabelClassCollection.BackgroundIndex)
+            {
+                DeleteInstance(instanceId);
+                return;
+            }
+            if (!_layers.TryGetValue(oldLabel, out var oldMask))
+            {
+                // 레이어가 사라진 비정상 상태 — 그냥 LabelIndex 만 정리.
+                inst.LabelIndex = newLabelIndex;
+                AssignLabelRef(inst);
+                return;
+            }
+
+            var newMask = GetOrCreateLayer(newLabelIndex);
+            int minX = int.MaxValue, minY = int.MaxValue, maxX = int.MinValue, maxY = int.MinValue;
+            // Sparse 타일 enumerate — 빈 타일 skip, inner loop dense (DeleteInstance 와 동일 패턴).
+            foreach (var (tileX, tileY, tile) in oldMask.EnumerateAllocatedTiles())
+            {
+                int tileBaseX = tileX * SparseTileLayer.TileSize;
+                int tileBaseY = tileY * SparseTileLayer.TileSize;
+                int yEnd = Math.Min(SparseTileLayer.TileSize, _height - tileBaseY);
+                int xEnd = Math.Min(SparseTileLayer.TileSize, _width - tileBaseX);
+                for (int ly = 0; ly < yEnd; ly++)
+                {
+                    int tileRowBase = ly * SparseTileLayer.TileSize;
+                    int gy = tileBaseY + ly;
+                    int gRow = gy * _width;
+                    for (int lx = 0; lx < xEnd; lx++)
+                    {
+                        if (tile[tileRowBase + lx] != instanceId) continue;
+                        int gx = tileBaseX + lx;
+                        int gIdx = gRow + gx;
+                        // oldLabel: id → 0
+                        RecordPixelChange(oldLabel, gIdx, instanceId, 0);
+                        tile[tileRowBase + lx] = 0;
+                        // newLabel: 기존값(보통 0) → id
+                        uint prevNew = newMask.Get(gx, gy);
+                        if (prevNew != instanceId)
+                        {
+                            RecordPixelChange(newLabelIndex, gIdx, prevNew, instanceId);
+                            newMask.Set(gx, gy, instanceId);
+                        }
+                        if (gx < minX) minX = gx;
+                        if (gx > maxX) maxX = gx;
+                        if (gy < minY) minY = gy;
+                        if (gy > maxY) maxY = gy;
+                    }
+                }
+            }
+
+            inst.LabelIndex = newLabelIndex;
+            AssignLabelRef(inst);
+            // contour 캐시 무효화 — 다음 vertex 편집 시 재추출.
+            inst.PolygonContours = null;
+
+            RecomputeInstanceMetadata(instanceId);
+            if (minX <= maxX) UpdateDisplayRect(minX, minY, maxX - minX + 1, maxY - minY + 1);
+        }
+
         /// <summary>여러 인스턴스를 한 번에 삭제. RefreshAll 단일 호출로 최적화.</summary>
         public void DeleteInstances(System.Collections.Generic.IEnumerable<uint> ids)
         {
@@ -2146,40 +2218,9 @@ namespace VSMVVM.WPF.Controls
             {
                 Images = { new CocoImage { Id = 1, Width = _width, Height = _height, FileName = imageFileName ?? "" } }
             };
-            if (Labels != null)
-            {
-                foreach (var lbl in Labels)
-                {
-                    if (lbl.Index == LabelClassCollection.BackgroundIndex) continue;
-                    doc.Categories.Add(new CocoCategory
-                    {
-                        Id = lbl.Index, Name = lbl.Name,
-                        Color = $"#{lbl.Color.R:X2}{lbl.Color.G:X2}{lbl.Color.B:X2}",
-                    });
-                }
-            }
-            foreach (var inst in _instances)
-            {
-                if (!_layers.TryGetValue(inst.LabelIndex, out var mask)) continue;
-                // pycocotools 호환 compressed RLE 로 segmentation 기록.
-                // 1) bitmap → column-major run-lengths (uncompressed).
-                // 2) run-lengths → LEB128-variant ASCII 문자열.
-                var rawCounts = RleCodec.Encode(mask, _width, _height, inst.Id);
-                var countsStr = CompressedRleCodec.Encode(rawCounts);
-                var b = inst.BoundingBox;
-                doc.Annotations.Add(new CocoAnnotation
-                {
-                    Id = inst.Id, ImageId = 1, CategoryId = inst.LabelIndex,
-                    Segmentation = new CocoCompressedRle
-                    {
-                        Size = new List<int> { _height, _width },
-                        Counts = countsStr,
-                    },
-                    // Rle/polygon 보조 필드는 기록하지 않음 (pycocotools 표준 부합, 파일 크기 감소).
-                    Bbox = new List<double> { b.X, b.Y, b.Width, b.Height },
-                    Area = inst.PixelCount,
-                });
-            }
+            doc.Categories = (List<CocoCategory>)BuildCocoCategories();
+            foreach (var ann in BuildCocoAnnotations(imageId: 1, annotationIdStart: 1))
+                doc.Annotations.Add(ann);
             var options = new JsonSerializerOptions
             {
                 WriteIndented = true,
@@ -2189,37 +2230,72 @@ namespace VSMVVM.WPF.Controls
             File.WriteAllText(path, JsonSerializer.Serialize(doc, options));
         }
 
-        public void ImportCocoJson(string path)
+        /// <summary>현재 Labels DP 의 라벨들을 CocoCategory 리스트로 변환 (Background 제외, color 보존).</summary>
+        public IList<CocoCategory> BuildCocoCategories()
         {
-            var json = File.ReadAllText(path);
-            var doc = JsonSerializer.Deserialize<CocoDocument>(json);
-            if (doc == null) return;
-            var img = doc.Images.FirstOrDefault();
-            if (img != null && (img.Width != _width || img.Height != _height))
-                throw new InvalidOperationException("COCO image 크기가 현재 마스크와 일치하지 않습니다.");
+            var list = new List<CocoCategory>();
+            if (Labels == null) return list;
+            foreach (var lbl in Labels)
+            {
+                if (lbl.Index == LabelClassCollection.BackgroundIndex) continue;
+                list.Add(new CocoCategory
+                {
+                    Id = lbl.Index,
+                    Name = lbl.Name,
+                    Color = $"#{lbl.Color.R:X2}{lbl.Color.G:X2}{lbl.Color.B:X2}",
+                });
+            }
+            return list;
+        }
 
+        /// <summary>현재 마스크의 instances 를 CocoAnnotation 리스트로 인코딩 (compressed RLE).
+        /// 그룹 단위 단일 JSON 합성 시 호출자가 image_id 와 시작 annotation id 를 지정.</summary>
+        public IList<CocoAnnotation> BuildCocoAnnotations(int imageId, uint annotationIdStart = 1)
+        {
+            var list = new List<CocoAnnotation>();
+            if (_width == 0 || _height == 0) return list;
+            uint nextId = annotationIdStart;
+            foreach (var inst in _instances)
+            {
+                if (!_layers.TryGetValue(inst.LabelIndex, out var mask)) continue;
+                if (inst.PixelCount == 0) continue;
+                var rawCounts = RleCodec.Encode(mask, _width, _height, inst.Id);
+                var countsStr = CompressedRleCodec.Encode(rawCounts);
+                var b = inst.BoundingBox;
+                list.Add(new CocoAnnotation
+                {
+                    Id = nextId++,
+                    ImageId = imageId,
+                    CategoryId = inst.LabelIndex,
+                    Segmentation = new CocoCompressedRle
+                    {
+                        Size = new List<int> { _height, _width },
+                        Counts = countsStr,
+                    },
+                    Bbox = new List<double> { b.X, b.Y, b.Width, b.Height },
+                    Area = inst.PixelCount,
+                });
+            }
+            return list;
+        }
+
+        /// <summary>annotations 를 마스크/인스턴스로 적용. 기존 마스크/인스턴스는 모두 제거.
+        /// segmentation 필드는 compressed RLE / legacy RLE / polygon 모두 지원.
+        /// Labels 동기화는 호출자 책임 (그룹 단위 컨텍스트에서 categories 를 미리 적용).</summary>
+        public void ApplyCocoAnnotations(IEnumerable<CocoAnnotation> annotations)
+        {
             _layers.Clear();
             _instances.Clear();
-
-            if (Labels != null)
-            {
-                foreach (var cat in doc.Categories)
-                {
-                    if (Labels.GetByIndex(cat.Id) != null) continue;
-                    var color = ParseHexColor(cat.Color);
-                    Labels.Add(cat.Name, color);
-                }
-            }
+            if (annotations == null) { RefreshAll(); return; }
 
             uint maxId = 0;
-            foreach (var ann in doc.Annotations)
+            foreach (var ann in annotations)
             {
                 int label = ann.CategoryId;
                 uint id = ann.Id;
                 if (id > maxId) maxId = id;
                 var layer = GetOrCreateLayer(label);
 
-                // 우선순위: compressed RLE(표준) → legacy rle(int[]) → polygon.
                 if (ann.Segmentation is CocoCompressedRle cRle && !string.IsNullOrEmpty(cRle.Counts))
                 {
                     var ints = CompressedRleCodec.Decode(cRle.Counts);
@@ -2245,6 +2321,29 @@ namespace VSMVVM.WPF.Controls
             }
             _instances.EnsureNextIdAtLeast(maxId);
             RefreshAll();
+        }
+
+        public void ImportCocoJson(string path)
+        {
+            var json = File.ReadAllText(path);
+            var doc = JsonSerializer.Deserialize<CocoDocument>(json);
+            if (doc == null) return;
+            var img = doc.Images.FirstOrDefault();
+            if (img != null && (img.Width != _width || img.Height != _height))
+                throw new InvalidOperationException("COCO image 크기가 현재 마스크와 일치하지 않습니다.");
+
+            // categories → Labels 동기화 (없는 인덱스만 추가).
+            if (Labels != null)
+            {
+                foreach (var cat in doc.Categories)
+                {
+                    if (Labels.GetByIndex(cat.Id) != null) continue;
+                    var color = ParseHexColor(cat.Color);
+                    Labels.AddWithIndex(cat.Id, cat.Name, color);
+                }
+            }
+
+            ApplyCocoAnnotations(doc.Annotations);
         }
 
         private static Color ParseHexColor(string? hex)

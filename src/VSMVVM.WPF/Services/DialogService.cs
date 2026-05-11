@@ -12,6 +12,25 @@ namespace VSMVVM.WPF.Services
     /// </summary>
     public sealed class DialogService : IDialogService
     {
+        /// <summary>
+        /// Dialog 의 OK/Cancel/Yes/No 버튼 텍스트를 다국어 변환하기 위한 콜백.
+        /// 호출자가 application 시작 시 등록한다 (예: <c>DialogService.LocalizeFunc = key => localizeService.GetString(key);</c>).
+        /// 미등록 시 기본 영문 라벨 ("OK"/"Cancel"/"Yes"/"No") 사용.
+        /// 키: UI_OK / UI_CANCEL / UI_YES / UI_NO.
+        /// </summary>
+        public static System.Func<string, string> LocalizeFunc { get; set; }
+
+        private static string Localize(string key, string fallback)
+        {
+            if (LocalizeFunc == null) return fallback;
+            try
+            {
+                var v = LocalizeFunc(key);
+                return string.IsNullOrEmpty(v) ? fallback : v;
+            }
+            catch { return fallback; }
+        }
+
         #region IDialogService
 
         public DialogResult<TResult> ShowDialog<TResult>(string viewName, double width, double height, DialogButtons buttons = DialogButtons.OKCancel, string title = null)
@@ -193,23 +212,23 @@ namespace VSMVVM.WPF.Services
             switch (buttons)
             {
                 case DialogButtons.OK:
-                    panel.Children.Add(CreateDialogButton("OK", true));
+                    panel.Children.Add(CreateDialogButton(Localize("UI_OK", "OK"), true));
                     break;
 
                 case DialogButtons.OKCancel:
-                    panel.Children.Add(CreateDialogButton("Cancel", false));
-                    panel.Children.Add(CreateDialogButton("OK", true));
+                    panel.Children.Add(CreateDialogButton(Localize("UI_CANCEL", "Cancel"), false));
+                    panel.Children.Add(CreateDialogButton(Localize("UI_OK", "OK"), true));
                     break;
 
                 case DialogButtons.YesNo:
-                    panel.Children.Add(CreateDialogButton("No", false));
-                    panel.Children.Add(CreateDialogButton("Yes", true));
+                    panel.Children.Add(CreateDialogButton(Localize("UI_NO", "No"), false));
+                    panel.Children.Add(CreateDialogButton(Localize("UI_YES", "Yes"), true));
                     break;
 
                 case DialogButtons.YesNoCancel:
-                    panel.Children.Add(CreateDialogButton("Cancel", false));
-                    panel.Children.Add(CreateDialogButton("No", false));
-                    panel.Children.Add(CreateDialogButton("Yes", true));
+                    panel.Children.Add(CreateDialogButton(Localize("UI_CANCEL", "Cancel"), false));
+                    panel.Children.Add(CreateDialogButton(Localize("UI_NO", "No"), false));
+                    panel.Children.Add(CreateDialogButton(Localize("UI_YES", "Yes"), true));
                     break;
             }
 

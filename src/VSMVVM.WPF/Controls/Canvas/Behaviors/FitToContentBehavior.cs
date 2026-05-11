@@ -48,8 +48,14 @@ namespace VSMVVM.WPF.Controls.Behaviors
 
         private static void OnFitTriggerChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            if (d is FitToContentBehavior self && self.AssociatedObject is IZoomPanViewport vp)
-                vp.FitToContent();
+            if (d is not FitToContentBehavior self) return;
+            if (self.AssociatedObject is not IZoomPanViewport vp) return;
+            // VM 이 BackgroundImageSource / ImagePixelWidth / Height 를 갱신한 직후 FitTrigger 를 발화하면
+            // Layout pass 가 끝나기 전에 vp.FitToContent() 가 옛 viewport 크기로 계산되어 fit 이 안 맞을 수 있다.
+            // ContextIdle 우선순위로 미루면 layout/render pass 가 모두 끝난 뒤 호출되어 새 ImageSource 크기 기준으로 정확히 fit.
+            self.AssociatedObject.Dispatcher.BeginInvoke(
+                new System.Action(() => vp.FitToContent()),
+                System.Windows.Threading.DispatcherPriority.ContextIdle);
         }
 
         private static void OnZoomToBoundsTriggerChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 #nullable enable
@@ -8,7 +8,7 @@ namespace VSMVVM.WPF.Imaging.Coco
     /// COCO instance segmentation JSON 스키마의 축약 POCO.
     /// System.Text.Json 으로 직렬화된다.
     /// </summary>
-    public sealed class CocoDocument
+    public class CocoDocument
     {
         [JsonPropertyName("info")]
         public CocoInfo Info { get; set; } = new();
@@ -23,7 +23,7 @@ namespace VSMVVM.WPF.Imaging.Coco
         public List<CocoAnnotation> Annotations { get; set; } = new();
     }
 
-    public sealed class CocoInfo
+    public class CocoInfo
     {
         [JsonPropertyName("description")]
         public string Description { get; set; } = "VSMVVM mask export";
@@ -32,7 +32,7 @@ namespace VSMVVM.WPF.Imaging.Coco
         public string Version { get; set; } = "1.0";
     }
 
-    public sealed class CocoImage
+    public class CocoImage
     {
         [JsonPropertyName("id")]
         public int Id { get; set; }
@@ -47,7 +47,7 @@ namespace VSMVVM.WPF.Imaging.Coco
         public string FileName { get; set; } = string.Empty;
     }
 
-    public sealed class CocoCategory
+    public class CocoCategory
     {
         [JsonPropertyName("id")]
         public int Id { get; set; }
@@ -60,7 +60,7 @@ namespace VSMVVM.WPF.Imaging.Coco
         public string? Color { get; set; }
     }
 
-    public sealed class CocoAnnotation
+    public class CocoAnnotation
     {
         [JsonPropertyName("id")]
         public uint Id { get; set; }
@@ -98,7 +98,7 @@ namespace VSMVVM.WPF.Imaging.Coco
         public int IsCrowd { get; set; } = 0;
     }
 
-    public sealed class CocoRle
+    public class CocoRle
     {
         /// <summary>[height, width] (pycocotools 와 동일 순서).</summary>
         [JsonPropertyName("size")]
@@ -113,7 +113,7 @@ namespace VSMVVM.WPF.Imaging.Coco
     /// pycocotools 호환 compressed RLE. segmentation 필드가 객체일 때 사용.
     /// { "size": [h, w], "counts": "<ascii-string>" }.
     /// </summary>
-    public sealed class CocoCompressedRle
+    public class CocoCompressedRle
     {
         /// <summary>[height, width].</summary>
         [JsonPropertyName("size")]

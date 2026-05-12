@@ -7,11 +7,12 @@ namespace VSMVVM.Core.MVVM
 {
     /// <summary>
     /// MVVM 패턴의 ViewModel 기본 클래스.
-    /// INotifyPropertyChanged, INotifyPropertyChanging, IDisposable 구현.
+    /// INotifyPropertyChanged, INotifyPropertyChanging, IDisposable, ICleanup 구현.
     /// Subscriptions 컬렉션을 통해 ILocalizeService.Subscribe / StateStoreBase.Subscribe 등의 IDisposable
-    /// 토큰을 일괄 관리하고, ViewModel Dispose 시 자동 정리합니다.
+    /// 토큰을 일괄 관리하고, RegionManager 가 view 교체 시 Cleanup() 을 호출하면 Dispose 까지 연쇄.
+    /// 이렇게 해야 region 에서 빠진 ViewModel 이 store/localize 통지를 계속 받아 동작에 간섭하지 않음.
     /// </summary>
-    public class ViewModelBase : INotifyPropertyChanged, INotifyPropertyChanging, IDisposable
+    public class ViewModelBase : INotifyPropertyChanged, INotifyPropertyChanging, IDisposable, ICleanup
     {
         #region Events
 
@@ -44,6 +45,19 @@ namespace VSMVVM.Core.MVVM
             {
                 Subscriptions.Dispose();
             }
+        }
+
+        #endregion
+
+        #region ICleanup
+
+        /// <summary>
+        /// RegionManager 가 view 를 region 에서 빼낼 때 호출. 기본 구현은 Dispose() 로 연결되어
+        /// Subscriptions 가 정리됩니다. 파생 클래스는 추가 이벤트 핸들러 해제 후 base.Cleanup() 호출.
+        /// </summary>
+        public virtual void Cleanup()
+        {
+            Dispose();
         }
 
         #endregion

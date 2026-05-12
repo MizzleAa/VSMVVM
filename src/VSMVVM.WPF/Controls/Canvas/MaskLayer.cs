@@ -2230,14 +2230,15 @@ namespace VSMVVM.WPF.Controls
             File.WriteAllText(path, JsonSerializer.Serialize(doc, options));
         }
 
-        /// <summary>현재 Labels DP 의 라벨들을 CocoCategory 리스트로 변환 (Background 제외, color 보존).</summary>
+        /// <summary>현재 Labels DP 의 라벨들을 CocoCategory 리스트로 변환 (Background 포함, color 보존).
+        /// BG(Index=0) 는 항상 첫 entry 로 직렬화된다. 로드 측은 LabelClassCollection 생성자가 이미 BG 를 예약하므로
+        /// 중복 추가 방지를 책임진다.</summary>
         public IList<CocoCategory> BuildCocoCategories()
         {
             var list = new List<CocoCategory>();
             if (Labels == null) return list;
             foreach (var lbl in Labels)
             {
-                if (lbl.Index == LabelClassCollection.BackgroundIndex) continue;
                 list.Add(new CocoCategory
                 {
                     Id = lbl.Index,

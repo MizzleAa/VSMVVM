@@ -57,14 +57,32 @@ namespace VSMVVM.WPF.Services
                 SetDialogParameter(view, param);
             }
 
+            // RequestClose 이벤트(있으면) 구독 — ViewModel 이 닫기 요청 시 Window.Close().
+            // WindowService 와 동일한 reflection 기반 구독으로 code-behind 없이 ViewModel 주도 닫기 지원.
+            var dataContext = (view as System.Windows.FrameworkElement)?.DataContext;
+            EventHandler closeHandler = null;
+            var requestCloseEvent = dataContext?.GetType().GetEvent("RequestClose");
+            if (requestCloseEvent != null)
+            {
+                closeHandler = (s, e) =>
+                {
+                    window.DialogResult = true;
+                    window.Close();
+                };
+                requestCloseEvent.AddEventHandler(dataContext, closeHandler);
+            }
+
             // 다이얼로그 결과 수집
             var resultData = default(TResult);
 
             window.Closed += (sender, args) =>
             {
                 resultData = GetDialogResultData<TResult>(view);
+                if (closeHandler != null && requestCloseEvent != null)
+                {
+                    requestCloseEvent.RemoveEventHandler(dataContext, closeHandler);
+                }
                 // ViewModel 이 IDisposable 이면 Subscriptions 자동 정리.
-                var dataContext = (view as System.Windows.FrameworkElement)?.DataContext;
                 if (dataContext is System.IDisposable disposable)
                 {
                     try { disposable.Dispose(); } catch { }

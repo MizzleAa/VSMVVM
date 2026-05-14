@@ -1,13 +1,14 @@
-<ResourceDictionary
+<core:SharedResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:core="clr-namespace:VSMVVM.WPF.Design.Core">
 
     <!-- Light Theme Semantic Colors -->
     <!-- Use with DynamicResource for runtime theme switching -->
 
-    <ResourceDictionary.MergedDictionaries>
+    <core:SharedResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Colors/Palette.xaml"/>
-    </ResourceDictionary.MergedDictionaries>
+    </core:SharedResourceDictionary.MergedDictionaries>
 
     <!-- Background -->
     <SolidColorBrush x:Key="BgPrimary" Color="{StaticResource White}"/>
@@ -78,6 +79,6 @@
     <SolidColorBrush x:Key="ScrollbarThumb" Color="{StaticResource Slate300}"/>
     <SolidColorBrush x:Key="ScrollbarThumbHover" Color="{StaticResource Slate400}"/>
 
-</ResourceDictionary>
+</core:SharedResourceDictionary>
 
 

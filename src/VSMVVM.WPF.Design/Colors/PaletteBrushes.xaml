@@ -1,13 +1,14 @@
-<ResourceDictionary
+<core:SharedResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:core="clr-namespace:VSMVVM.WPF.Design.Core">
 
     <!-- SolidColorBrush counterparts for Palette.xaml Color resources -->
     <!-- Use "{Brush}" suffix: e.g. Lime500Brush for Brush-typed properties -->
 
-    <ResourceDictionary.MergedDictionaries>
+    <core:SharedResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Colors/Palette.xaml"/>
-    </ResourceDictionary.MergedDictionaries>
+    </core:SharedResourceDictionary.MergedDictionaries>
 
     <!-- White/Black -->
     <SolidColorBrush x:Key="WhiteBrush" Color="{StaticResource White}"/>
@@ -300,5 +301,5 @@
     <SolidColorBrush x:Key="Rose900Brush" Color="{StaticResource Rose900}"/>
     <SolidColorBrush x:Key="Rose950Brush" Color="{StaticResource Rose950}"/>
 
-</ResourceDictionary>
+</core:SharedResourceDictionary>
 

@@ -1,7 +1,8 @@
-<ResourceDictionary
+<core:SharedResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    xmlns:core="clr-namespace:VSMVVM.WPF.Design.Core">
 
     <!-- ========================== -->
     <!-- Spacing Scale     -->
@@ -340,5 +341,5 @@
     <sys:Double x:Key="Gap20">80</sys:Double>
     <sys:Double x:Key="Gap24">96</sys:Double>
 
-</ResourceDictionary>
+</core:SharedResourceDictionary>
 

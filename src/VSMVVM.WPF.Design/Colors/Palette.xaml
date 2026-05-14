@@ -1,6 +1,7 @@
-﻿<ResourceDictionary
+﻿<core:SharedResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:core="clr-namespace:VSMVVM.WPF.Design.Core">
 
     <!-- Tailwind CSS Full Color Palette -->
     <!-- 22 Colors × 11 Shades = 242 Colors -->
@@ -296,5 +297,5 @@
     <Color x:Key="Rose900">#881337</Color>
     <Color x:Key="Rose950">#4C0519</Color>
 
-</ResourceDictionary>
+</core:SharedResourceDictionary>
 

@@ -32,6 +32,7 @@
         </Setter>
     </Style>
 
+
     <!-- 체크무늬(투명도 표시용) 브러시. Alpha 트랙 및 preview 스워치의 배경. -->
     <DrawingBrush x:Key="VSMVVM.ColorPicker.CheckerBrush"
                   TileMode="Tile"

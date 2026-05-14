@@ -1,13 +1,14 @@
-<ResourceDictionary
+<core:SharedResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:core="clr-namespace:VSMVVM.WPF.Design.Core">
 
-    <ResourceDictionary.MergedDictionaries>
+    <core:SharedResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Sizing.xaml"/>
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Spacing.xaml"/>
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Effects.xaml"/>
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Typography.xaml"/>
-    </ResourceDictionary.MergedDictionaries>
+    </core:SharedResourceDictionary.MergedDictionaries>
 
     <!-- ComboBox ToggleButton Template -->
     <ControlTemplate x:Key="ComboBoxToggleButtonTemplate" TargetType="ToggleButton">
@@ -124,4 +125,4 @@
         </Setter>
     </Style>
 
-</ResourceDictionary>
+</core:SharedResourceDictionary>

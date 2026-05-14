@@ -1,11 +1,12 @@
-<ResourceDictionary
+<core:SharedResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:core="clr-namespace:VSMVVM.WPF.Design.Core">
 
-    <ResourceDictionary.MergedDictionaries>
+    <core:SharedResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Sizing.xaml"/>
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Effects.xaml"/>
-    </ResourceDictionary.MergedDictionaries>
+    </core:SharedResourceDictionary.MergedDictionaries>
 
     <!-- Default ScrollBar Thumb Template -->
     <ControlTemplate x:Key="ScrollBarThumbTemplate" TargetType="Thumb">
@@ -113,4 +114,4 @@
         </Setter>
     </Style>
 
-</ResourceDictionary>
+</core:SharedResourceDictionary>

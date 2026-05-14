@@ -1,15 +1,15 @@
-<ResourceDictionary
+<ctrl:SharedResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
     xmlns:ctrl="clr-namespace:VSMVVM.WPF.Design.Core">
 
-    <ResourceDictionary.MergedDictionaries>
+    <ctrl:SharedResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Spacing.xaml"/>
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Sizing.xaml"/>
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Effects.xaml"/>
         <ResourceDictionary Source="/VSMVVM.WPF.Design;component/Tokens/Typography.xaml"/>
-    </ResourceDictionary.MergedDictionaries>
+    </ctrl:SharedResourceDictionary.MergedDictionaries>
 
     <!-- ==================== -->
     <!-- Dialog Button Styles -->
@@ -209,4 +209,4 @@
         </Setter>
     </Style>
 
-</ResourceDictionary>
+</ctrl:SharedResourceDictionary>

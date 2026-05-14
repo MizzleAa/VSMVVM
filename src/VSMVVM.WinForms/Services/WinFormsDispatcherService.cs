@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using VSMVVM.Core.MVVM;
 
@@ -54,15 +55,28 @@ namespace VSMVVM.WinForms.Services
         }
 
         /// <summary>
-        /// UI 스레드에서 비동기적으로 Action을 실행합니다.
-        /// WPF: Dispatcher.InvokeAsync에 대응.
+        /// UI 스레드에서 비동기적으로 Action을 실행하고, 완료를 기다릴 수 있는 Task 를 반환합니다.
+        /// WPF: Dispatcher.InvokeAsync(action).Task 에 대응.
         /// </summary>
-        public void InvokeAsync(Action action)
+        public Task InvokeAsync(Action action)
         {
             if (action == null)
                 throw new ArgumentNullException(nameof(action));
 
-            _syncContext.Post(_ => action(), null);
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _syncContext.Post(_ =>
+            {
+                try
+                {
+                    action();
+                    tcs.TrySetResult(null);
+                }
+                catch (Exception ex)
+                {
+                    tcs.TrySetException(ex);
+                }
+            }, null);
+            return tcs.Task;
         }
 
         /// <summary>

@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace VSMVVM.Core.MVVM
 {
@@ -14,9 +15,10 @@ namespace VSMVVM.Core.MVVM
         void Invoke(Action action);
 
         /// <summary>
-        /// UI 스레드에서 비동기적으로 Action을 실행합니다.
+        /// UI 스레드에서 비동기적으로 Action을 실행하고, 완료를 기다릴 수 있는 Task 를 반환합니다.
+        /// fire-and-forget 호출은 반환값을 무시하면 되고, 완료까지 기다려야 한다면 await.
         /// </summary>
-        void InvokeAsync(Action action);
+        Task InvokeAsync(Action action);
 
         /// <summary>
         /// 현재 스레드가 UI 스레드인지 확인합니다.

@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using VSMVVM.Core.MVVM;
@@ -31,7 +32,7 @@ namespace VSMVVM.WPF.Services
             }
         }
 
-        public void InvokeAsync(Action action)
+        public Task InvokeAsync(Action action)
         {
             if (action == null)
             {
@@ -39,7 +40,7 @@ namespace VSMVVM.WPF.Services
             }
 
             var dispatcher = GetDispatcher();
-            dispatcher.InvokeAsync(action);
+            return dispatcher.InvokeAsync(action).Task;
         }
 
         public bool CheckAccess()

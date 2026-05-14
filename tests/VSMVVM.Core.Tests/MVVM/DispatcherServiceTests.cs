@@ -28,10 +28,11 @@ namespace VSMVVM.Core.Tests.MVVM
                 action?.Invoke();
             }
 
-            public void InvokeAsync(Action action)
+            public Task InvokeAsync(Action action)
             {
                 Interlocked.Increment(ref InvokeAsyncCallCount);
                 action?.Invoke();
+                return Task.CompletedTask;
             }
 
             public bool CheckAccess()
@@ -54,12 +55,12 @@ namespace VSMVVM.Core.Tests.MVVM
         }
 
         [Fact]
-        public void IDispatcherService_Defines_InvokeAsync_With_Action_Parameter()
+        public void IDispatcherService_Defines_InvokeAsync_With_Action_Parameter_Returning_Task()
         {
             var method = typeof(IDispatcherService).GetMethod(nameof(IDispatcherService.InvokeAsync));
 
             method.Should().NotBeNull();
-            method!.ReturnType.Should().Be(typeof(void));
+            method!.ReturnType.Should().Be(typeof(Task));
             var parameters = method.GetParameters();
             parameters.Should().HaveCount(1);
             parameters[0].ParameterType.Should().Be(typeof(Action));
@@ -106,6 +107,17 @@ namespace VSMVVM.Core.Tests.MVVM
 
             executed.Should().BeTrue();
             dispatcher.InvokeAsyncCallCount.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task InvokeAsync_Returns_Awaitable_Task_That_Completes_After_Action()
+        {
+            var dispatcher = new FakeDispatcher();
+            var executed = false;
+
+            await dispatcher.InvokeAsync(() => executed = true);
+
+            executed.Should().BeTrue();
         }
 
         [Fact]

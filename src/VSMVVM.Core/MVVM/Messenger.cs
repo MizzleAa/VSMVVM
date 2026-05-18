@@ -98,6 +98,22 @@ namespace VSMVVM.Core.MVVM
                     _subscriptions[key] = list;
                 }
 
+                // 같은 (recipient, handler) 조합 재등록은 무시. lambda 매번 새로 만들면
+                // 신규로 취급되므로 호출자는 멤버 메서드/캐시된 delegate 사용 권장.
+                for (int i = list.Count - 1; i >= 0; i--)
+                {
+                    var existing = list[i];
+                    if (!existing.IsAlive)
+                    {
+                        list.RemoveAt(i);
+                        continue;
+                    }
+                    if (ReferenceEquals(existing.Target, recipient) && existing.Handler.Equals(handler))
+                    {
+                        return;
+                    }
+                }
+
                 list.Add(new Subscription(recipient, handler));
             }
         }

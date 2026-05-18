@@ -88,6 +88,18 @@ namespace VSMVVM.WinForms.Services
             return Thread.CurrentThread.ManagedThreadId == _mainThreadId;
         }
 
+        /// <summary>
+        /// UI 스레드 메시지 큐를 한 사이클 양보합니다.
+        /// WinForms 는 DispatcherPriority 개념 없음 — SynchronizationContext.Post 로 큐 끝에 빈 작업 post.
+        /// WPF Yield(Background) 의 frame 양보와 의도 동등.
+        /// </summary>
+        public Task Yield()
+        {
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _syncContext.Post(_ => tcs.TrySetResult(null), null);
+            return tcs.Task;
+        }
+
         #endregion
     }
 }

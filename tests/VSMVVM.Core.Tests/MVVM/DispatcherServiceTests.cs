@@ -20,6 +20,7 @@ namespace VSMVVM.Core.Tests.MVVM
             public int InvokeCallCount;
             public int InvokeAsyncCallCount;
             public int CheckAccessCallCount;
+            public int YieldCallCount;
             public bool CheckAccessReturnValue = true;
 
             public void Invoke(Action action)
@@ -39,6 +40,12 @@ namespace VSMVVM.Core.Tests.MVVM
             {
                 Interlocked.Increment(ref CheckAccessCallCount);
                 return CheckAccessReturnValue;
+            }
+
+            public Task Yield()
+            {
+                Interlocked.Increment(ref YieldCallCount);
+                return Task.CompletedTask;
             }
         }
 
@@ -73,6 +80,16 @@ namespace VSMVVM.Core.Tests.MVVM
 
             method.Should().NotBeNull();
             method!.ReturnType.Should().Be(typeof(bool));
+            method.GetParameters().Should().BeEmpty();
+        }
+
+        [Fact]
+        public void IDispatcherService_Defines_Yield_Returning_Task_With_No_Parameters()
+        {
+            var method = typeof(IDispatcherService).GetMethod(nameof(IDispatcherService.Yield));
+
+            method.Should().NotBeNull();
+            method!.ReturnType.Should().Be(typeof(Task));
             method.GetParameters().Should().BeEmpty();
         }
 
@@ -129,6 +146,16 @@ namespace VSMVVM.Core.Tests.MVVM
 
             result.Should().BeFalse();
             dispatcher.CheckAccessCallCount.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task Yield_Returns_Completed_Task_From_Fake()
+        {
+            var dispatcher = new FakeDispatcher();
+
+            await dispatcher.Yield();
+
+            dispatcher.YieldCallCount.Should().Be(1);
         }
 
         [Fact]

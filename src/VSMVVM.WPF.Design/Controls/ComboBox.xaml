@@ -101,6 +101,16 @@
         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
         <Setter Property="Padding" Value="{StaticResource Px2Py1}"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <!-- ItemsControl 조상으로부터 alignment 상속.
+             WPF generic.xaml 의 ComboBoxItem 기본 패턴 — 명시하지 않으면 ContentPresenter
+             기본 RelativeSource binding 이 ItemContainerGenerator 의 lifecycle 시점에 ancestor
+             를 못 찾아 binding 에러 발생 + dropdown item 이 stretch 되지 않음. -->
+        <Setter Property="HorizontalContentAlignment"
+                Value="{Binding HorizontalContentAlignment,
+                        RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"/>
+        <Setter Property="VerticalContentAlignment"
+                Value="{Binding VerticalContentAlignment,
+                        RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBoxItem">
@@ -109,7 +119,8 @@
                             CornerRadius="{StaticResource Rounded}"
                             Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
-                        <ContentPresenter/>
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">

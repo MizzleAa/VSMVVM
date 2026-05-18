@@ -65,6 +65,37 @@ namespace VSMVVM.WPF.Imaging.Coco
             return counts;
         }
 
+        /// <summary>BBox 사각 영역을 column-major RLE 로 직접 인코딩 — 픽셀 마스크 읽기 없이 사각 그대로.
+        /// ObjectDetection (IndependentInstances) 모드 COCO export 에서 사용. bbox 는 [0, width) x [0, height) 안으로 클램프 가정.</summary>
+        public static List<int> EncodeRectangle(int bx, int by, int bw, int bh, int width, int height)
+        {
+            var counts = new List<int>();
+            int run = 0;
+            bool prevBit = false;
+            int bxEnd = bx + bw;
+            int byEnd = by + bh;
+            for (int x = 0; x < width; x++)
+            {
+                bool xInside = x >= bx && x < bxEnd;
+                for (int y = 0; y < height; y++)
+                {
+                    bool bit = xInside && y >= by && y < byEnd;
+                    if (bit == prevBit)
+                    {
+                        run++;
+                    }
+                    else
+                    {
+                        counts.Add(run);
+                        prevBit = bit;
+                        run = 1;
+                    }
+                }
+            }
+            counts.Add(run);
+            return counts;
+        }
+
         /// <summary>
         /// column-major RLE 를 row-major binary mask 로 디코딩. 1 인 픽셀은 outId, 아니면 0.
         /// 반환 배열 크기는 width*height. instanceMask 에 OR 로 합치거나 직접 씀.

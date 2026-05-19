@@ -248,6 +248,17 @@ namespace VSMVVM.WPF.Services
                     panel.Children.Add(CreateDialogButton(Localize("UI_NO", "No"), false));
                     panel.Children.Add(CreateDialogButton(Localize("UI_YES", "Yes"), true));
                     break;
+
+                case DialogButtons.OKCancelDestructive:
+                    // 확인 버튼이 Danger 색 — 삭제/제거 등 되돌릴 수 없는 동작.
+                    panel.Children.Add(CreateDialogButton(Localize("UI_CANCEL", "Cancel"), false));
+                    panel.Children.Add(CreateDialogButton(Localize("UI_OK", "OK"), true, isDanger: true));
+                    break;
+
+                case DialogButtons.YesNoDestructive:
+                    panel.Children.Add(CreateDialogButton(Localize("UI_NO", "No"), false));
+                    panel.Children.Add(CreateDialogButton(Localize("UI_YES", "Yes"), true, isDanger: true));
+                    break;
             }
 
             // 버튼 패널을 감싸는 Border (상단 구분선 포함)
@@ -262,7 +273,7 @@ namespace VSMVVM.WPF.Services
             return border;
         }
 
-        private static Button CreateDialogButton(string text, bool isPrimary)
+        private static Button CreateDialogButton(string text, bool isPrimary, bool isDanger = false)
         {
             var button = new Button
             {
@@ -272,10 +283,12 @@ namespace VSMVVM.WPF.Services
                 IsCancel = !isPrimary
             };
 
-            // Design 시스템 버튼 스타일 적용
+            // Design 시스템 버튼 스타일 적용. Danger 면 DialogButtonDanger (Error 색) 우선.
             try
             {
-                var styleKey = isPrimary ? "DialogButtonPrimary" : "DialogButtonSecondary";
+                string styleKey;
+                if (isPrimary) styleKey = isDanger ? "DialogButtonDanger" : "DialogButtonPrimary";
+                else styleKey = "DialogButtonSecondary";
                 var style = Application.Current?.TryFindResource(styleKey) as Style;
                 if (style != null)
                 {

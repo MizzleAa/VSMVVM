@@ -40,11 +40,13 @@ namespace VSMVVM.WPF.Controls.Behaviors
             {
                 oldM.SelectedInstanceChanged -= self.OnMaskSelectedInstanceChanged;
                 oldM.VertexEditModeChanged -= self.OnVertexEditModeChanged;
+                oldM.InstanceSelectionVisualEnabledChanged -= self.OnInstanceSelectionVisualEnabledChanged;
             }
             if (e.NewValue is MaskLayer newM)
             {
                 newM.SelectedInstanceChanged += self.OnMaskSelectedInstanceChanged;
                 newM.VertexEditModeChanged += self.OnVertexEditModeChanged;
+                newM.InstanceSelectionVisualEnabledChanged += self.OnInstanceSelectionVisualEnabledChanged;
             }
         }
 
@@ -58,6 +60,12 @@ namespace VSMVVM.WPF.Controls.Behaviors
 
         private void OnVertexEditModeChanged(object? sender, EventArgs e)
         {
+            RefreshAdorner();
+        }
+
+        private void OnInstanceSelectionVisualEnabledChanged(object? sender, EventArgs e)
+        {
+            // false→true 전환 시 Adorner 다시 생성, true→false 전환 시 제거.
             RefreshAdorner();
         }
 
@@ -80,6 +88,9 @@ namespace VSMVVM.WPF.Controls.Behaviors
                 layer.Remove(_vertexAdorner);
                 _vertexAdorner = null;
             }
+
+            // 인스턴스 선택 시각화 비활성 — Cls 모드 등. Adorner 생성 skip.
+            if (!mask.IsInstanceSelectionVisualEnabled) return;
 
             var inst = mask.SelectedInstance;
             if (inst == null) return;

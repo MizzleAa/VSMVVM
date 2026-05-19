@@ -140,6 +140,27 @@ namespace VSMVVM.WPF.Controls
         /// <summary>IsVertexEditMode 변경 알림. MaskBehavior 가 구독해 Adorner 교체.</summary>
         public event EventHandler? VertexEditModeChanged;
 
+        public static readonly DependencyProperty IsInstanceSelectionVisualEnabledProperty =
+            DependencyProperty.Register(nameof(IsInstanceSelectionVisualEnabled), typeof(bool), typeof(MaskLayer),
+                // 인스턴스 선택 시각화 (Adorner + IsSelected BBox 점선) 활성 여부.
+                // Cls 처럼 라벨이 이미지 전체 단일 적용이라 인스턴스 단위 강조가 의미 없는 모듈에서 false.
+                // false 시: (a) MaskBehavior 가 Adorner 미생성, (b) OnRender 의 IsSelected BBox 점선 루프 skip.
+                new PropertyMetadata(true, (d, _) =>
+                {
+                    var m = (MaskLayer)d;
+                    m.InstanceSelectionVisualEnabledChanged?.Invoke(m, EventArgs.Empty);
+                    m.InvalidateVisual();
+                }));
+
+        public bool IsInstanceSelectionVisualEnabled
+        {
+            get => (bool)GetValue(IsInstanceSelectionVisualEnabledProperty);
+            set => SetValue(IsInstanceSelectionVisualEnabledProperty, value);
+        }
+
+        /// <summary>IsInstanceSelectionVisualEnabled 변경 알림. MaskBehavior 가 구독해 Adorner 재평가.</summary>
+        public event EventHandler? InstanceSelectionVisualEnabledChanged;
+
         private static readonly DependencyPropertyKey DisplayImagePropertyKey =
             DependencyProperty.RegisterReadOnly(nameof(DisplayImage), typeof(ImageSource), typeof(MaskLayer),
                 new PropertyMetadata(null));
@@ -834,8 +855,15 @@ namespace VSMVVM.WPF.Controls
             // 새 마스크 픽셀이 실제 닿은 자리에서만 (prev != 0 && prev != id) 그 ID 가 진짜 흡수 대상.
             var sameLabelReplaced = new HashSet<uint>();
 
-            int oldX = (int)oldBBox.X, oldY = (int)oldBBox.Y;
-            int oldW = (int)oldBBox.Width, oldH = (int)oldBBox.Height;
+            // BBox 의 가장자리 1픽셀 누락 방지 — floor/ceiling 으로 conservative 추출.
+            // (int) cast 만 쓰면 Width=171.5 같은 경우 oldW=171 로 truncate 되어 마지막 row/col 의 픽셀이
+            // sourceBits 에 안 잡힘 → 이동/리사이즈 후 옛 위치에 ㄱ/ㄴ/ㅡ 모양 1픽셀 잔존.
+            int oldX = (int)Math.Floor(oldBBox.X);
+            int oldY = (int)Math.Floor(oldBBox.Y);
+            int oldXEnd = (int)Math.Ceiling(oldBBox.X + oldBBox.Width);
+            int oldYEnd = (int)Math.Ceiling(oldBBox.Y + oldBBox.Height);
+            int oldW = Math.Max(1, oldXEnd - oldX);
+            int oldH = Math.Max(1, oldYEnd - oldY);
 
             // sourceBits 캐시 재사용 — 큰 인스턴스 (예: 4000×3000=12MB) 매번 alloc 시 LOH 누적.
             int srcBitsLen = oldW * oldH;
@@ -867,6 +895,8 @@ namespace VSMVVM.WPF.Controls
 
             // 1. 기존 인스턴스 픽셀을 해당 라벨 레이어에서 제거 — sourceBits 가 어느 픽셀이 id 인지 알므로
             //    매 픽셀 `mask.Get(gx, gy) == id` 검사 대신 sourceBits true 만 처리. 더 빠름.
+            // 단, OD 의 누적 잔존 (이전 ResampleInstance 가 BBox 밖 픽셀을 못 지운 케이스) 을 위해
+            // sourceBits 외에 sparse layer 의 모든 타일을 스캔해 id 픽셀 추가 제거.
             for (int y = 0; y < oldH; y++)
             {
                 int gy = oldY + y;
@@ -883,12 +913,58 @@ namespace VSMVVM.WPF.Controls
                 }
             }
 
+            // 1-b. 누적 잔존 cleanup — layer 의 모든 allocated 타일을 스캔해 id 픽셀 0 으로.
+            //      OD 의 RewriteRectangleOnResample=true 면 step 2 가 newBBox 안 픽셀을 다시 id 로 채움.
+            //      step 1 의 oldBBox 가 stale 한 경우에도 잔존 픽셀이 완전히 사라짐.
+            foreach (var (tileX, tileY, tile) in mask.EnumerateAllocatedTiles())
+            {
+                int tileBaseX = tileX * SparseTileLayer.TileSize;
+                int tileBaseY = tileY * SparseTileLayer.TileSize;
+                int yEnd = Math.Min(SparseTileLayer.TileSize, _height - tileBaseY);
+                int xEnd = Math.Min(SparseTileLayer.TileSize, _width - tileBaseX);
+                for (int ly = 0; ly < yEnd; ly++)
+                {
+                    int tileRowBase = ly * SparseTileLayer.TileSize;
+                    int gy = tileBaseY + ly;
+                    int gRow = gy * _width;
+                    for (int lx = 0; lx < xEnd; lx++)
+                    {
+                        if (tile[tileRowBase + lx] != id) continue;
+                        int gx = tileBaseX + lx;
+                        RecordPixelChange(labelIdx, gRow + gx, id, 0);
+                        mask.Set(gx, gy, 0);
+                    }
+                }
+            }
+
             // 2. 새 BBox 로 픽셀 재기록.
+            //    Strategy 가 RewriteRectangleOnResample=true 면 nearest 리샘플 우회 — OD 같이 bbox 사각 자체가 마스크인 경우
+            //    sourceBits 의 가장자리 픽셀 누락이 잔존 픽셀로 보이는 회귀를 fix. newBBox 사각 전체를 자기 ID 로 채움.
             //    pureTranslate(크기 변동 ≤ 1px) 인 경우 nearest-neighbor 대신 1:1 shift 로 복사 —
             //    Merge 로 묶인 disconnected 덩어리의 공백 구조가 정확히 보존됨.
             //    리사이즈(크기 변동) 인 경우만 nearest-neighbor 스케일 수행.
+            bool rewriteRect = MergeStrategy?.RewriteRectangleOnResample ?? false;
             bool pureTranslate = Math.Abs(newWi - oldW) <= 1 && Math.Abs(newHi - oldH) <= 1;
-            if (pureTranslate)
+            if (rewriteRect)
+            {
+                int xStart = Math.Max(0, newXi);
+                int yStart = Math.Max(0, newYi);
+                int xEnd = Math.Min(_width, newXi + newWi);
+                int yEnd = Math.Min(_height, newYi + newHi);
+                for (int gy = yStart; gy < yEnd; gy++)
+                {
+                    int gRow = gy * _width;
+                    for (int gx = xStart; gx < xEnd; gx++)
+                    {
+                        uint prev = mask.Get(gx, gy);
+                        if (prev == id) continue;
+                        if (prev != 0) sameLabelReplaced.Add(prev);
+                        RecordPixelChange(labelIdx, gRow + gx, prev, id);
+                        mask.Set(gx, gy, id);
+                    }
+                }
+            }
+            else if (pureTranslate)
             {
                 int dxShift = newXi - oldX;
                 int dyShift = newYi - oldY;
@@ -2580,23 +2656,27 @@ namespace VSMVVM.WPF.Controls
             // 다중 선택(IsSelected=true) 인스턴스들의 BBox 점선 (핸들 없음).
             // SelectedInstance 하나는 Adorner 가 full(실루엣+핸들) 을 그리므로 중복되지만
             // Adorner 도 노란 점선이라 시각적으로 자연스러움.
-            double sxRatioSel = (ActualWidth > 0 ? ActualWidth : _width) / (double)_width;
-            double syRatioSel = (ActualHeight > 0 ? ActualHeight : _height) / (double)_height;
-            Pen? selPen = null;
-            foreach (var inst in _instances)
+            // IsInstanceSelectionVisualEnabled=false 이면 Cls 같이 인스턴스 단위 강조 의미 없는 모드 — 점선 skip.
+            if (IsInstanceSelectionVisualEnabled)
             {
-                if (!inst.IsSelected) continue;
-                var b = inst.BoundingBox;
-                if (b.IsEmpty) continue;
-                if (selPen == null)
+                double sxRatioSel = (ActualWidth > 0 ? ActualWidth : _width) / (double)_width;
+                double syRatioSel = (ActualHeight > 0 ? ActualHeight : _height) / (double)_height;
+                Pen? selPen = null;
+                foreach (var inst in _instances)
                 {
-                    selPen = new Pen(Brushes.Yellow, 1.2 / z) { DashStyle = new DashStyle(new double[] { 4, 3 }, 0) };
-                    selPen.Freeze();
+                    if (!inst.IsSelected) continue;
+                    var b = inst.BoundingBox;
+                    if (b.IsEmpty) continue;
+                    if (selPen == null)
+                    {
+                        selPen = new Pen(Brushes.Yellow, 1.2 / z) { DashStyle = new DashStyle(new double[] { 4, 3 }, 0) };
+                        selPen.Freeze();
+                    }
+                    var localRect = new Rect(
+                        b.X * sxRatioSel, b.Y * syRatioSel,
+                        b.Width * sxRatioSel, b.Height * syRatioSel);
+                    dc.DrawRectangle(null, selPen, localRect);
                 }
-                var localRect = new Rect(
-                    b.X * sxRatioSel, b.Y * syRatioSel,
-                    b.Width * sxRatioSel, b.Height * syRatioSel);
-                dc.DrawRectangle(null, selPen, localRect);
             }
 
             // Rubber band 사각형 (픽셀 좌표 → 로컬 DIU).

@@ -17,6 +17,17 @@ namespace VSMVVM.WPF.Controls
 
         /// <summary>ResampleInstance (instance 이동/리사이즈) 직후 호출. 이동한 instance 가 침범한 옛 instance 들 처리.</summary>
         void OnResampleOverlap(IInstanceMergeContext ctx);
+
+        /// <summary>instance 더블클릭 시 vertex 편집 모드 진입을 허용할지.
+        /// OD (IndependentInstances) 같이 bbox 사각 자체가 의미인 모델은 false → 더블클릭 무반응.
+        /// 기본 구현은 true 반환 (회귀 zero — Seg/기존 동작).</summary>
+        bool AllowVertexEdit => true;
+
+        /// <summary>ResampleInstance 가 nearest-neighbor 리샘플 대신 newBBox 사각 전체를 자기 ID 로 채워야 할지.
+        /// OD 의 bbox 사각 마스크처럼 사각 자체가 정보이고 sourceBits 의 가장자리 픽셀 누락이 잔존 픽셀로 보이는 케이스 fix.
+        /// true 면 MaskLayer.ResampleInstance 가 step 2 를 newBBox 전체 fill 로 대체.
+        /// 기본 구현은 false 반환 (회귀 zero — Seg 의 픽셀 정밀 의미 유지).</summary>
+        bool RewriteRectangleOnResample => false;
     }
 
     /// <summary>

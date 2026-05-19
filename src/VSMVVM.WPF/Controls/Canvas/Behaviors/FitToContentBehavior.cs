@@ -50,11 +50,21 @@ namespace VSMVVM.WPF.Controls.Behaviors
         {
             if (d is not FitToContentBehavior self) return;
             if (self.AssociatedObject is not IZoomPanViewport vp) return;
+            var fe = self.AssociatedObject;
+
+            // 원본 크기 1프레임 깜빡임 방지 — fit 완료 전까지 시각적으로 가린다.
+            // Opacity 만 0 으로 — Visibility=Collapsed/Hidden 은 layout 영향이라 ActualWidth/Height 가 0 되어 fit 계산 어긋남.
+            fe.Opacity = 0;
+
             // VM 이 BackgroundImageSource / ImagePixelWidth / Height 를 갱신한 직후 FitTrigger 를 발화하면
             // Layout pass 가 끝나기 전에 vp.FitToContent() 가 옛 viewport 크기로 계산되어 fit 이 안 맞을 수 있다.
             // ContextIdle 우선순위로 미루면 layout/render pass 가 모두 끝난 뒤 호출되어 새 ImageSource 크기 기준으로 정확히 fit.
-            self.AssociatedObject.Dispatcher.BeginInvoke(
-                new System.Action(() => vp.FitToContent()),
+            fe.Dispatcher.BeginInvoke(
+                new System.Action(() =>
+                {
+                    vp.FitToContent();
+                    fe.Opacity = 1;
+                }),
                 System.Windows.Threading.DispatcherPriority.ContextIdle);
         }
 

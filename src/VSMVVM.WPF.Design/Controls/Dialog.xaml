@@ -53,6 +53,44 @@
         </Style.Triggers>
     </Style>
 
+    <!-- Danger Button (OK/Yes on destructive action) - Error colored. Primary 와 동일 구조 + Error 토큰. -->
+    <Style x:Key="DialogButtonDanger" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource Error}"/>
+        <Setter Property="Foreground" Value="{DynamicResource TextInverse}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="{StaticResource Px3Py2}"/>
+        <Setter Property="MinWidth" Value="{StaticResource W20}"/>
+        <Setter Property="FontWeight" Value="{StaticResource FontMedium}"/>
+        <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource RoundedMd}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{DynamicResource ErrorHover}"/>
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="{DynamicResource ErrorActive}"/>
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="{StaticResource Opacity50}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- Secondary Button (Cancel, No) - Subtle, outlined -->
     <Style x:Key="DialogButtonSecondary" TargetType="Button">
         <Setter Property="Background" Value="{DynamicResource BgSecondary}"/>

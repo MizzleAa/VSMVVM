@@ -59,6 +59,12 @@ namespace VSMVVM.WPF.Controls
 
         private IndependentInstancesInstanceMergeStrategy() { }
 
+        /// <summary>OD bbox 사각 의미상 polygon vertex 편집은 잘못 — 더블클릭 차단.</summary>
+        public bool AllowVertexEdit => false;
+
+        /// <summary>OD bbox 마스크는 newBBox 사각 전체 fill 로 리샘플 — nearest 가장자리 픽셀 누락 fix.</summary>
+        public bool RewriteRectangleOnResample => true;
+
         public uint OnEndStroke(IInstanceMergeContext ctx)
         {
             // 모든 옛 instance (TentativeId 제외) 의 BoundingBox 스냅샷.

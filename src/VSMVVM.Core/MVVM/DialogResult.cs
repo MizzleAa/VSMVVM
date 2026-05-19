@@ -54,7 +54,17 @@ namespace VSMVVM.Core.MVVM
         /// <summary>
         /// 예 · 아니오 · 취소.
         /// </summary>
-        YesNoCancel
+        YesNoCancel,
+
+        /// <summary>
+        /// 확인 · 취소 — 확인 버튼이 Danger 색 (삭제/제거 같은 되돌릴 수 없는 동작 강조).
+        /// </summary>
+        OKCancelDestructive,
+
+        /// <summary>
+        /// 예 · 아니오 — 예 버튼이 Danger 색 (삭제/제거 같은 되돌릴 수 없는 동작 강조).
+        /// </summary>
+        YesNoDestructive
     }
 
     /// <summary>

@@ -56,6 +56,7 @@
     <!-- Status: Error / Danger -->
     <SolidColorBrush x:Key="Error" Color="{StaticResource Red500}"/>
     <SolidColorBrush x:Key="ErrorHover" Color="{StaticResource Red600}"/>
+    <SolidColorBrush x:Key="ErrorActive" Color="{StaticResource Red700}"/>
     <SolidColorBrush x:Key="ErrorMuted" Color="{StaticResource Red100}"/>
     <SolidColorBrush x:Key="ErrorText" Color="{StaticResource Red700}"/>
     <SolidColorBrush x:Key="Danger" Color="{StaticResource Red500}"/>

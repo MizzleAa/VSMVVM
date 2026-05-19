@@ -171,7 +171,8 @@ namespace VSMVVM.WPF.Controls
             if (_instance == null) return;
 
             // 더블클릭 → vertex 편집 모드로 전환. PolygonPoints 가 없으면 마스크 픽셀에서 외곽을 lazy 추출.
-            if (e.ClickCount == 2)
+            // Strategy 가 vertex 편집을 허용하지 않으면 (OD 등 bbox 의미 모델) skip — 더블클릭 무반응.
+            if (e.ClickCount == 2 && (_mask.MergeStrategy?.AllowVertexEdit ?? true))
             {
                 _mask.EnsurePolygonPoints(_instance.Id);
                 if (_instance.PolygonPoints != null && _instance.PolygonPoints.Count >= 3)

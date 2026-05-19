@@ -73,5 +73,58 @@ namespace VSMVVM.Core.Tests.MessengerTests
             testReceived.Should().BeTrue();
             otherReceived.Should().BeFalse();
         }
+
+        private class RecipientWithHandlers
+        {
+            public int CountA;
+            public int CountB;
+
+            public void HandleA(object sender, TestMessage msg) => CountA++;
+            public void HandleB(object sender, TestMessage msg) => CountB++;
+        }
+
+        [Fact]
+        public void Register_Twice_SameRecipientSameHandler_InvokedOnce()
+        {
+            var messenger = new VSMVVM.Core.MVVM.Messenger();
+            var recipient = new RecipientWithHandlers();
+
+            messenger.Register<TestMessage>(recipient, recipient.HandleA);
+            messenger.Register<TestMessage>(recipient, recipient.HandleA);
+
+            messenger.Send(new TestMessage { Data = "X" });
+
+            recipient.CountA.Should().Be(1);
+        }
+
+        [Fact]
+        public void Register_Twice_SameRecipientDifferentHandler_BothInvoked()
+        {
+            var messenger = new VSMVVM.Core.MVVM.Messenger();
+            var recipient = new RecipientWithHandlers();
+
+            messenger.Register<TestMessage>(recipient, recipient.HandleA);
+            messenger.Register<TestMessage>(recipient, recipient.HandleB);
+
+            messenger.Send(new TestMessage { Data = "X" });
+
+            recipient.CountA.Should().Be(1);
+            recipient.CountB.Should().Be(1);
+        }
+
+        [Fact]
+        public void Register_Twice_DifferentTokens_BothInvoked()
+        {
+            var messenger = new VSMVVM.Core.MVVM.Messenger();
+            var recipient = new RecipientWithHandlers();
+
+            messenger.Register<TestMessage>(recipient, "token-1", recipient.HandleA);
+            messenger.Register<TestMessage>(recipient, "token-2", recipient.HandleA);
+
+            messenger.Send(new TestMessage { Data = "X" }, "token-1");
+            messenger.Send(new TestMessage { Data = "Y" }, "token-2");
+
+            recipient.CountA.Should().Be(2);
+        }
     }
 }

@@ -101,6 +101,14 @@
         <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
         <Setter Property="Padding" Value="{StaticResource Px2Py1}"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <!-- ComboBoxItem 의 alignment 는 ItemContainerGenerator 가 컨테이너를 생성하는 시점에
+             set 되어야 한다. RelativeSource AncestorType=ItemsControl binding 으로 ItemsControl 의
+             값을 가져오려 하면 Popup 경계 + visual tree 미완성 시점이라 ancestor walk 실패해
+             "소스를 찾을 수 없습니다" 에러 발생. WPF generic.xaml 의 Microsoft 표준 ComboBoxItem
+             스타일도 같은 이유로 hard-coded 값 사용. dropdown item 의 alignment 가 호출처마다
+             달라야 한다면 그건 ComboBoxItem 의 Style override 로 처리할 일. -->
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ComboBoxItem">
@@ -109,7 +117,8 @@
                             CornerRadius="{StaticResource Rounded}"
                             Padding="{TemplateBinding Padding}"
                             SnapsToDevicePixels="True">
-                        <ContentPresenter/>
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">

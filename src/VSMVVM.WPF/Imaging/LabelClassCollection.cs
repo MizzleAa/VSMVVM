@@ -7,27 +7,19 @@ using System.Windows.Media;
 namespace VSMVVM.WPF.Imaging
 {
     /// <summary>
-    /// <see cref="LabelClass"/> 컬렉션. Index 0 = 배경은 생성 시 자동 예약되며 제거할 수 없다.
+    /// <see cref="LabelClass"/> 컬렉션. Index 0 = 배경은 시스템 예약 인덱스이며
+    /// 사용자 라벨은 <see cref="NextFreeIndex"/> (1~255) 범위에서 부여된다.
+    /// 자동 추가는 하지 않는다 — 호출자가 필요 시 직접 Background 항목을 만들어야 한다.
     /// </summary>
     public class LabelClassCollection : ObservableCollection<LabelClass>
     {
-        /// <summary>배경 라벨의 인덱스.</summary>
+        /// <summary>배경 라벨의 예약 인덱스.</summary>
         public const int BackgroundIndex = 0;
 
         /// <summary>라벨 인덱스의 최댓값(마스크가 byte 저장이라 0~255).</summary>
         public const int MaxIndex = 255;
 
-        public LabelClassCollection()
-        {
-            // 배경 라벨 예약
-            base.Add(new LabelClass
-            {
-                Index = BackgroundIndex,
-                Name = "Background",
-                Color = Colors.Transparent,
-                IsVisible = true,
-            });
-        }
+        public LabelClassCollection() { }
 
         /// <summary>다음 사용 가능한 최소 인덱스(1~255)를 반환.</summary>
         public int NextFreeIndex()
@@ -88,17 +80,5 @@ namespace VSMVVM.WPF.Imaging
             base.SetItem(index, item);
         }
 
-        /// <summary>전체 Clear 시에도 배경은 유지.</summary>
-        protected override void ClearItems()
-        {
-            base.ClearItems();
-            base.Add(new LabelClass
-            {
-                Index = BackgroundIndex,
-                Name = "Background",
-                Color = Colors.Transparent,
-                IsVisible = true,
-            });
-        }
     }
 }

@@ -425,7 +425,42 @@ namespace VSMVVM.WPF.Controls
             _strokeAnyPixel = false;
         }
 
-        public void EndStroke(int labelIndex)
+        /// <summary>같은 라벨 instance 겹침 시 통합 정책 전략. default <see cref="MergeOnOverlapInstanceMergeStrategy"/>
+        /// (Segmentation 동작). ObjectDetection 등 독립 instance 가 필요한 도메인은
+        /// <see cref="IndependentInstancesInstanceMergeStrategy"/> 주입.
+        /// VSMVVM 은 호출 측 도메인을 모르고 Strategy 가 EndStroke / ResampleInstance 시점에 hook 처리.</summary>
+        public IInstanceMergeStrategy MergeStrategy { get; set; } = MergeOnOverlapInstanceMergeStrategy.Instance;
+
+        /// <summary>1.1.9~1.1.10 호환용 — MergeStrategy 와 자동 동기화.
+        /// 신규 코드는 <see cref="MergeStrategy"/> 직접 set 권장.</summary>
+        [System.Obsolete("Use MergeStrategy property with IInstanceMergeStrategy instance instead.")]
+        public InstanceMergePolicy InstanceMergePolicy
+        {
+            get => MergeStrategy is IndependentInstancesInstanceMergeStrategy
+                ? InstanceMergePolicy.IndependentInstances
+                : InstanceMergePolicy.MergeOnOverlap;
+            set => MergeStrategy = value == InstanceMergePolicy.IndependentInstances
+                ? (IInstanceMergeStrategy)IndependentInstancesInstanceMergeStrategy.Instance
+                : MergeOnOverlapInstanceMergeStrategy.Instance;
+        }
+
+        /// <summary>1.1.8 호환용 — InstanceMergePolicy 와 자동 동기화.</summary>
+        [System.Obsolete("Use MergeStrategy property with IInstanceMergeStrategy instance instead.")]
+        public bool MergeSameLabelOnStroke
+        {
+            get => MergeStrategy is not IndependentInstancesInstanceMergeStrategy;
+            set => MergeStrategy = value
+                ? (IInstanceMergeStrategy)MergeOnOverlapInstanceMergeStrategy.Instance
+                : IndependentInstancesInstanceMergeStrategy.Instance;
+        }
+
+        public void EndStroke(int labelIndex) => EndStrokeCore(labelIndex, MergeStrategy);
+
+        /// <summary>일회성으로 IndependentInstances 정책을 적용. 호출 측이 MergeStrategy 를 안 바꾸고 한 번만 사용하고 싶을 때.</summary>
+        public void EndStrokeWithoutMerge(int labelIndex)
+            => EndStrokeCore(labelIndex, IndependentInstancesInstanceMergeStrategy.Instance);
+
+        private void EndStrokeCore(int labelIndex, IInstanceMergeStrategy strategy)
         {
             if (_activeStrokeId == 0 || _strokePreLayers == null)
             {
@@ -440,11 +475,11 @@ namespace VSMVVM.WPF.Controls
                 return;
             }
 
-            // 해당 라벨 레이어에서 stroke 영역 내 이전 ID 수집 (같은 라벨 내 merge 대상).
-            // (x, y) 직접 호출 — Get(idx) 의 modulo/division 회피. tile cache 가 같은 타일 연속 access 시 효과.
             var layer = GetOrCreateLayer(labelIndex);
+
+            // stroke 영역에서 만난 옛 instance ID 들 수집 — Strategy 가 처리할 컨텍스트의 핵심 입력.
             _strokePreLayers.TryGetValue(labelIndex, out var pre);
-            var sameLabelReplaced = new HashSet<uint>();
+            var overlapped = new HashSet<uint>();
             for (int y = _strokeMinY; y <= _strokeMaxY; y++)
             {
                 for (int x = _strokeMinX; x <= _strokeMaxX; x++)
@@ -453,42 +488,38 @@ namespace VSMVVM.WPF.Controls
                     if (newId != tentativeId) continue;
                     uint oldId = pre != null ? pre.Get(x, y) : 0;
                     if (oldId != 0 && oldId != tentativeId)
-                        sameLabelReplaced.Add(oldId);
+                        overlapped.Add(oldId);
                 }
             }
 
-            uint finalId = tentativeId;
-            if (sameLabelReplaced.Count > 0)
+            // strokeBounds 계산 (이미지 경계 클립).
+            Rect strokeBounds = Rect.Empty;
+            int sw = _strokeMaxX - _strokeMinX + 1;
+            int sh = _strokeMaxY - _strokeMinY + 1;
+            if (sw > 0 && sh > 0)
             {
-                finalId = sameLabelReplaced.Min();
-                var remap = new HashSet<uint>(sameLabelReplaced) { tentativeId };
-                remap.Remove(finalId);
-                RemapInstanceIdsInLayer(layer, remap, finalId);
-                foreach (var id in sameLabelReplaced)
-                {
-                    if (id == finalId) continue;
-                    var victim = _instances.GetById(id);
-                    if (victim != null) _instances.Remove(victim);
-                }
+                strokeBounds = new Rect(_strokeMinX, _strokeMinY, sw, sh);
+                strokeBounds.Intersect(new Rect(0, 0, _width, _height));
             }
 
-            // finalId 인스턴스 보장 + 메타 재계산.
-            var finalInst = _instances.GetById(finalId);
-            if (finalInst == null)
+            // tentativeId 의 finalInst 보장 (Strategy 가 remap 으로 ID 바꿀 수 있으니 미리 생성).
+            var tentativeInst = _instances.GetById(tentativeId);
+            if (tentativeInst == null)
             {
-                finalInst = new MaskInstance { Id = finalId, LabelIndex = labelIndex };
-                AssignLabelRef(finalInst);
-                _instances.Add(finalInst);
+                tentativeInst = new MaskInstance { Id = tentativeId, LabelIndex = labelIndex };
+                AssignLabelRef(tentativeInst);
+                _instances.Add(tentativeInst);
             }
             else
             {
-                finalInst.LabelIndex = labelIndex;
-                AssignLabelRef(finalInst);
-                // 기존 인스턴스에 stroke 픽셀 추가/병합 — PolygonContours 가 마스크와 어긋나므로 무효화.
-                // 다음 더블클릭 시 EnsurePolygonPoints 가 새 contour 추출.
-                finalInst.PolygonContours = null;
+                tentativeInst.LabelIndex = labelIndex;
+                AssignLabelRef(tentativeInst);
+                tentativeInst.PolygonContours = null;
             }
-            RecomputeInstanceMetadata(finalId);
+
+            // Strategy 호출 — 정책별 알고리즘 적용 (병합 / 독립 유지 등).
+            var ctx = new MaskLayerMergeContext(this, layer, labelIndex, tentativeId, strokeBounds, overlapped);
+            uint finalId = strategy.OnEndStroke(ctx);
 
             _activeStrokeId = 0;
             _strokePreLayers = null;
@@ -876,6 +907,7 @@ namespace VSMVVM.WPF.Controls
                         if (prev != id)
                         {
                             // 이동된 마스크의 실제 픽셀이 닿은 자리에서 다른 인스턴스 ID 만났으면 흡수 대상.
+                            // IndependentInstances 모드는 아래 흡수 블록에서 흡수 차단 + BoundingBox 보존.
                             if (prev != 0) sameLabelReplaced.Add(prev);
                             RecordPixelChange(labelIdx, gRow + gx, prev, id);
                             mask.Set(gx, gy, id);
@@ -904,6 +936,7 @@ namespace VSMVVM.WPF.Controls
                         if (prev != id)
                         {
                             // 새 마스크 픽셀이 실제 닿은 자리에서 다른 인스턴스 만났으면 흡수 대상.
+                            // IndependentInstances 모드는 아래 흡수 블록에서 흡수 차단 + BoundingBox 보존.
                             if (prev != 0) sameLabelReplaced.Add(prev);
                             RecordPixelChange(labelIdx, gRow + gx, prev, id);
                             mask.Set(gx, gy, id);
@@ -933,20 +966,10 @@ namespace VSMVVM.WPF.Controls
                 inst.PolygonContours = newContours;
             }
 
-            // 4. 겹쳐 덮인 같은 라벨의 다른 인스턴스들을 id 로 통합 (EndStroke 와 동일 정책).
-            if (sameLabelReplaced.Count > 0)
-            {
-                RemapInstanceIdsInLayer(mask, sameLabelReplaced, id);
-                foreach (var victimId in sameLabelReplaced)
-                {
-                    var victim = _instances.GetById(victimId);
-                    if (victim != null) _instances.Remove(victim);
-                }
-                // 흡수 일어남 — affine 변환된 PolygonContours 가 부분만 표현. 무효화 → 다음 더블클릭 시 재추출.
-                inst.PolygonContours = null;
-            }
-
-            RecomputeInstanceMetadata(id);
+            // 4. Strategy 에 위임 — MergeOnOverlap 은 흡수 + remap, IndependentInstances 는 BoundingBox freeze.
+            //    Strategy 가 RecomputeInstanceMetadata 까지 호출하므로 아래에서 중복 호출 안 함.
+            var resampleCtx = new MaskLayerMergeContext(this, mask, labelIdx, id, newBBox, sameLabelReplaced);
+            MergeStrategy.OnResampleOverlap(resampleCtx);
 
             // 5. 리사이즈로 병합이 일어난 경우 disconnected 면 자동 재분리.
             //    pureTranslate(이동) 에서는 Merge 로 묶인 사용자 의도를 존중해 자동 재분리 생략 —
@@ -1393,6 +1416,8 @@ namespace VSMVVM.WPF.Controls
             uint prevId = layer.Get(x, y);
             if (prevId != _activeStrokeId)
             {
+                // IndependentInstances 모드도 픽셀 덮어쓰기는 허용 — 새 사각형 fill 이 사각형 그대로 유지되게.
+                // 옛 instance 의 BoundingBox 는 EndStrokeCore 의 freeze 로직이 보존.
                 RecordPixelChange(labelIndex, idx, prevId, _activeStrokeId);
                 layer.Set(x, y, _activeStrokeId);
             }
@@ -2184,6 +2209,12 @@ namespace VSMVVM.WPF.Controls
             var color = inst.Label?.Color ?? Labels?.GetByIndex(inst.LabelIndex)?.Color ?? Colors.Yellow;
             var bmp = new WriteableBitmap(outW, outH, 96, 96, PixelFormats.Bgra32, null);
             var pixels = new byte[outW * outH * 4];
+
+            // IndependentInstances (ObjectDetection): BBox 안 모든 픽셀을 라벨 색으로 fill.
+            // 픽셀 마스크가 다른 인스턴스에 빼앗긴 자리도 silhouette 은 사각 그대로 — drag preview L 자 잘림 방지.
+            // MergeOnOverlap (Segmentation) 분기는 기존대로 픽셀 마스크 모양 유지.
+            bool fillFullBBox = MergeStrategy is IndependentInstancesInstanceMergeStrategy;
+
             for (int oy = 0; oy < outH; oy++)
             {
                 int gy = by + oy * scale;
@@ -2194,7 +2225,7 @@ namespace VSMVVM.WPF.Controls
                 {
                     int gx = bx + ox * scale;
                     if ((uint)gx >= (uint)_width) continue;
-                    if (mask[rowStart + gx] != id) continue;
+                    if (!fillFullBBox && mask[rowStart + gx] != id) continue;
                     int di = dstRow + ox * 4;
                     pixels[di + 0] = color.B;
                     pixels[di + 1] = color.G;
@@ -2230,9 +2261,9 @@ namespace VSMVVM.WPF.Controls
             File.WriteAllText(path, JsonSerializer.Serialize(doc, options));
         }
 
-        /// <summary>현재 Labels DP 의 라벨들을 CocoCategory 리스트로 변환 (Background 포함, color 보존).
-        /// BG(Index=0) 는 항상 첫 entry 로 직렬화된다. 로드 측은 LabelClassCollection 생성자가 이미 BG 를 예약하므로
-        /// 중복 추가 방지를 책임진다.</summary>
+        /// <summary>현재 Labels DP 의 라벨들을 CocoCategory 리스트로 변환 (color 보존).
+        /// LabelClassCollection 은 자동 BG 항목을 추가하지 않으므로 사용자 라벨만 (Index 1+) 직렬화된다.
+        /// 호출자가 명시적으로 Index=0 항목을 넣으면 그대로 직렬화되니 주의.</summary>
         public IList<CocoCategory> BuildCocoCategories()
         {
             var list = new List<CocoCategory>();
@@ -2255,14 +2286,39 @@ namespace VSMVVM.WPF.Controls
         {
             var list = new List<CocoAnnotation>();
             if (_width == 0 || _height == 0) return list;
+
+            // IndependentInstances (ObjectDetection): segmentation RLE 와 area 를 BBox 사각 그대로 인코딩.
+            // 픽셀 마스크 손상 (drag-separate L-shape) 이 RLE 에 전파되지 않음 — 저장/재로드 후에도 항상 사각 보장.
+            // MergeOnOverlap (Segmentation) 분기는 기존대로 픽셀 마스크 정밀 형상 인코딩.
+            bool useBBoxRle = MergeStrategy is IndependentInstancesInstanceMergeStrategy;
+
             uint nextId = annotationIdStart;
             foreach (var inst in _instances)
             {
                 if (!_layers.TryGetValue(inst.LabelIndex, out var mask)) continue;
-                if (inst.PixelCount == 0) continue;
-                var rawCounts = RleCodec.Encode(mask, _width, _height, inst.Id);
-                var countsStr = CompressedRleCodec.Encode(rawCounts);
                 var b = inst.BoundingBox;
+                List<int> rawCounts;
+                int area;
+                if (useBBoxRle)
+                {
+                    if (b.IsEmpty || b.Width < 1 || b.Height < 1) continue;
+                    int bx = Math.Max(0, (int)b.X);
+                    int by = Math.Max(0, (int)b.Y);
+                    int bxEnd = Math.Min(_width, (int)Math.Round(b.X + b.Width));
+                    int byEnd = Math.Min(_height, (int)Math.Round(b.Y + b.Height));
+                    int bw = bxEnd - bx;
+                    int bh = byEnd - by;
+                    if (bw <= 0 || bh <= 0) continue;
+                    rawCounts = RleCodec.EncodeRectangle(bx, by, bw, bh, _width, _height);
+                    area = bw * bh;
+                }
+                else
+                {
+                    if (inst.PixelCount == 0) continue;
+                    rawCounts = RleCodec.Encode(mask, _width, _height, inst.Id);
+                    area = inst.PixelCount;
+                }
+                var countsStr = CompressedRleCodec.Encode(rawCounts);
                 list.Add(new CocoAnnotation
                 {
                     Id = nextId++,
@@ -2274,7 +2330,7 @@ namespace VSMVVM.WPF.Controls
                         Counts = countsStr,
                     },
                     Bbox = new List<double> { b.X, b.Y, b.Width, b.Height },
-                    Area = inst.PixelCount,
+                    Area = area,
                 });
             }
             return list;
@@ -2671,6 +2727,47 @@ namespace VSMVVM.WPF.Controls
                 }
             }
 
+            // IndependentInstances 모드: 각 instance 의 BoundingBox 영역 전체를 자기 LabelColor 로 fill.
+            // 픽셀 mask 가 다른 ID 차지 / 0 인 자리도 BBox 안이면 자기 색으로 그림 — ObjectDetection 의 사각형 풀 fill.
+            // z-order: instance 별로 LabelIndex 가 작을수록 아래 (sortedLabelKeys 의 끝). 같은 라벨 안에서는 Id 작은 게 먼저
+            // 그려져 큰 Id 가 위에 그려짐. Segmentation (MergeOnOverlap) 은 이 분기 안 탐 — render 변경 없음.
+            if (MergeStrategy is IndependentInstancesInstanceMergeStrategy)
+            {
+                // 라벨 색 lookup (위 인덱스별 캐시는 재활용 어려움 — instance 의 LabelIndex 로 직접 조회).
+                // 그릴 instance 순서 — LabelIndex 오름차순 (낮은 라벨 먼저 = 아래) + 같은 라벨 안에서 Id 오름차순.
+                var orderedInstances = _instances.OrderBy(i => i.LabelIndex).ThenBy(i => i.Id);
+                foreach (var inst in orderedInstances)
+                {
+                    if (!inst.IsVisible) continue;
+                    var bbox = inst.BoundingBox;
+                    if (bbox.IsEmpty) continue;
+                    var lbl = labels?.GetByIndex(inst.LabelIndex);
+                    if (lbl == null || !lbl.IsVisible) continue;
+                    byte cb = lbl.Color.B, cg = lbl.Color.G, cr = lbl.Color.R, ca = lbl.Color.A;
+
+                    // BBox 와 update rect 의 교집합.
+                    int bx0 = Math.Max(x, (int)bbox.X);
+                    int by0 = Math.Max(y, (int)bbox.Y);
+                    int bx1 = Math.Min(x + w - 1, (int)Math.Round(bbox.X + bbox.Width) - 1);
+                    int by1 = Math.Min(y + h - 1, (int)Math.Round(bbox.Y + bbox.Height) - 1);
+                    if (bx1 < bx0 || by1 < by0) continue;
+
+                    for (int gy = by0; gy <= by1; gy++)
+                    {
+                        int dstRowBase = (gy - y) * w;
+                        for (int gx = bx0; gx <= bx1; gx++)
+                        {
+                            int dstIdx = dstRowBase + (gx - x);
+                            int di = dstIdx * 4;
+                            pixels[di + 0] = cb;
+                            pixels[di + 1] = cg;
+                            pixels[di + 2] = cr;
+                            pixels[di + 3] = ca;
+                        }
+                    }
+                }
+            }
+
             _displayBitmap.WritePixels(new Int32Rect(x, y, w, h), pixels, w * 4, 0);
             RaiseDisplayChanged();
             // OnRender 가 다시 실행되어 다중 선택 BBox 점선 (이전 위치 잔상) 도 새 위치로 갱신.
@@ -2678,6 +2775,17 @@ namespace VSMVVM.WPF.Controls
         }
 
         private void UpdateDisplayPixel(int x, int y) => UpdateDisplayRect(x, y, 1, 1);
+
+        internal Color SampleDisplayPixel(int x, int y)
+        {
+            if (_displayBitmap == null) return Colors.Transparent;
+            if ((uint)x >= (uint)_width || (uint)y >= (uint)_height) return Colors.Transparent;
+            var px = new byte[4];
+            _displayBitmap.CopyPixels(new Int32Rect(x, y, 1, 1), px, 4, 0);
+            return Color.FromArgb(px[3], px[2], px[1], px[0]);
+        }
+
+        internal void TestForceRefreshAll() => RefreshAll();
 
         #endregion
 
@@ -2724,5 +2832,133 @@ namespace VSMVVM.WPF.Controls
         }
 
         #endregion
+
+        /// <summary>IInstanceMergeStrategy 가 MaskLayer 의 internal state 를 조작할 수 있도록 노출하는 컨텍스트.
+        /// MaskLayer 내부에서만 생성. Strategy 호출 1회당 1개 인스턴스 — Strategy 가 helper 메서드로 mask remap /
+        /// instance 제거 / metadata 재계산 등 처리. MaskLayer 의 private 필드 (_instances 등) 에 접근 가능.</summary>
+        private sealed class MaskLayerMergeContext : IInstanceMergeContext
+        {
+            private readonly MaskLayer _owner;
+            private readonly SparseTileLayer _layer;
+
+            public MaskLayerMergeContext(
+                MaskLayer owner,
+                SparseTileLayer layer,
+                int labelIndex,
+                uint tentativeId,
+                Rect strokeBounds,
+                IReadOnlyCollection<uint> overlapped)
+            {
+                _owner = owner;
+                _layer = layer;
+                LabelIndex = labelIndex;
+                TentativeId = tentativeId;
+                StrokeBounds = strokeBounds;
+                OverlappedInstanceIds = overlapped;
+            }
+
+            public int LabelIndex { get; }
+            public uint TentativeId { get; }
+            public Rect StrokeBounds { get; }
+            public IReadOnlyCollection<uint> OverlappedInstanceIds { get; }
+
+            public void RemapInstanceIds(IEnumerable<uint> from, uint toId)
+            {
+                var set = from as HashSet<uint> ?? new HashSet<uint>(from);
+                if (set.Count == 0) return;
+                _owner.RemapInstanceIdsInLayer(_layer, set, toId);
+            }
+
+            public void RemoveInstance(uint id)
+            {
+                var victim = _owner._instances.GetById(id);
+                if (victim != null) _owner._instances.Remove(victim);
+            }
+
+            public void RecomputeInstanceMetadata(uint id) => _owner.RecomputeInstanceMetadata(id);
+
+            public void SetInstanceBoundingBox(uint id, Rect bbox)
+            {
+                var inst = _owner._instances.GetById(id);
+                if (inst != null) inst.BoundingBox = bbox;
+            }
+
+            public Rect GetInstanceBoundingBox(uint id)
+            {
+                var inst = _owner._instances.GetById(id);
+                return inst?.BoundingBox ?? Rect.Empty;
+            }
+
+            public void ClearPolygonContours(uint id)
+            {
+                var inst = _owner._instances.GetById(id);
+                if (inst != null) inst.PolygonContours = null;
+            }
+
+            public IEnumerable<uint> EnumerateInstanceIds()
+            {
+                // 스냅샷 — 호출 측에서 RemoveInstance 가능 (열거 중 변경 회피).
+                var ids = new List<uint>(_owner._instances.Count);
+                foreach (var inst in _owner._instances) ids.Add(inst.Id);
+                return ids;
+            }
+
+            public void FillEmptyPixelsInBoundingBox(uint id)
+            {
+                var inst = _owner._instances.GetById(id);
+                if (inst == null) return;
+                var bbox = inst.BoundingBox;
+                if (bbox.IsEmpty) return;
+                if (!_owner._layers.TryGetValue(inst.LabelIndex, out var layer)) return;
+
+                int x0 = Math.Max(0, (int)bbox.X);
+                int y0 = Math.Max(0, (int)bbox.Y);
+                int x1 = Math.Min(_owner._width - 1, (int)Math.Round(bbox.X + bbox.Width) - 1);
+                int y1 = Math.Min(_owner._height - 1, (int)Math.Round(bbox.Y + bbox.Height) - 1);
+                if (x1 < x0 || y1 < y0) return;
+
+                int labelIdx = inst.LabelIndex;
+                for (int y = y0; y <= y1; y++)
+                {
+                    int rowStart = y * _owner._width;
+                    for (int x = x0; x <= x1; x++)
+                    {
+                        if (layer.Get(x, y) == 0)
+                        {
+                            _owner.RecordPixelChange(labelIdx, rowStart + x, 0, id);
+                            layer.Set(x, y, id);
+                        }
+                    }
+                }
+            }
+
+            public void ReclaimBoundingBoxPixels(uint id)
+            {
+                var inst = _owner._instances.GetById(id);
+                if (inst == null) return;
+                var bbox = inst.BoundingBox;
+                if (bbox.IsEmpty) return;
+                if (!_owner._layers.TryGetValue(inst.LabelIndex, out var layer)) return;
+
+                int x0 = Math.Max(0, (int)bbox.X);
+                int y0 = Math.Max(0, (int)bbox.Y);
+                int x1 = Math.Min(_owner._width - 1, (int)Math.Round(bbox.X + bbox.Width) - 1);
+                int y1 = Math.Min(_owner._height - 1, (int)Math.Round(bbox.Y + bbox.Height) - 1);
+                if (x1 < x0 || y1 < y0) return;
+
+                int labelIdx = inst.LabelIndex;
+                for (int y = y0; y <= y1; y++)
+                {
+                    int rowStart = y * _owner._width;
+                    for (int x = x0; x <= x1; x++)
+                    {
+                        uint prev = layer.Get(x, y);
+                        if (prev == id) continue;
+                        _owner.RecordPixelChange(labelIdx, rowStart + x, prev, id);
+                        layer.Set(x, y, id);
+                    }
+                }
+            }
+        }
     }
 }

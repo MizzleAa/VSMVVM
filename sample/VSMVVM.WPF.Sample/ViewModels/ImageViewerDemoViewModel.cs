@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -126,7 +127,7 @@ namespace VSMVVM.WPF.Sample.ViewModels
 
             Labels.Add("Label1", Colors.DeepSkyBlue);
             Labels.Add("Label2", Colors.OrangeRed);
-            SelectedLabel = Labels.Count > 1 ? Labels[1] : null;
+            SelectedLabel = Labels.FirstOrDefault();
 
             // 측정 도구에 결과 저장 컬렉션 주입.
             LengthMeasurementTool.Target = Measurements;
@@ -247,7 +248,7 @@ namespace VSMVVM.WPF.Sample.ViewModels
         [RelayCommand]
         private void AddLabel()
         {
-            var idx = Labels.Count;
+            var idx = Labels.NextFreeIndex();
             var presets = new[] { Colors.DeepSkyBlue, Colors.OrangeRed, Colors.LimeGreen, Colors.Gold, Colors.MediumPurple };
             var color = presets[(idx - 1) % presets.Length];
             var prevSelected = SelectedLabel;

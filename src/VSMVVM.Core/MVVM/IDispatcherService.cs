@@ -24,5 +24,14 @@ namespace VSMVVM.Core.MVVM
         /// 현재 스레드가 UI 스레드인지 확인합니다.
         /// </summary>
         bool CheckAccess();
+
+        /// <summary>
+        /// UI 스레드 큐의 layout/render pass 가 한 번 처리되도록 양보합니다.
+        /// 무거운 동기 작업 직전에 호출하면 직전에 set 한 상태 (예: IsLoading=true) 가
+        /// 화면에 그려진 뒤 작업이 시작됩니다.
+        /// WPF: Dispatcher.InvokeAsync(_, Background) — Render priority 보다 낮아 frame 양보 보장.
+        /// WinForms: SynchronizationContext.Post 한 사이클 양보.
+        /// </summary>
+        Task Yield();
     }
 }

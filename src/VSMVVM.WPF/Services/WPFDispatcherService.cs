@@ -48,6 +48,14 @@ namespace VSMVVM.WPF.Services
             return GetDispatcher().CheckAccess();
         }
 
+        public Task Yield()
+        {
+            // Background priority — WPF Render priority 보다 낮아 우리 빈 람다가 처리될 때쯤이면
+            // layout/render pass 가 이미 끝나 IsLoading=true 등이 화면에 그려진 상태가 됨.
+            // Normal priority 로 post 하면 Render 보다 먼저 처리되어 frame 양보 효과가 사라진다.
+            return GetDispatcher().InvokeAsync(() => { }, DispatcherPriority.Background).Task;
+        }
+
         #endregion
 
         #region Private Methods

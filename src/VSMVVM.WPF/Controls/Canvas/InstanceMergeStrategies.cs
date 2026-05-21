@@ -32,6 +32,10 @@ namespace VSMVVM.WPF.Controls
             // remap 대상이 된 instance(옛 ID + tentativeId 중 finalId 가 아닌 것) 모두 컬렉션에서 제거.
             foreach (var id in remap) ctx.RemoveInstance(id);
             ctx.RecomputeInstanceMetadata(finalId);
+            // 병합 후 finalId 의 PolygonContours 가 stroke 시점의 옛 외곽선이라 새 합집합 모양과 어긋남.
+            // OnResampleOverlap (line 44) 와 대칭. EnsurePolygonPoints 의 early-return 가드를 우회해
+            // 다음 vertex edit 진입 시 ContourTracing 으로 합쳐진 외곽을 재추출하게 한다.
+            ctx.ClearPolygonContours(finalId);
             return finalId;
         }
 

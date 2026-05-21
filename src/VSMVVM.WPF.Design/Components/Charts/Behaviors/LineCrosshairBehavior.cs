@@ -143,6 +143,16 @@ namespace VSMVVM.WPF.Design.Components.Charts.Behaviors
                     canvas.Children.Add(dot);
                 }
                 var p = e.Points[i];
+
+                // PlotRect 밖이면 dot 숨김 — bin count 가 매우 작아 baseline 근처 (= X축 라벨 영역) 에
+                // 그려지거나, 좌우 edge 에서 빠지는 경우를 차단.
+                if (p.ScreenPoint.X < plotRect.Left || p.ScreenPoint.X > plotRect.Right ||
+                    p.ScreenPoint.Y < plotRect.Top || p.ScreenPoint.Y > plotRect.Bottom)
+                {
+                    dot.Visibility = Visibility.Collapsed;
+                    continue;
+                }
+
                 var r = DotRadius;
                 dot.Width = r * 2; dot.Height = r * 2;
                 dot.Fill = p.Brush ?? Brushes.White;

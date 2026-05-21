@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
@@ -610,6 +611,86 @@ namespace VSMVVM.WPF.Tests.Canvas
             for (int y = 120; y < 160; y++)
             for (int x = 120; x < 160; x++)
                 layer.SampleDisplayPixel(x, y).Should().Be(Colors.Red, $"B ({x},{y})");
+        }
+
+        // ── T22: Seg 같은 라벨 두 stroke 병합 후 vertex edit 진입 시 합쳐진 외곽이 표시되어야 함 ──
+        //         사용자 보고 버그: 두 polygon 겹쳐 그린 뒤 더블클릭하면 첫 polygon vertex 만 보임.
+        //         원인: MergeOnOverlap.OnEndStroke 가 finalId 의 PolygonContours 를 무효화하지 않아
+        //               EnsurePolygonPoints 의 early-return 가드 (≥3점 있으면 그대로 사용) 가 stale 데이터를 돌려줌.
+        //         이미지 reload 시엔 PolygonContours 가 통째로 reset 되어 정상 동작 (사용자 확인 단서).
+
+        [WpfFact]
+        public void T22_Seg_MergeAfterFirstStrokeHasPolygon_EnsureExtractsUnionContour()
+        {
+            var layer = CreateLayer(200, 200);
+            layer.MergeStrategy = MergeOnOverlapInstanceMergeStrategy.Instance;
+
+            // 첫 stroke A: Polygon 도구가 한 것처럼 stroke 후 PolygonPoints 를 명시적으로 set.
+            // (PolygonMaskTool 이 EndStroke 후 새 instance 일 때 savedPoints 를 instance.PolygonPoints 에 박는 경로 — 라인 72~75.)
+            var rectA = new Rect(20, 20, 40, 40);
+            uint idA = DrawRectangle(layer, labelIndex: 1, rectA);
+            var instA = layer.Instances.GetById(idA);
+            instA.Should().NotBeNull();
+            instA!.PolygonPoints = new List<Point>
+            {
+                new Point(20, 20), new Point(60, 20), new Point(60, 60), new Point(20, 60),
+            };
+            // 이 시점: PolygonContours = [A 의 네 모서리]. EnsurePolygonPoints 가 호출되면 early-return.
+
+            // 두 번째 stroke B 가 A 와 겹치게 그려져 자동 병합 — finalId = idA (작은 ID).
+            uint idB = DrawRectangle(layer, labelIndex: 1, new Rect(40, 40, 40, 40));
+            layer.Instances.Count.Should().Be(1, "같은 라벨 두 사각이 자동 병합");
+
+            var merged = layer.Instances.First();
+            merged.Id.Should().Be(idA, "MergeOnOverlap 은 가장 작은 ID 로 통합 — idA");
+
+            // 더블클릭 → vertex edit 진입 시 호출되는 EnsurePolygonPoints. 합쳐진 모양의 외곽을 돌려줘야 함.
+            bool extracted = layer.EnsurePolygonPoints(merged.Id);
+            extracted.Should().BeTrue();
+            merged.PolygonContours.Should().NotBeNull();
+            merged.PolygonContours!.Should().NotBeEmpty();
+
+            // 핵심 검증: contour 의 BoundingBox 가 A∪B 와 일치해야 함.
+            // fix 전: stale = A 의 네 모서리 → BoundingBox = (20,20,40,40).
+            // fix 후: 재추출 = 합쳐진 외곽 → BoundingBox = (20,20,60,60).
+            var outerContour = merged.PolygonContours[0];
+            outerContour.Should().NotBeEmpty();
+            double minX = outerContour.Min(p => p.X);
+            double minY = outerContour.Min(p => p.Y);
+            double maxX = outerContour.Max(p => p.X);
+            double maxY = outerContour.Max(p => p.Y);
+            // PaintRectangle 의 inclusive 경계 (xMax = X+W-1). 컨투어 추출 정밀도 차이 ±1.
+            minX.Should().BeApproximately(20, 1.0, "외곽 minX 가 A 좌측 (B 가 늘리지 않음)");
+            minY.Should().BeApproximately(20, 1.0, "외곽 minY 가 A 상단 (B 가 늘리지 않음)");
+            maxX.Should().BeApproximately(79, 1.0, "외곽 maxX 가 B 우측까지 확장 — fix 검증 핵심");
+            maxY.Should().BeApproximately(79, 1.0, "외곽 maxY 가 B 하단까지 확장 — fix 검증 핵심");
+        }
+
+        // ── T23: T22 의 대칭 — 사용자가 vertex 미세 편집한 polygon 이 stroke 없이는 보존되어야 함 ──
+        //         EnsurePolygonPoints 의 early-return 가드의 정상 케이스 유지. fix 가 가드 자체를 깨면 안 됨.
+
+        [WpfFact]
+        public void T23_Seg_UserEditedPolygonPreservedWhenNoMerge()
+        {
+            var layer = CreateLayer(200, 200);
+            layer.MergeStrategy = MergeOnOverlapInstanceMergeStrategy.Instance;
+
+            uint idA = DrawRectangle(layer, labelIndex: 1, new Rect(20, 20, 40, 40));
+            var instA = layer.Instances.GetById(idA);
+            // 사용자가 vertex edit 으로 다듬은 polygon — 사각이 아닌 5각형.
+            var userPolygon = new List<Point>
+            {
+                new Point(20, 20), new Point(60, 20), new Point(70, 40),
+                new Point(60, 60), new Point(20, 60),
+            };
+            instA!.PolygonPoints = userPolygon;
+
+            // 추가 stroke 없이 다시 EnsurePolygonPoints — 가드가 사용자 편집을 보존해야 함.
+            bool extracted = layer.EnsurePolygonPoints(idA);
+            extracted.Should().BeTrue();
+            instA.PolygonContours.Should().NotBeNull();
+            instA.PolygonContours![0].Count.Should().Be(5, "사용자가 set 한 5각형이 보존되어야 함");
+            instA.PolygonContours[0][2].Should().Be(new Point(70, 40), "5각형의 우측 돌출점이 보존");
         }
 
         // ── T21: Segmentation 회귀 잠금 — IndependentInstances 픽스가 MergeOnOverlap 동작에 영향 없음 ──

@@ -219,7 +219,15 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
             InvalidateVisual();
         }
 
-        private void OnSeriesItemVisualChanged(object sender, EventArgs e) => InvalidateVisual();
+        // ChartSeries.OnAnyChanged 는 IsVisible / Title / Brush / StrokeThickness / MarkerSize / MarkerShape 변경을 전부
+        // VisualChanged 로 통지한다. 이 중 IsVisible 만 ComputeDataRange / Histogram.EnsureBinned 의 visible-only 산출
+        // 결과에 영향을 미치므로, DataRangeDirty 도 함께 set 해서 다음 OnRender 에서 범위/binning 이 새 visibility
+        // 기준으로 재계산되도록 한다. (Brush 등 다른 visual 변경은 한 번 더 ComputeDataRange 가 같은 값을 산출해 무해함.)
+        private void OnSeriesItemVisualChanged(object sender, EventArgs e)
+        {
+            DataRangeDirty = true;
+            InvalidateVisual();
+        }
 
         private static void OnAxisChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {

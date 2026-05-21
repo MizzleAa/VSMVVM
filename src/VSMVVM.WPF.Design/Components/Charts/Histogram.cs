@@ -235,5 +235,37 @@ namespace VSMVVM.WPF.Design.Components.Charts
             var tag = $"[{binStart:0.##}, {binEnd:0.##})";
             return new ChartHoverState(bestSer, b, (binStart + binEnd) / 2, bestCount, screenPx, title, tag);
         }
+
+        /// <summary>HoverMode=XUnified 일 때 같은 bin 의 모든 visible 시리즈 count 를 묶어 반환.
+        /// 사용자가 Normal / Abnormal 두 시리즈 동시 값을 보고자 할 때 사용.</summary>
+        protected override XUnifiedHoverState HitTestXUnified(Point screenPx)
+        {
+            EnsureBinned();
+            var r = PlotRect;
+            if (!r.Contains(screenPx) || _binCount == 0) return XUnifiedHoverState.Empty;
+            var dataX = ViewToDataX(screenPx.X);
+            var b = (int)((dataX - _binMin) / _binWidth);
+            if (b < 0 || b >= _binCount) return XUnifiedHoverState.Empty;
+
+            var series = Series;
+            if (series == null || series.Count == 0) return XUnifiedHoverState.Empty;
+
+            var binCenter = _binMin + (b + 0.5) * _binWidth;
+            var points = new List<XUnifiedHoverPoint>(series.Count);
+            for (var s = 0; s < series.Count; s++)
+            {
+                var ser = series[s];
+                if (ser == null || !ser.IsVisible) continue;
+                if (s >= (_seriesCounts?.Length ?? 0)) continue;
+                var counts = _seriesCounts[s];
+                if (counts == null) continue;
+                var c = counts[b];
+                if (c <= 0) continue;
+                var sp = new Point(DataToViewX(binCenter), DataToViewY(c));
+                points.Add(new XUnifiedHoverPoint(s, ser.Title, ser.Brush, binCenter, c, sp));
+            }
+            if (points.Count == 0) return XUnifiedHoverState.Empty;
+            return new XUnifiedHoverState(binCenter, screenPx, points);
+        }
     }
 }

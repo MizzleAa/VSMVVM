@@ -48,6 +48,10 @@ namespace VSMVVM.WPF.Design.Components.Charts
             if (d is Histogram h) h._binningDirty = true;
         }
 
+        // ChartBase 가 Series 컬렉션 교체, 시리즈 추가/제거, ChartSeries 의 DataChanged / VisualChanged 시점에 호출.
+        // 이로써 IsVisible 토글이나 YValues 재할당, Series 통째 교체 모두에서 binning 캐시가 정확히 무효화됨.
+        protected override void OnSeriesInvalidated() => _binningDirty = true;
+
         protected override void ComputeDataRange(out double minX, out double maxX, out double minY, out double maxY)
         {
             EnsureBinned();
@@ -98,8 +102,11 @@ namespace VSMVVM.WPF.Design.Components.Charts
                         var px0 = DataToViewX(x0);
                         var px1 = DataToViewX(x1);
                         var py = DataToViewY(c);
-                        var rect = new Rect(Math.Min(px0, px1), Math.Min(py, baselineY),
-                                            Math.Abs(px1 - px0), Math.Abs(baselineY - py));
+                        var fullH = Math.Abs(baselineY - py);
+                        // 진입 애니메이션: baseline(아래) 에서부터 위로 자라남.
+                        var animH = fullH * AnimationProgress;
+                        var rect = new Rect(Math.Min(px0, px1), baselineY - animH,
+                                            Math.Abs(px1 - px0), animH);
                         if (rect.Width > 0 && rect.Height > 0)
                             dc.DrawRectangle(fill, pen, rect);
                     }
@@ -204,6 +211,9 @@ namespace VSMVVM.WPF.Design.Components.Charts
                         if (s == null) continue;
                         h = h * 31 + s.Count;
                         h = h * 31 + (s.IsVisible ? 1 : 0);
+                        // 시리즈 인스턴스 ID 도 포함 — Series 컬렉션 교체로 인스턴스가 바뀐 경우 hash 가 자동으로 달라져
+                        // OnSeriesInvalidated hook 누락 시에도 stale 캐시가 자동 invalidate 되는 second line of defense.
+                        h = h * 31 + System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(s);
                     }
                 }
                 return h;

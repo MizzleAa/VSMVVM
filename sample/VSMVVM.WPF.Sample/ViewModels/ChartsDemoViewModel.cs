@@ -89,6 +89,12 @@ namespace VSMVVM.WPF.Sample.ViewModels
 
         [Property] private CandleSeries _candleSeries;
 
+        // 진입 애니메이션 — 모든 차트에 일괄 적용. 토글 + Restart 트리거.
+        [Property] private bool _isAnimationEnabled = true;
+        [Property] private object _animationRestartTrigger;
+
+        [RelayCommand] private void RestartAllAnimations() => AnimationRestartTrigger = new object();
+
         // 모든 axis (AxisFontSyncBehavior에 일괄 전달)
         public IList<ChartAxis> AllAxes => new[] { LineXAxis, LineYAxis, ScatterXAxis, ScatterYAxis, BarXAxis, BarYAxis };
 
@@ -205,15 +211,41 @@ namespace VSMVVM.WPF.Sample.ViewModels
             return Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
         }
 
+        private static readonly string[] BarCategories = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+
         private void BuildBarSeries()
         {
-            var categories = new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
-            var s1 = new ChartSeries { Title = "Sales", YValues = new List<double> { 12, 18, 9, 24, 30, 22, 16 } };
+            // Sales 시리즈에 카테고리별 색 적용 — BrushPerCategory DP 시각 검증.
+            var palette = VSMVVM.WPF.Design.Components.Charts.Core.ChartPalette.GetPalette();
+            var perDayBrushes = new List<System.Windows.Media.Brush>();
+            for (var i = 0; i < BarCategories.Length; i++) perDayBrushes.Add(palette[i % palette.Count]);
+
+            var s1 = new ChartSeries { Title = "Sales", YValues = new List<double> { 12, 18, 9, 24, 30, 22, 16 }, BrushPerCategory = perDayBrushes };
             var s2 = new ChartSeries { Title = "Returns", YValues = new List<double> { 2, 3, 1, 4, 5, 3, 2 } };
             var s3 = new ChartSeries { Title = "Refunds", YValues = new List<double> { 1, 0, 2, 1, 2, 0, 1 } };
             BarSeries = new ObservableCollection<ChartSeries> { s1, s2, s3 };
-            BarXAxis = new ChartAxis { IsCategorical = true, Categories = categories, Title = "Day" };
-            BarYAxis = new ChartAxis { Title = "Count" };
+            ApplyBarAxes();
+        }
+
+        // ChartBase 는 IsCategorical=true 인 축을 무조건 카테고리 라벨로 그리므로,
+        // Orientation 에 맞춰 한쪽 축만 categorical 로 설정해야 한다. (양쪽 동시 categorical 은 시각적으로 잘못 됨)
+        private void ApplyBarAxes()
+        {
+            if (BarOrientation == Orientation.Vertical)
+            {
+                BarXAxis = new ChartAxis { IsCategorical = true, Categories = BarCategories, Title = "Day" };
+                BarYAxis = new ChartAxis { Title = "Count" };
+            }
+            else
+            {
+                BarXAxis = new ChartAxis { Title = "Count" };
+                BarYAxis = new ChartAxis { IsCategorical = true, Categories = BarCategories, Title = "Day" };
+            }
+        }
+
+        partial void OnBarOrientationChanged(Orientation oldValue, Orientation newValue)
+        {
+            if (BarSeries != null) ApplyBarAxes();
         }
 
         private void BuildPieSeries()

@@ -48,12 +48,16 @@ namespace VSMVVM.WPF.Design.Components.Charts
                     if (ser == null || !ser.IsVisible) continue;
                     if (s >= _downsampled.Count) continue;
                     var (xs, ys) = _downsampled[s];
-                    var n = Math.Min(xs?.Length ?? 0, ys?.Length ?? 0);
-                    if (n < 1) continue;
+                    var nTotal = Math.Min(xs?.Length ?? 0, ys?.Length ?? 0);
+                    if (nTotal < 1) continue;
 
                     var brush = ser.Brush;
                     var pen = GetPen(brush, ser.StrokeThickness);
                     if (pen == null) continue;
+
+                    // 진입 애니메이션: 전체 점 중 처음부터 progress 비율만큼만 그리기 → 좌→우로 그려지는 효과.
+                    var n = Math.Max(1, (int)Math.Ceiling(nTotal * AnimationProgress));
+                    if (n > nTotal) n = nTotal;
 
                     var pts = new Point[n];
                     for (var i = 0; i < n; i++) pts[i] = new Point(DataToViewX(xs[i]), DataToViewY(ys[i]));

@@ -47,6 +47,44 @@ namespace VSMVVM.WPF.Design.Components.Charts
         public string ValueFormat { get => (string)GetValue(ValueFormatProperty); set => SetValue(ValueFormatProperty, value); }
         public double ValueFontSize { get => (double)GetValue(ValueFontSizeProperty); set => SetValue(ValueFontSizeProperty, value); }
 
+        /// <summary>
+        /// <see cref="ShowValues"/> 가 true 면 시리즈 최댓값을 <see cref="ValueFormat"/> 으로 포맷한 문자열의
+        /// 폭/높이를 측정해서 plot 영역 우측(가로) 또는 상단(세로) 여백을 확보한다.
+        /// 가로 막대 음수 값이 있는 경우는 좌측은 categorical 라벨 영역이 이미 있어 별도 처리 불필요.
+        /// </summary>
+        protected override (double extraRight, double extraTop) MeasureValueLabelOverhead()
+        {
+            if (!ShowValues) return (0, 0);
+            var series = Series;
+            if (series == null || series.Count == 0) return (0, 0);
+
+            double maxAbs = 0;
+            foreach (var s in series)
+            {
+                if (s == null || !s.IsVisible) continue;
+                s.GetArrays(out var _, out var ys);
+                if (ys == null) continue;
+                foreach (var y in ys)
+                {
+                    if (!double.IsFinite(y)) continue;
+                    var a = Math.Abs(y);
+                    if (a > maxAbs) maxAbs = a;
+                }
+            }
+            if (maxAbs <= 0) return (0, 0);
+
+            var label = maxAbs.ToString(ValueFormat ?? "0.##");
+            var ft = TextCache.Get(label, ValueFontSize, TextBrush ?? Brushes.Gray);
+
+            if (Orientation == Orientation.Horizontal)
+            {
+                // BarChart.DrawPlot 가 라벨을 막대 끝 + 4px 위치에 그리므로 동일 패딩 + 약간 여유.
+                return (ft.Width + 8, 0);
+            }
+            // 세로: 막대 위 + 2px 위치에 그림.
+            return (0, ft.Height + 4);
+        }
+
         protected override void ComputeDataRange(out double minX, out double maxX, out double minY, out double maxY)
         {
             var series = Series;
@@ -131,7 +169,13 @@ namespace VSMVVM.WPF.Design.Components.Charts
             foreach (var s in series) if (s != null && s.IsVisible) visibleSeries.Add(s);
             if (visibleSeries.Count == 0) return;
 
-            dc.PushClip(new RectangleGeometry(r));
+            // ShowValues 라벨이 plot 영역 우측(가로) / 상단(세로) 밖의 여백에 그려질 수 있으므로,
+            // PushClip 을 PlotRect 가 아니라 컨트롤 전체로 둔다. AutoFitAxisLabels 가 여백을 이미 확보했으므로 안전.
+            // 막대/선 자체 좌표는 DataToView* 변환이 PlotRect 기준이므로 plot 영역 밖으로 새지 않음.
+            var clipRect = ShowValues
+                ? new Rect(0, 0, ActualWidth, ActualHeight)
+                : r;
+            dc.PushClip(new RectangleGeometry(clipRect));
             try
             {
                 var catSpacing = Math.Max(0, Math.Min(0.9, CategorySpacing));
@@ -151,7 +195,9 @@ namespace VSMVVM.WPF.Design.Components.Charts
                         ser.GetArrays(out var _, out var ys);
                         var n = ys?.Length ?? 0;
                         if (n == 0) continue;
-                        var fb = GetFrozenBrush(ser.Brush);
+                        // 시리즈 단위 fallback 색. 카테고리별 색이 지정된 경우 c 루프 안에서 덮어씀.
+                        var seriesBrush = GetFrozenBrush(ser.Brush);
+                        var perCat = ser.BrushPerCategory;
                         var groupW = BarMode == BarMode.Grouped ? slotInner / visibleSeries.Count : slotInner;
                         var inner = groupW * (1 - barSpacing);
 
@@ -182,17 +228,27 @@ namespace VSMVVM.WPF.Design.Components.Charts
                             {
                                 xStart = baselineX; xEnd = DataToViewX(v);
                             }
-                            var rect = new Rect(Math.Min(xStart, xEnd), yTop, Math.Abs(xEnd - xStart), yBot - yTop);
+                            var fullRect = new Rect(Math.Min(xStart, xEnd), yTop, Math.Abs(xEnd - xStart), yBot - yTop);
+                            // 가로 막대: width 만 progress 비례 — baseline(x=0) 에서부터 자라남.
+                            var animW = fullRect.Width * AnimationProgress;
+                            var rect = v >= 0
+                                ? new Rect(fullRect.X, fullRect.Y, animW, fullRect.Height)
+                                : new Rect(fullRect.Right - animW, fullRect.Y, animW, fullRect.Height);
+                            var fb = (perCat != null && c < perCat.Count && perCat[c] != null)
+                                ? GetFrozenBrush(perCat[c])
+                                : seriesBrush;
                             if (rect.Width > 0 && rect.Height > 0)
                                 dc.DrawRectangle(fb, null, rect);
-                            if (ShowValues && rect.Height >= 12)
+                            // 값 라벨은 거의 완료(99%) 시점에 그려 깜빡임/이동감 방지.
+                            // 라벨을 막대 안쪽 시작점(baseline 쪽 끝) 에 그려 plot 끝에 닿는 가장 큰 막대도 잘리지 않도록.
+                            if (ShowValues && rect.Height >= 12 && AnimationProgress >= 0.99)
                             {
                                 var label = v.ToString(ValueFormat ?? "0.##");
                                 var ft = TextCache.Get(label, ValueFontSize, TextBrush ?? System.Windows.Media.Brushes.Gray);
-                                // 가로 막대 → 막대 끝 (오른쪽 또는 왼쪽 음수)
-                                var labelX = v >= 0 ? rect.Right + 4 : rect.Left - ft.Width - 4;
+                                var labelX = v >= 0 ? fullRect.Left + 4 : fullRect.Right - ft.Width - 4;
                                 var labelY = (yTop + yBot) / 2 - ft.Height / 2;
-                                if (labelX >= r.Left && labelX + ft.Width <= r.Right)
+                                // 막대 너비보다 라벨이 길면 그리지 않음 (막대 밖으로 새는 것 방지).
+                                if (ft.Width + 8 <= fullRect.Width)
                                     dc.DrawText(ft, new System.Windows.Point(labelX, labelY));
                             }
                         }
@@ -212,7 +268,8 @@ namespace VSMVVM.WPF.Design.Components.Charts
                         ser.GetArrays(out var _, out var ys);
                         var n = ys?.Length ?? 0;
                         if (n == 0) continue;
-                        var fb = GetFrozenBrush(ser.Brush);
+                        var seriesBrush = GetFrozenBrush(ser.Brush);
+                        var perCat = ser.BrushPerCategory;
                         var groupW = BarMode == BarMode.Grouped ? slotInner / visibleSeries.Count : slotInner;
                         var inner = groupW * (1 - barSpacing);
 
@@ -243,17 +300,26 @@ namespace VSMVVM.WPF.Design.Components.Charts
                             {
                                 yStart = baselineY; yEnd = DataToViewY(v);
                             }
-                            var rect = new Rect(xLeft, Math.Min(yStart, yEnd), xRight - xLeft, Math.Abs(yEnd - yStart));
+                            var fullRect = new Rect(xLeft, Math.Min(yStart, yEnd), xRight - xLeft, Math.Abs(yEnd - yStart));
+                            // 세로 막대: height 만 progress 비례 — baseline(y=0) 에서부터 위/아래로 자라남.
+                            var animH = fullRect.Height * AnimationProgress;
+                            var rect = v >= 0
+                                ? new Rect(fullRect.X, fullRect.Bottom - animH, fullRect.Width, animH)
+                                : new Rect(fullRect.X, fullRect.Y, fullRect.Width, animH);
+                            var fb = (perCat != null && c < perCat.Count && perCat[c] != null)
+                                ? GetFrozenBrush(perCat[c])
+                                : seriesBrush;
                             if (rect.Width > 0 && rect.Height > 0)
                                 dc.DrawRectangle(fb, null, rect);
-                            if (ShowValues && rect.Width >= 12)
+                            if (ShowValues && rect.Width >= 12 && AnimationProgress >= 0.99)
                             {
                                 var label = v.ToString(ValueFormat ?? "0.##");
                                 var ft = TextCache.Get(label, ValueFontSize, TextBrush ?? System.Windows.Media.Brushes.Gray);
-                                // 세로 막대 → 막대 위쪽 (양수) 또는 아래쪽 (음수)
                                 var labelX = (xLeft + xRight) / 2 - ft.Width / 2;
-                                var labelY = v >= 0 ? rect.Top - ft.Height - 2 : rect.Bottom + 2;
-                                if (labelY >= r.Top && labelY + ft.Height <= r.Bottom)
+                                // 막대 안쪽 상단(양수) / 하단(음수) — 가장 큰 막대도 plot 안에 그려져 잘리지 않음.
+                                var labelY = v >= 0 ? fullRect.Top + 2 : fullRect.Bottom - ft.Height - 2;
+                                // 막대 높이보다 라벨이 크면 그리지 않음.
+                                if (ft.Height + 4 <= fullRect.Height)
                                     dc.DrawText(ft, new System.Windows.Point(labelX, labelY));
                             }
                         }

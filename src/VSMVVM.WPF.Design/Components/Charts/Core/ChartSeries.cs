@@ -45,6 +45,15 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
             DependencyProperty.Register(nameof(MarkerShape), typeof(MarkerShape), typeof(ChartSeries),
                 new PropertyMetadata(MarkerShape.Circle, OnAnyChanged));
 
+        /// <summary>
+        /// 카테고리별 색. null 이면 <see cref="Brush"/> 한 색으로 그림 (기존 동작).
+        /// 값이 있고 BarChart 같이 카테고리 인덱스를 갖는 차트에서, 카테고리 i 의 막대를 <c>BrushPerCategory[i]</c> 로 그린다.
+        /// 길이가 카테고리보다 짧으면 그 뒤는 <see cref="Brush"/> 로 fallback.
+        /// </summary>
+        public static readonly DependencyProperty BrushPerCategoryProperty =
+            DependencyProperty.Register(nameof(BrushPerCategory), typeof(IList<Brush>), typeof(ChartSeries),
+                new PropertyMetadata(null, OnAnyChanged));
+
         public string Title { get => (string)GetValue(TitleProperty); set => SetValue(TitleProperty, value); }
         public Brush Brush { get => (Brush)GetValue(BrushProperty); set => SetValue(BrushProperty, value); }
         public double StrokeThickness { get => (double)GetValue(StrokeThicknessProperty); set => SetValue(StrokeThicknessProperty, value); }
@@ -54,6 +63,7 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
         public bool IsVisible { get => (bool)GetValue(IsVisibleProperty); set => SetValue(IsVisibleProperty, value); }
         public double MarkerSize { get => (double)GetValue(MarkerSizeProperty); set => SetValue(MarkerSizeProperty, value); }
         public MarkerShape MarkerShape { get => (MarkerShape)GetValue(MarkerShapeProperty); set => SetValue(MarkerShapeProperty, value); }
+        public IList<Brush> BrushPerCategory { get => (IList<Brush>)GetValue(BrushPerCategoryProperty); set => SetValue(BrushPerCategoryProperty, value); }
 
         public event EventHandler DataChanged;
         public event EventHandler VisualChanged;

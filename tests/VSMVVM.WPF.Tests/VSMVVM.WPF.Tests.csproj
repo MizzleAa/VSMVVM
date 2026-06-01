@@ -23,6 +23,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\VSMVVM.Core\VSMVVM.Core.csproj" />
 		<ProjectReference Include="..\..\src\VSMVVM.WPF\VSMVVM.WPF.csproj" />
+		<ProjectReference Include="..\..\src\VSMVVM.WPF.Design\VSMVVM.WPF.Design.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -45,6 +45,15 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
             DependencyProperty.Register(nameof(MarkerShape), typeof(MarkerShape), typeof(ChartSeries),
                 new PropertyMetadata(MarkerShape.Circle, OnAnyChanged));
 
+        /// <summary>
+        /// 카테고리별 색. null 이면 <see cref="Brush"/> 한 색으로 그림 (기존 동작).
+        /// 값이 있고 BarChart 같이 카테고리 인덱스를 갖는 차트에서, 카테고리 i 의 막대를 <c>BrushPerCategory[i]</c> 로 그린다.
+        /// 길이가 카테고리보다 짧으면 그 뒤는 <see cref="Brush"/> 로 fallback.
+        /// </summary>
+        public static readonly DependencyProperty BrushPerCategoryProperty =
+            DependencyProperty.Register(nameof(BrushPerCategory), typeof(IList<Brush>), typeof(ChartSeries),
+                new PropertyMetadata(null, OnAnyChanged));
+
         public string Title { get => (string)GetValue(TitleProperty); set => SetValue(TitleProperty, value); }
         public Brush Brush { get => (Brush)GetValue(BrushProperty); set => SetValue(BrushProperty, value); }
         public double StrokeThickness { get => (double)GetValue(StrokeThicknessProperty); set => SetValue(StrokeThicknessProperty, value); }
@@ -54,6 +63,7 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
         public bool IsVisible { get => (bool)GetValue(IsVisibleProperty); set => SetValue(IsVisibleProperty, value); }
         public double MarkerSize { get => (double)GetValue(MarkerSizeProperty); set => SetValue(MarkerSizeProperty, value); }
         public MarkerShape MarkerShape { get => (MarkerShape)GetValue(MarkerShapeProperty); set => SetValue(MarkerShapeProperty, value); }
+        public IList<Brush> BrushPerCategory { get => (IList<Brush>)GetValue(BrushPerCategoryProperty); set => SetValue(BrushPerCategoryProperty, value); }
 
         public event EventHandler DataChanged;
         public event EventHandler VisualChanged;
@@ -65,9 +75,17 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
         private object _xSource; // 마지막으로 ToArray한 IList — 다른 instance가 들어오면 재로드
         private object _ySource;
         private bool? _isXSorted;
+        private long _version;
 
         /// <summary>현재 유효 점 개수 (cache array.Length가 아니라 실제 사용 length).</summary>
         public int Count => _count;
+
+        /// <summary>
+        /// 데이터 변경(AppendPoint/TrimOldest/Replace/Notify) 마다 단조 증가하는 카운터.
+        /// 차트의 downsample/render cache 키에 포함해서 "Count 가 동일해도 데이터가 바뀌었음" 을 감지할 때 사용.
+        /// 예: ring-buffer 같은 슬라이딩 윈도우 — TrimOldest 후 Count 가 윈도우 크기로 고정되어 hash가 stale 해지는 케이스.
+        /// </summary>
+        public long Version => _version;
 
         /// <summary>차트가 그릴 때 호출. xs/ys array의 [0, count) 만 유효.</summary>
         public void GetArrays(out double[] xs, out double[] ys, out int count)
@@ -125,6 +143,35 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
             _yCache[_count] = y;
             _count++;
             if (_isXSorted == true && _count >= 2 && x < _xCache[_count - 2]) _isXSorted = false;
+            _version++;
+            DataChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 가장 오래된 점들을 drop해서 유효 점 개수를 최대 <paramref name="keep"/>개로 줄인다.
+        /// live tick + 슬라이딩 윈도우 시나리오 — AppendPoint 후 호출해 메모리 무한 누적을 막는다.
+        /// capacity(배열 길이)는 유지하고 _count 만 줄여 잦은 재할당을 피한다.
+        /// keep &lt;= 0 이면 cache 비움. _count 가 이미 keep 이하면 no-op.
+        /// </summary>
+        public void TrimOldest(int keep)
+        {
+            EnsureCacheLoaded();
+            if (keep <= 0)
+            {
+                _count = 0;
+                _isXSorted = null;
+                _version++;
+                DataChanged?.Invoke(this, EventArgs.Empty);
+                return;
+            }
+            if (_count <= keep) return;
+            var drop = _count - keep;
+            // 뒤쪽 keep 개를 앞으로 당김 — Array.Copy 는 같은 array overlap 안전.
+            Array.Copy(_xCache, drop, _xCache, 0, keep);
+            Array.Copy(_yCache, drop, _yCache, 0, keep);
+            _count = keep;
+            // 뒤쪽 잔여값은 _count 밖이라 차트가 안 읽음 — 굳이 0 으로 클리어 안 함.
+            _version++;
             DataChanged?.Invoke(this, EventArgs.Empty);
         }
 
@@ -137,6 +184,7 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
             if (yList != null) yList.Add(y);
             // cache 무효화 (외부 List 변경됨)
             InvalidateCache();
+            _version++;
             DataChanged?.Invoke(this, EventArgs.Empty);
         }
 
@@ -150,6 +198,7 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
         public void NotifyDataChanged()
         {
             InvalidateCache();
+            _version++;
             DataChanged?.Invoke(this, EventArgs.Empty);
         }
 
@@ -190,6 +239,7 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
             if (d is ChartSeries s)
             {
                 s.InvalidateCache();
+                s._version++;
                 s.DataChanged?.Invoke(s, EventArgs.Empty);
             }
         }

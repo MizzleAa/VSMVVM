@@ -79,10 +79,50 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
             DependencyProperty.Register(nameof(HoverMode), typeof(ChartHoverMode), typeof(ChartBase),
                 new PropertyMetadata(ChartHoverMode.NearestPoint));
 
+        /// <summary>
+        /// true 면 categorical 축(X 또는 Y)의 라벨 실측 폭/높이를 기반으로 <see cref="PlotRect"/> 의 좌/하단 여백을
+        /// 자동 확장한다. 긴 카테고리명("Anomaly Detection" 등) 이 잘리는 현상을 방지.
+        /// <see cref="PlotMargin"/> 은 최소 보장값으로 동작하며, 라벨이 더 길면 그만큼 더 키운다.
+        /// </summary>
+        public static readonly DependencyProperty AutoFitAxisLabelsProperty =
+            DependencyProperty.Register(nameof(AutoFitAxisLabels), typeof(bool), typeof(ChartBase),
+                new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+
+        /// <summary>
+        /// true 면 차트가 처음 화면에 로드될 때 단 한 번 진입 애니메이션을 재생한다 (BarChart 막대가 자라남, LineChart 좌→우 그려짐 등).
+        /// 데이터 갱신/Series 교체 시에는 재생하지 않음 — 사용자 거슬림 방지.
+        /// 자식 차트의 DrawPlot 가 <see cref="AnimationProgress"/> 를 곱해 부분 렌더링한다.
+        /// </summary>
+        public static readonly DependencyProperty IsAnimationEnabledProperty =
+            DependencyProperty.Register(nameof(IsAnimationEnabled), typeof(bool), typeof(ChartBase),
+                new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.AffectsRender, OnAnimationEnabledChanged));
+
+        public static readonly DependencyProperty AnimationDurationProperty =
+            DependencyProperty.Register(nameof(AnimationDuration), typeof(TimeSpan), typeof(ChartBase),
+                new PropertyMetadata(TimeSpan.FromMilliseconds(600)));
+
+        /// <summary>
+        /// 이 값이 바뀌면(아무 값이어도 OK, new object() 등) <see cref="RestartAnimation"/> 이 호출돼 진입 애니메이션이 재생된다.
+        /// ViewModel 에서 코드비하인드 없이 차트 애니메이션을 트리거하기 위한 hook.
+        /// </summary>
+        public static readonly DependencyProperty AnimationRestartTriggerProperty =
+            DependencyProperty.Register(nameof(AnimationRestartTrigger), typeof(object), typeof(ChartBase),
+                new PropertyMetadata(null, OnAnimationRestartTriggerChanged));
+
         public IList<ChartSeries> Series { get => (IList<ChartSeries>)GetValue(SeriesProperty); set => SetValue(SeriesProperty, value); }
         public ChartAxis XAxis { get => (ChartAxis)GetValue(XAxisProperty); set => SetValue(XAxisProperty, value); }
         public ChartAxis YAxis { get => (ChartAxis)GetValue(YAxisProperty); set => SetValue(YAxisProperty, value); }
         public Thickness PlotMargin { get => (Thickness)GetValue(PlotMarginProperty); set => SetValue(PlotMarginProperty, value); }
+        public bool AutoFitAxisLabels { get => (bool)GetValue(AutoFitAxisLabelsProperty); set => SetValue(AutoFitAxisLabelsProperty, value); }
+        public bool IsAnimationEnabled { get => (bool)GetValue(IsAnimationEnabledProperty); set => SetValue(IsAnimationEnabledProperty, value); }
+        public TimeSpan AnimationDuration { get => (TimeSpan)GetValue(AnimationDurationProperty); set => SetValue(AnimationDurationProperty, value); }
+        public object AnimationRestartTrigger { get => GetValue(AnimationRestartTriggerProperty); set => SetValue(AnimationRestartTriggerProperty, value); }
+
+        /// <summary>
+        /// 진입 애니메이션 진행률 (0.0 → 1.0). 자식 차트의 DrawPlot 에서 곱해 부분 렌더링.
+        /// 비활성 / 완료 / 한 번 재생 끝난 후 영구히 1.0.
+        /// </summary>
+        protected double AnimationProgress { get; private set; } = 1.0;
         public Brush PlotBackgroundBrush { get => (Brush)GetValue(PlotBackgroundBrushProperty); set => SetValue(PlotBackgroundBrushProperty, value); }
         public Brush GridBrush { get => (Brush)GetValue(GridBrushProperty); set => SetValue(GridBrushProperty, value); }
         public Brush AxisBrush { get => (Brush)GetValue(AxisBrushProperty); set => SetValue(AxisBrushProperty, value); }
@@ -153,6 +193,8 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
             FocusVisualStyle = null;
             ClipToBounds = true;
             Loaded += OnLoadedSetDpi;
+            Loaded += OnLoadedPlayIntro;
+            Unloaded += OnUnloadedStopAnimation;
             SizeChanged += (s, e) => SizeChangedEx?.Invoke(s, e);
         }
 
@@ -161,6 +203,118 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
             try { TextCache.SetPixelsPerDip(VisualTreeHelper.GetDpi(this).PixelsPerDip); }
             catch { TextCache.SetPixelsPerDip(1.0); }
         }
+
+        #region Intro animation (Loaded 시 한 번)
+
+        // hide/show 반복 / virtualization 으로 Loaded 가 여러 번 발화돼도 단 한 번만 재생.
+        private bool _hasPlayedIntro;
+        private bool _isAnimating;
+        private DateTime _animationStartUtc;
+
+        public void RestartAnimation()
+        {
+            _hasPlayedIntro = false;
+            StartIntroAnimation();
+        }
+
+        private void OnLoadedPlayIntro(object sender, RoutedEventArgs e)
+        {
+            if (_hasPlayedIntro) return;
+            // 데이터가 아직 비어있으면 재생을 미루고 대기. 첫 데이터 도착 시 OnSeriesInvalidated 에서 재생.
+            if (!HasAnyVisibleData()) return;
+            _hasPlayedIntro = true;
+            StartIntroAnimation();
+        }
+
+        /// <summary>
+        /// Series 변경/컬렉션 갱신 hook 에서 호출. Loaded 이후 첫 데이터가 도착한 시점이면 그때 한 번 재생.
+        /// </summary>
+        private void TryPlayIntroAfterDataArrived()
+        {
+            if (_hasPlayedIntro) return;
+            if (!IsLoaded) return;            // Loaded 전이면 그쪽 핸들러가 처리.
+            if (!HasAnyVisibleData()) return; // 여전히 비어있으면 더 기다림.
+            _hasPlayedIntro = true;
+            StartIntroAnimation();
+        }
+
+        /// <summary>가시 시리즈 중 하나라도 데이터(YValues 비어있지 않음) 가 있는지.</summary>
+        private bool HasAnyVisibleData()
+        {
+            var series = Series;
+            if (series == null) return false;
+            foreach (var s in series)
+            {
+                if (s == null || !s.IsVisible) continue;
+                s.GetArrays(out var _, out var ys);
+                if (ys != null && ys.Length > 0) return true;
+            }
+            return false;
+        }
+
+        private void StartIntroAnimation()
+        {
+            if (!IsAnimationEnabled || AnimationDuration <= TimeSpan.Zero)
+            {
+                AnimationProgress = 1.0;
+                InvalidateVisual();
+                return;
+            }
+            AnimationProgress = 0.0;
+            _animationStartUtc = DateTime.UtcNow;
+            if (!_isAnimating)
+            {
+                _isAnimating = true;
+                CompositionTarget.Rendering += OnAnimationFrame;
+            }
+            InvalidateVisual();
+        }
+
+        private void OnAnimationFrame(object sender, EventArgs e)
+        {
+            var elapsed = DateTime.UtcNow - _animationStartUtc;
+            var dur = AnimationDuration.TotalMilliseconds;
+            var t = dur <= 0 ? 1.0 : Math.Min(1.0, elapsed.TotalMilliseconds / dur);
+            // ease-out cubic — 끝부분 부드러운 감속.
+            AnimationProgress = 1 - Math.Pow(1 - t, 3);
+            InvalidateVisual();
+            if (t >= 1.0)
+            {
+                _isAnimating = false;
+                CompositionTarget.Rendering -= OnAnimationFrame;
+            }
+        }
+
+        private void OnUnloadedStopAnimation(object sender, RoutedEventArgs e)
+        {
+            if (_isAnimating)
+            {
+                CompositionTarget.Rendering -= OnAnimationFrame;
+                _isAnimating = false;
+            }
+        }
+
+        private static void OnAnimationEnabledChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is ChartBase c && (bool)e.NewValue == false)
+            {
+                // 비활성으로 바뀌면 진행 중이던 애니메이션 즉시 종료.
+                c.AnimationProgress = 1.0;
+                if (c._isAnimating)
+                {
+                    CompositionTarget.Rendering -= c.OnAnimationFrame;
+                    c._isAnimating = false;
+                }
+                c.InvalidateVisual();
+            }
+        }
+
+        private static void OnAnimationRestartTriggerChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            if (d is ChartBase c) c.RestartAnimation();
+        }
+
+        #endregion
 
         #region Series / Axis change
 
@@ -174,6 +328,8 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
                 if (e.NewValue is IEnumerable<ChartSeries> newList) cb.SubscribeSeries(newList);
                 cb.AssignDefaultSeriesBrushes();
                 cb.DataRangeDirty = true;
+                cb.OnSeriesInvalidated();
+                cb.TryPlayIntroAfterDataArrived();
                 cb.InvalidateVisual();
             }
         }
@@ -184,6 +340,8 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
             if (e.NewItems != null) SubscribeSeries(e.NewItems);
             AssignDefaultSeriesBrushes();
             DataRangeDirty = true;
+            OnSeriesInvalidated();
+            TryPlayIntroAfterDataArrived();
             InvalidateVisual();
         }
 
@@ -216,6 +374,8 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
         private void OnSeriesItemDataChanged(object sender, EventArgs e)
         {
             DataRangeDirty = true;
+            OnSeriesInvalidated();
+            TryPlayIntroAfterDataArrived();
             InvalidateVisual();
         }
 
@@ -223,11 +383,18 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
         // VisualChanged 로 통지한다. 이 중 IsVisible 만 ComputeDataRange / Histogram.EnsureBinned 의 visible-only 산출
         // 결과에 영향을 미치므로, DataRangeDirty 도 함께 set 해서 다음 OnRender 에서 범위/binning 이 새 visibility
         // 기준으로 재계산되도록 한다. (Brush 등 다른 visual 변경은 한 번 더 ComputeDataRange 가 같은 값을 산출해 무해함.)
+        // OnSeriesInvalidated hook 으로 파생 차트(Histogram 등)가 자체 binning 캐시를 무효화할 수 있도록 한다.
         private void OnSeriesItemVisualChanged(object sender, EventArgs e)
         {
             DataRangeDirty = true;
+            OnSeriesInvalidated();
             InvalidateVisual();
         }
+
+        /// <summary>Series 컬렉션 / 항목의 데이터·시각 상태가 변경되었을 때 호출되는 hook.
+        /// 파생 차트가 자체 캐시(예: Histogram 의 binning 결과) 를 무효화하기 위해 override.
+        /// 기본 구현은 no-op. InvalidateVisual 은 caller 가 이미 호출하므로 여기서 다시 부르지 말 것.</summary>
+        protected virtual void OnSeriesInvalidated() { }
 
         private static void OnAxisChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
@@ -271,10 +438,63 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
         {
             get
             {
-                var w = Math.Max(0, ActualWidth - PlotMargin.Left - PlotMargin.Right);
-                var h = Math.Max(0, ActualHeight - PlotMargin.Top - PlotMargin.Bottom);
-                return new Rect(PlotMargin.Left, PlotMargin.Top, w, h);
+                var m = PlotMargin;
+                if (AutoFitAxisLabels)
+                {
+                    var (extraLeft, extraBottom) = MeasureCategoricalAxisOverhead();
+                    if (extraLeft > m.Left) m = new Thickness(extraLeft, m.Top, m.Right, m.Bottom);
+                    if (extraBottom > m.Bottom) m = new Thickness(m.Left, m.Top, m.Right, extraBottom);
+
+                    // 자식 차트(BarChart 등) 가 그리는 값 라벨이 plot 영역 우/상단을 넘는 경우 자동 확보.
+                    var (extraRight, extraTop) = MeasureValueLabelOverhead();
+                    if (extraRight > m.Right) m = new Thickness(m.Left, m.Top, extraRight, m.Bottom);
+                    if (extraTop > m.Top) m = new Thickness(m.Left, extraTop, m.Right, m.Bottom);
+                }
+                var w = Math.Max(0, ActualWidth - m.Left - m.Right);
+                var h = Math.Max(0, ActualHeight - m.Top - m.Bottom);
+                return new Rect(m.Left, m.Top, w, h);
             }
+        }
+
+        /// <summary>
+        /// 자식 차트가 값 라벨(예: BarChart.ShowValues) 을 그릴 때 plot 영역 우/상단을 넘는 경우,
+        /// <see cref="AutoFitAxisLabels"/> 가 true 면 그 폭/높이만큼 PlotRect 를 자동으로 줄여서 라벨이 잘리지 않게 한다.
+        /// 기본값은 (0, 0) — 영향 없음. BarChart 등이 override.
+        /// </summary>
+        protected virtual (double extraRight, double extraTop) MeasureValueLabelOverhead() => (0, 0);
+
+        /// <summary>
+        /// <see cref="AutoFitAxisLabels"/> 가 true 일 때 categorical 라벨이 차지할 좌/하단 여백을 실측.
+        /// Y categorical: 가장 긴 라벨 width + (tick 표식 + 패딩 6) 만큼 좌측 확보.
+        /// X categorical: 폰트 height + 패딩(6+축선4) 만큼 하단 확보.
+        /// </summary>
+        private (double extraLeft, double extraBottom) MeasureCategoricalAxisOverhead()
+        {
+            double extraLeft = 0, extraBottom = 0;
+            var ya = YAxis;
+            if (ya != null && ya.IsCategorical && ya.Categories != null && ya.Categories.Count > 0)
+            {
+                var size = ya.FontSize == 0 ? 11.0 : ya.FontSize;
+                var family = ya.FontFamily;
+                var weight = ya.FontWeight == default ? FontWeights.Normal : ya.FontWeight;
+                var brush = TextBrush ?? Brushes.Gray;
+                double maxW = 0;
+                foreach (var c in ya.Categories)
+                {
+                    if (string.IsNullOrEmpty(c)) continue;
+                    var ft = TextCache.Get(c, size, brush, family, weight);
+                    if (ft.Width > maxW) maxW = ft.Width;
+                }
+                extraLeft = maxW + 10; // 6 (라벨-축 간격) + 4 (tick)
+            }
+
+            var xa = XAxis;
+            if (xa != null && xa.IsCategorical && xa.Categories != null && xa.Categories.Count > 0)
+            {
+                var size = xa.FontSize == 0 ? 11.0 : xa.FontSize;
+                extraBottom = size + 10; // 폰트 높이 근사 + 패딩
+            }
+            return (extraLeft, extraBottom);
         }
 
         public double DataToViewX(double dx)
@@ -498,14 +718,38 @@ namespace VSMVVM.WPF.Design.Components.Charts.Core
                 }
             }
 
-            var yTicks = ChartTickGenerator.Generate(ViewMinY, ViewMaxY, ya?.MajorTickCountTarget ?? 6);
-            foreach (var t in yTicks)
+            if (ya == null || !ya.IsCategorical)
             {
-                var py = DataToViewY(t);
-                if (py < r.Top - 0.5 || py > r.Bottom + 0.5) continue;
-                if (axisPen != null) dc.DrawLine(axisPen, new Point(r.Left - 4, py), new Point(r.Left, py));
-                var ft = TextCache.Get(ya?.Format(t) ?? t.ToString("0.##"), ySize, textBrush, yFamily, yWeight);
-                dc.DrawText(ft, new Point(r.Left - ft.Width - 6, py - ft.Height / 2));
+                var yTicks = ChartTickGenerator.Generate(ViewMinY, ViewMaxY, ya?.MajorTickCountTarget ?? 6);
+                foreach (var t in yTicks)
+                {
+                    var py = DataToViewY(t);
+                    if (py < r.Top - 0.5 || py > r.Bottom + 0.5) continue;
+                    if (axisPen != null) dc.DrawLine(axisPen, new Point(r.Left - 4, py), new Point(r.Left, py));
+                    var ft = TextCache.Get(ya?.Format(t) ?? t.ToString("0.##"), ySize, textBrush, yFamily, yWeight);
+                    dc.DrawText(ft, new Point(r.Left - ft.Width - 6, py - ft.Height / 2));
+                }
+            }
+            else if (ya.Categories != null)
+            {
+                // X 축 categorical 분기와 대칭 — 슬롯 중앙에 라벨, 슬롯 95% 넘으면 생략(겹침 방지).
+                // BarChart Orientation=Horizontal 일 때 catAxis = YAxis 이므로 이 경로에서 그룹명/모델명이 그려진다.
+                var cats = ya.Categories;
+                var n = cats.Count;
+                if (n > 0)
+                {
+                    var slot = r.Height / n;
+                    for (var i = 0; i < n; i++)
+                    {
+                        var py = r.Top + (i + 0.5) * slot;
+                        if (py < r.Top - 0.5 || py > r.Bottom + 0.5) continue;
+                        var ft = TextCache.Get(cats[i] ?? string.Empty, ySize, textBrush, yFamily, yWeight);
+                        if (ft.Height <= slot * 0.95)
+                        {
+                            dc.DrawText(ft, new Point(r.Left - ft.Width - 6, py - ft.Height / 2));
+                        }
+                    }
+                }
             }
 
             if (!string.IsNullOrEmpty(xa?.Title))

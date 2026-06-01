@@ -98,7 +98,17 @@
                                VerticalAlignment="Center" Margin="{StaticResource Mr2}"/>
                     <ComboBox ItemsSource="{Binding ColorMapOptions}"
                               SelectedItem="{Binding SelectedColorMap}"
-                              Width="100"/>
+                              Width="100"
+                              Margin="{StaticResource Mr3}"/>
+
+                    <!-- 진입 애니메이션 검증: Bar / Line / Histogram 에 일괄 적용. -->
+                    <ToggleButton Content="Animation"
+                                  IsChecked="{Binding IsAnimationEnabled}"
+                                  Padding="{StaticResource Px2Py1}"
+                                  Margin="{StaticResource Mr2}"/>
+                    <Button Content="Restart"
+                            Command="{Binding RestartAllAnimationsCommand}"
+                            Padding="{StaticResource Px2Py1}"/>
                 </WrapPanel>
             </Border>
 
@@ -137,6 +147,8 @@
                                               XAxis="{Binding LineXAxis}"
                                               YAxis="{Binding LineYAxis}"
                                               IsTooltipEnabled="{Binding IsTooltipOn}"
+                                              IsAnimationEnabled="{Binding IsAnimationEnabled}"
+                                              AnimationRestartTrigger="{Binding AnimationRestartTrigger}"
                                               HoverMode="{Binding LineHoverMode}">
                                 <i:Interaction.Behaviors>
                                     <chBeh:ChartTooltipBehavior TooltipElement="{Binding ElementName=LineTooltip}"
@@ -328,7 +340,9 @@
                                              Orientation="{Binding BarOrientation}"
                                              BarMode="{Binding BarMode}"
                                              ShowValues="{Binding BarShowValues}"
-                                             IsTooltipEnabled="{Binding IsTooltipOn}">
+                                             IsTooltipEnabled="{Binding IsTooltipOn}"
+                                             IsAnimationEnabled="{Binding IsAnimationEnabled}"
+                                             AnimationRestartTrigger="{Binding AnimationRestartTrigger}">
                                 <i:Interaction.Behaviors>
                                     <chBeh:BarChartTooltipBehavior TooltipElement="{Binding ElementName=BarTooltip}"
                                                                    TitleElement="{Binding ElementName=BarTooltipTitle}"
@@ -686,7 +700,9 @@
                                               XAxis="{Binding HistogramXAxis}"
                                               YAxis="{Binding HistogramYAxis}"
                                               BinCount="30"
-                                              IsTooltipEnabled="{Binding IsTooltipOn}">
+                                              IsTooltipEnabled="{Binding IsTooltipOn}"
+                                              IsAnimationEnabled="{Binding IsAnimationEnabled}"
+                                              AnimationRestartTrigger="{Binding AnimationRestartTrigger}">
                                 <i:Interaction.Behaviors>
                                     <chBeh:ChartTooltipBehavior TooltipElement="{Binding ElementName=HistogramTooltip}"
                                                                 TitleElement="{Binding ElementName=HistogramTooltipTitle}"

@@ -191,6 +191,8 @@ namespace VSMVVM.WPF.Design.Components.Charts
                     {
                         if (s == null) continue;
                         h = h * 31 + s.Count;
+                        // Count 가 고정인 슬라이딩 윈도우 케이스에서 stale cache 방지.
+                        h = h * 31 + s.Version;
                     }
                 }
                 return h;

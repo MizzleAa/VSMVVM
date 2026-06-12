@@ -394,9 +394,12 @@ namespace VSMVVM.WPF.Sample.ViewModels
             var path = _fileDialog.OpenFile("Image files|*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff");
             if (string.IsNullOrEmpty(path)) return;
 
-            // 새 이미지 로드 — 기존 마스크 인스턴스 + Undo/Redo 스택 모두 클리어.
-            // MaskLayer.Clear() 가 SelectedInstance / IsVertexEditMode 도 자동 초기화.
-            MaskLayer?.Clear();
+            // 새 이미지 로드 전 — MaskLayer.Cleanup() 으로 이전 이미지/마스크의 큰 LOH 캐시들 (_sourcePixels,
+            // _displayBitmap, _sourceGradient, _displayPixelsBuffer 등) 강제 회수. Clear() 만으로는 인스턴스만
+            // 비우고 큰 byte/double 배열들은 그대로 — Cleanup() 이 null + GC.Collect 2회로 즉시 회수.
+            BackgroundImageSource = null;
+            MaskLayer?.Cleanup();
+
             _undoRedo.Clear();
             SelectedInstance = null;
 

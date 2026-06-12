@@ -79,6 +79,7 @@ namespace VSMVVM.WPF.Controls.Behaviors
             if (_currentAdorner != null)
             {
                 _currentAdorner.CommitRequested -= OnAdornerCommitRequested;
+                _currentAdorner.Cleanup(); // _silhouette (WriteableBitmap native) + 이벤트 핸들러 명시 해제 → LOH 회수.
                 layer.Remove(_currentAdorner);
                 _currentAdorner = null;
             }

@@ -31,5 +31,15 @@ namespace VSMVVM.Core.CodeGen.GenInfo
         /// NotifyCanExecuteChangedFor 대상 Command 이름 목록.
         /// </summary>
         public List<string> CommandNames { get; set; } = new List<string>();
+
+        /// <summary>
+        /// [Log] 어트리뷰트가 적용되었는지 여부.
+        /// </summary>
+        public bool HasLogAttribute { get; set; }
+
+        /// <summary>
+        /// [Log(Level=...)] 로 지정된 레벨 이름. "Trace"|"Debug"|"Info"|"Warn"|"Error". 기본 "Info".
+        /// </summary>
+        public string LogLevel { get; set; }
     }
 }

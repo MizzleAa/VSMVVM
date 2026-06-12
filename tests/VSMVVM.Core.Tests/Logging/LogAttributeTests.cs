@@ -85,13 +85,14 @@ namespace VSMVVM.Core.Tests.Logging
         #region Attribute Usage
 
         [Fact]
-        public void LogAttribute_TargetsMethodOnly()
+        public void LogAttribute_TargetsMethodOrField()
         {
+            // v1.2.3 부터 [Log] 는 [Property] 필드에도 적용 가능 ( setter 안 로깅 ).
             var usage = typeof(LogAttribute)
                 .GetCustomAttribute<AttributeUsageAttribute>();
 
             usage.Should().NotBeNull();
-            usage.ValidOn.Should().Be(AttributeTargets.Method);
+            usage.ValidOn.Should().Be(AttributeTargets.Method | AttributeTargets.Field);
         }
 
         [Fact]

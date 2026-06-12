@@ -20,6 +20,7 @@ namespace VSMVVM.Core.CodeGen
         #region Constants
 
         private const string RelayCommandAttributeFullName = "VSMVVM.Core.Attributes.RelayCommandAttribute";
+        private const string LogAttributeFullName = "VSMVVM.Core.Attributes.LogAttribute";
 
         #endregion
 
@@ -106,6 +107,8 @@ namespace VSMVVM.Core.CodeGen
             {
                 string canExecuteName = null;
                 var hasAttribute = false;
+                var hasLogAttribute = false;
+                string logLevel = "Info";
 
                 foreach (var attrList in method.AttributeLists)
                 {
@@ -113,7 +116,9 @@ namespace VSMVVM.Core.CodeGen
                     {
                         if (model.GetSymbolInfo(attr).Symbol is IMethodSymbol attrSymbol)
                         {
-                            if (attrSymbol.ContainingType.ToDisplayString() == RelayCommandAttributeFullName)
+                            var fullName = attrSymbol.ContainingType.ToDisplayString();
+
+                            if (fullName == RelayCommandAttributeFullName)
                             {
                                 hasAttribute = true;
 
@@ -137,15 +142,26 @@ namespace VSMVVM.Core.CodeGen
                                         }
                                     }
                                 }
+                            }
+                            else if (fullName == LogAttributeFullName)
+                            {
+                                hasLogAttribute = true;
 
-                                break;
+                                // Level 프로퍼티 추출. 예: [Log(Level = LogLevel.Debug)] → "Debug"
+                                if (attr.ArgumentList != null)
+                                {
+                                    foreach (var arg in attr.ArgumentList.Arguments)
+                                    {
+                                        if (arg.NameEquals != null && arg.NameEquals.Name.ToString() == "Level")
+                                        {
+                                            var expr = arg.Expression.ToString();
+                                            var dotIdx = expr.LastIndexOf('.');
+                                            logLevel = dotIdx >= 0 ? expr.Substring(dotIdx + 1) : expr;
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }
-
-                    if (hasAttribute)
-                    {
-                        break;
                     }
                 }
 
@@ -197,7 +213,9 @@ namespace VSMVVM.Core.CodeGen
                     ReturnType = returnType,
                     CanExecuteName = canExecuteName,
                     IsAsync = false,
-                    ParameterType = parameterType
+                    ParameterType = parameterType,
+                    HasLogAttribute = hasLogAttribute,
+                    LogLevel = logLevel
                 });
             }
 
@@ -239,6 +257,19 @@ namespace VSMVVM.Core.CodeGen
                     var commandName = method.MethodName + "Command";
                     var backingField = "_" + char.ToLower(commandName[0]) + commandName.Substring(1);
 
+                    // [Log] 지정 시 람다 안에서 ILoggerService 를 정적 로케이터로 가져와 진입 로그를 남긴다.
+                    // ServiceLocator 가 초기화 안된 시점에도 예외로 명령 실행이 중단되지 않도록 try/catch 로 감싼다.
+                    // 제네릭 (파라미터 1개) 일 때는 람다의 __p 를 보간해 "Method(__p)" 형태로 기록 — 어느 항목 클릭인지 식별 가능.
+                    var logPrefix = $"[Command] {clsNamespace}.{cls.Identifier.ValueText}.{method.MethodName}";
+                    var logBlockNoParam = method.HasLogAttribute
+                        ? $@"            try {{ var __sp = VSMVVM.Core.MVVM.ServiceLocator.GetServiceProvider(); var __log = __sp?.GetService(typeof(VSMVVM.Core.MVVM.ILoggerService)) as VSMVVM.Core.MVVM.ILoggerService; __log?.{method.LogLevel}(""{logPrefix}""); }} catch {{ }}
+"
+                        : string.Empty;
+                    var logBlockWithParam = method.HasLogAttribute
+                        ? $@"            try {{ var __sp = VSMVVM.Core.MVVM.ServiceLocator.GetServiceProvider(); var __log = __sp?.GetService(typeof(VSMVVM.Core.MVVM.ILoggerService)) as VSMVVM.Core.MVVM.ILoggerService; __log?.{method.LogLevel}($""{logPrefix}({{__p}})""); }} catch {{ }}
+"
+                        : string.Empty;
+
                     if (method.ParameterType != null)
                     {
                         // 제네릭 커맨드
@@ -246,9 +277,21 @@ namespace VSMVVM.Core.CodeGen
                             ? $", {method.CanExecuteName}"
                             : string.Empty;
 
-                        commandCode.AppendLine($@"
+                        if (method.HasLogAttribute)
+                        {
+                            commandCode.AppendLine($@"
+        private VSMVVM.Core.MVVM.RelayCommand<{method.ParameterType}>? {backingField};
+        public VSMVVM.Core.MVVM.RelayCommand<{method.ParameterType}> {commandName} => {backingField} ?? ({backingField} = new VSMVVM.Core.MVVM.RelayCommand<{method.ParameterType}>(__p =>
+        {{
+{logBlockWithParam}            {method.MethodName}(__p);
+        }}{canExecutePart}));");
+                        }
+                        else
+                        {
+                            commandCode.AppendLine($@"
         private VSMVVM.Core.MVVM.RelayCommand<{method.ParameterType}>? {backingField};
         public VSMVVM.Core.MVVM.RelayCommand<{method.ParameterType}> {commandName} => {backingField} ?? ({backingField} = new VSMVVM.Core.MVVM.RelayCommand<{method.ParameterType}>({method.MethodName}{canExecutePart}));");
+                        }
                     }
                     else
                     {
@@ -257,9 +300,21 @@ namespace VSMVVM.Core.CodeGen
                             ? $", {method.CanExecuteName}"
                             : string.Empty;
 
-                        commandCode.AppendLine($@"
+                        if (method.HasLogAttribute)
+                        {
+                            commandCode.AppendLine($@"
+        private VSMVVM.Core.MVVM.RelayCommand? {backingField};
+        public VSMVVM.Core.MVVM.RelayCommand {commandName} => {backingField} ?? ({backingField} = new VSMVVM.Core.MVVM.RelayCommand(() =>
+        {{
+{logBlockNoParam}            {method.MethodName}();
+        }}{canExecutePart}));");
+                        }
+                        else
+                        {
+                            commandCode.AppendLine($@"
         private VSMVVM.Core.MVVM.RelayCommand? {backingField};
         public VSMVVM.Core.MVVM.RelayCommand {commandName} => {backingField} ?? ({backingField} = new VSMVVM.Core.MVVM.RelayCommand({method.MethodName}{canExecutePart}));");
+                        }
                     }
                 }
 

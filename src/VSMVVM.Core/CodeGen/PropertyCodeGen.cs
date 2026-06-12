@@ -22,6 +22,7 @@ namespace VSMVVM.Core.CodeGen
         private const string PropertyAttributeFullName = "VSMVVM.Core.Attributes.PropertyAttribute";
         private const string PropertyChangedForAttributeFullName = "VSMVVM.Core.Attributes.PropertyChangedForAttribute";
         private const string NotifyCanExecuteChangedForAttributeFullName = "VSMVVM.Core.Attributes.NotifyCanExecuteChangedForAttribute";
+        private const string LogAttributeFullName = "VSMVVM.Core.Attributes.LogAttribute";
 
         #endregion
 
@@ -144,6 +145,8 @@ namespace VSMVVM.Core.CodeGen
                 var targetNames = new List<string>();
                 var commandNames = new List<string>();
                 var forwardedAttributes = new List<string>();
+                var hasLogAttribute = false;
+                string logLevel = "Info";
 
                 foreach (var attrList in field.AttributeLists)
                 {
@@ -182,9 +185,26 @@ namespace VSMVVM.Core.CodeGen
                                     }
                                 }
                             }
+                            else if (attrFullName == LogAttributeFullName)
+                            {
+                                // [Log] 는 생성된 프로퍼티의 setter 안에 로깅 호출을 삽입한다 (메서드/필드에 forward 하지 않음).
+                                hasLogAttribute = true;
+                                if (attr.ArgumentList != null)
+                                {
+                                    foreach (var arg in attr.ArgumentList.Arguments)
+                                    {
+                                        if (arg.NameEquals != null && arg.NameEquals.Name.ToString() == "Level")
+                                        {
+                                            var expr = arg.Expression.ToString();
+                                            var dotIdx = expr.LastIndexOf('.');
+                                            logLevel = dotIdx >= 0 ? expr.Substring(dotIdx + 1) : expr;
+                                        }
+                                    }
+                                }
+                            }
                             else if (attrFullName != PropertyAttributeFullName)
                             {
-                                // Property, PropertyChangedFor, NotifyCanExecuteChangedFor 이외의 모든 어트리뷰트를 전달
+                                // Property, PropertyChangedFor, NotifyCanExecuteChangedFor, Log 이외의 모든 어트리뷰트를 전달
                                 forwardedAttributes.Add($"[{attr.ToFullString().Trim()}]");
                             }
                         }
@@ -199,7 +219,9 @@ namespace VSMVVM.Core.CodeGen
                         TypeName = field.Declaration.Type.ToString(),
                         TargetNames = targetNames,
                         ForwardedAttributes = forwardedAttributes,
-                        CommandNames = commandNames
+                        CommandNames = commandNames,
+                        HasLogAttribute = hasLogAttribute,
+                        LogLevel = logLevel
                     });
                 }
             }
@@ -287,12 +309,23 @@ namespace VSMVVM.Core.CodeGen
                         propertyCode.AppendLine($"        {attr}");
                     }
 
+                    // [Log] 가 적용된 경우 setter 안에 ILoggerService 호출 한 줄 삽입.
+                    // ServiceLocator 미초기화 시점에도 죽지 않도록 try/catch 가드.
+                    var logBlock = string.Empty;
+                    if (field.HasLogAttribute)
+                    {
+                        var logPrefix = $"[Property] {clsNamespace}.{cls.Identifier.ValueText}.{propertyName}";
+                        logBlock = $@"                    try {{ var __sp = VSMVVM.Core.MVVM.ServiceLocator.GetServiceProvider(); var __log = __sp?.GetService(typeof(VSMVVM.Core.MVVM.ILoggerService)) as VSMVVM.Core.MVVM.ILoggerService; __log?.{field.LogLevel}($""{logPrefix} = {{value}}""); }} catch {{ }}
+";
+                    }
+
                     if (isObservableValidator)
                     {
                         // ObservableValidator: SetProperty 사용 (자동 DataAnnotation 검증).
                         // SetProperty의 bool 반환을 활용해 PropertyChangedFor / NotifyCanExecuteChangedFor도 함께 발화한다.
+                        // [Log] 가 있으면 동일하게 SetProperty 가 true 반환한 분기에서만 로깅.
                         var hasDependents = field.TargetNames.Count > 0 || field.CommandNames.Count > 0;
-                        if (!hasDependents)
+                        if (!hasDependents && !field.HasLogAttribute)
                         {
                             propertyCode.AppendLine($@"
         public {field.TypeName} {propertyName}
@@ -312,6 +345,10 @@ namespace VSMVVM.Core.CodeGen
             {{
                 if (SetProperty(ref {field.Identifier}, value))
                 {{");
+                            if (field.HasLogAttribute)
+                            {
+                                propertyCode.Append(logBlock);
+                            }
                             foreach (var targetName in field.TargetNames)
                             {
                                 propertyCode.AppendLine($"                    OnPropertyChanged({targetName});");
@@ -344,6 +381,11 @@ namespace VSMVVM.Core.CodeGen
                     On{propertyName}Changed(value);
                     On{propertyName}Changed(oldValue, value);
                     OnPropertyChanged();");
+
+                    if (field.HasLogAttribute)
+                    {
+                        propertyCode.Append(logBlock);
+                    }
 
                     // PropertyChangedFor 대상
                     foreach (var targetName in field.TargetNames)

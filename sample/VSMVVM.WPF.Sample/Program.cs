@@ -2,6 +2,7 @@ using VSMVVM.WPF.Host;
 
 namespace VSMVVM.WPF.Sample
 {
+    
     public static class Program
     {
         [System.STAThread]

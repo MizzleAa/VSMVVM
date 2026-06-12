@@ -65,6 +65,22 @@ namespace VSMVVM.WPF.Controls
             }
         }
 
+        /// <summary>
+        /// AdornerLayer 에서 Remove 직전에 호출 — _silhouette (WriteableBitmap, native 백버퍼 포함) 와 이벤트 핸들러
+        /// 를 명시적으로 해제. 호출 안 하면 Adorner 객체 + WriteableBitmap 이 살아남아 GC 회수 불가, 데이터셋
+        /// 전환마다 LOH 에 누적된다.
+        /// </summary>
+        public void Cleanup()
+        {
+            if (_instance != null)
+            {
+                _instance.PropertyChanged -= OnInstancePropertyChanged;
+            }
+            _silhouette = null;
+            _activeHandle = HandlePos.None;
+            _hasPreview = false;
+        }
+
         private void OnInstancePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(MaskInstance.BoundingBox) && !_hasPreview)

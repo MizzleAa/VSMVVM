@@ -34,10 +34,11 @@ namespace VSMVVM.Core.Attributes
     }
 
     /// <summary>
-    /// 메서드에 적용하면 Source Generator가 AOP 스타일 로깅 래퍼를 생성합니다.
-    /// 진입/퇴출/실행시간/예외를 자동 기록합니다.
+    /// 메서드 또는 필드에 적용하면 Source Generator가 자동 로깅 코드를 삽입합니다.
+    /// - [RelayCommand]/[AsyncRelayCommand] 메서드: Command 람다 안에 ILoggerService 진입 로그.
+    /// - [Property] 필드: 생성된 setter 안 값 변경 시 ILoggerService 로 새 값 기록.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
     public sealed class LogAttribute : Attribute
     {
         /// <summary>

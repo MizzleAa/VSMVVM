@@ -8,6 +8,9 @@ namespace VSMVVM.Core.Tests.MVVM
     /// <summary>
     /// IRegionManager 네비게이션 히스토리 (Back/Forward) 및 DisplayName 변환 테스트.
     /// </summary>
+    // ServiceLocator 정적 상태를 사용 — Logging.LogAttributeRelayCommandTests 와 동일 collection 으로
+    // 묶어 병렬 실행 시 ServiceProvider 덮어쓰기로 인한 간헐 실패를 차단.
+    [Collection("ServiceLocator")]
     public class RegionManagerTests
     {
         #region Test Doubles

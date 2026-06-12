@@ -1,0 +1,106 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g. 1.2.8). Must not already exist on nuget.org.'
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') {
+            $v = '${{ inputs.version }}'
+          } else {
+            # refs/tags/v1.2.8 -> 1.2.8
+            $v = $env:GITHUB_REF -replace '^refs/tags/v',''
+          }
+          if (-not $v) { throw 'Version could not be resolved.' }
+          Write-Host "Resolved version: $v"
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Update Directory.Build.props version
+        shell: pwsh
+        run: |
+          $v = '${{ steps.ver.outputs.version }}'
+          $path = 'Directory.Build.props'
+          $content = Get-Content $path -Raw
+          $new = [System.Text.RegularExpressions.Regex]::Replace(
+            $content, '<Version>[^<]+</Version>', "<Version>$v</Version>")
+          Set-Content -Path $path -Value $new -Encoding UTF8 -NoNewline
+          Select-String -Path $path -Pattern '<Version>'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: '**/test-results.trx'
+
+      - name: Pack
+        shell: pwsh
+        run: |
+          $v = '${{ steps.ver.outputs.version }}'
+          New-Item -ItemType Directory -Force -Path ./nupkgs | Out-Null
+          foreach ($p in @(
+            'src/VSMVVM.Core/VSMVVM.Core.csproj',
+            'src/VSMVVM.WPF/VSMVVM.WPF.csproj',
+            'src/VSMVVM.WPF.Design/VSMVVM.WPF.Design.csproj'
+          )) {
+            dotnet pack $p -c Release -o ./nupkgs --no-build
+            if ($LASTEXITCODE -ne 0) { throw "pack failed: $p" }
+          }
+          Get-ChildItem ./nupkgs -Filter "*.$v.nupkg" | ForEach-Object { Write-Host $_.Name }
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkgs-${{ steps.ver.outputs.version }}
+          path: nupkgs/*.nupkg
+
+      - name: Push to nuget.org
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          if (-not $env:NUGET_API_KEY) { throw 'NUGET_API_KEY secret is not set.' }
+          $v = '${{ steps.ver.outputs.version }}'
+          foreach ($id in @('VSMVVM.Core','VSMVVM.WPF','VSMVVM.WPF.Design')) {
+            $pkg = "./nupkgs/$id.$v.nupkg"
+            if (-not (Test-Path $pkg)) { throw "package not found: $pkg" }
+            dotnet nuget push $pkg `
+              --api-key $env:NUGET_API_KEY `
+              --source https://api.nuget.org/v3/index.json `
+              --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { throw "push failed: $id" }
+          }

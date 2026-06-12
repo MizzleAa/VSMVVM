@@ -19,7 +19,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\..\src\VSMVVM.Core\VSMVVM.Core.csproj" />
+		<!-- 하나의 ProjectReference 로 1) 어셈블리 참조 + 2) Source Generator(Analyzer) 동시 등록.
+		     테스트 프로젝트가 멀티타겟(net8.0;net9.0) 이고 VSMVVM.Core 가 단일타겟(netstandard2.0) 이라
+		     ReferenceOutputAssembly=false 로 별도 ProjectReference 를 추가하는 패턴은 NETSDK1005 를 유발.
+		     동일 참조에 OutputItemType=Analyzer 만 더해 두 역할을 함께 수행하게 한다. -->
+		<ProjectReference Include="..\..\src\VSMVVM.Core\VSMVVM.Core.csproj"
+		                  OutputItemType="Analyzer" />
 	</ItemGroup>
 
 </Project>

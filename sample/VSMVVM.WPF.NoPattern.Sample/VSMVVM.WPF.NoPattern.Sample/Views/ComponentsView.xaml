@@ -1,0 +1,105 @@
+<UserControl x:Class="VSMVVM.WPF.NoPattern.Sample.Views.ComponentsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:comp="clr-namespace:VSMVVM.WPF.Design.Components;assembly=VSMVVM.WPF.Design"
+             xmlns:wpfctrl="clr-namespace:VSMVVM.WPF.Controls;assembly=VSMVVM.WPF">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="{StaticResource P2}">
+        <StackPanel>
+            <TextBlock Text="Components"
+                       FontSize="{StaticResource Text2xl}"
+                       FontWeight="{StaticResource FontBold}"
+                       Foreground="{DynamicResource TextPrimary}"
+                       Margin="{StaticResource Mb4}"/>
+            <TextBlock Text="Custom components from VSMVVM.WPF.Design.Components — wired in code-behind, no MVVM."
+                       FontSize="{StaticResource TextSm}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       Margin="{StaticResource Mb6}"/>
+
+            <TextBlock Text="LoadingOverlay" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                       Foreground="{DynamicResource AccentPrimary}" Margin="{StaticResource Mb2}"/>
+            <StackPanel Margin="{StaticResource Mb6}">
+                <CheckBox x:Name="LoadingCheckBox"
+                          Content="Toggle Loading"
+                          Checked="LoadingCheckBox_Changed"
+                          Unchecked="LoadingCheckBox_Changed"
+                          Margin="{StaticResource Mb2}"/>
+                <Border Background="{DynamicResource BgSecondary}"
+                        CornerRadius="{StaticResource RoundedMd}"
+                        Height="{StaticResource H40}" Width="{StaticResource W96}"
+                        HorizontalAlignment="Left">
+                    <comp:LoadingOverlay x:Name="LoadingOverlay" LoadingText="Processing...">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="Content Area"
+                                       FontSize="{StaticResource TextLg}"
+                                       Foreground="{DynamicResource TextPrimary}"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Toggle the checkbox to see the overlay"
+                                       FontSize="{StaticResource TextSm}"
+                                       Foreground="{DynamicResource TextSecondary}"
+                                       HorizontalAlignment="Center" Margin="{StaticResource Mt1}"/>
+                        </StackPanel>
+                    </comp:LoadingOverlay>
+                </Border>
+            </StackPanel>
+
+            <TextBlock Text="JsonEditor" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                       Foreground="{DynamicResource AccentPrimary}" Margin="{StaticResource Mb2}"/>
+            <comp:JsonEditor x:Name="JsonEditor"
+                             Width="{StaticResource W96}" Height="{StaticResource H64}"
+                             HorizontalAlignment="Left"
+                             Margin="{StaticResource Mb6}"/>
+
+            <TextBlock Text="DateTimePicker" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                       Foreground="{DynamicResource AccentPrimary}" Margin="{StaticResource Mb2}"/>
+            <StackPanel Margin="{StaticResource Mb6}">
+                <comp:DateTimePicker x:Name="DateTimePicker"
+                                     Width="{StaticResource W64}"
+                                     HorizontalAlignment="Left"/>
+                <TextBlock x:Name="DateTimeLabel"
+                           FontSize="{StaticResource TextSm}"
+                           Foreground="{DynamicResource TextSecondary}"
+                           Margin="{StaticResource Mt2}"/>
+            </StackPanel>
+
+            <TextBlock Text="InfoPopup" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                       Foreground="{DynamicResource AccentPrimary}" Margin="{StaticResource Mb2}"/>
+            <StackPanel Orientation="Horizontal" Margin="{StaticResource Mb6}">
+                <TextBlock Text="Click the ? button for info"
+                           FontSize="{StaticResource TextSm}"
+                           Foreground="{DynamicResource TextSecondary}"
+                           VerticalAlignment="Center"
+                           Margin="{StaticResource Mr2}"/>
+                <comp:InfoPopup Title="InfoPopup Demo"
+                                Description="This popup provides contextual help. Title and Description are simple XAML attributes — no binding needed."/>
+            </StackPanel>
+
+            <TextBlock Text="ColorPicker" FontSize="{StaticResource TextBase}" FontWeight="{StaticResource FontSemibold}"
+                       Foreground="{DynamicResource AccentPrimary}" Margin="{StaticResource Mb2}"/>
+            <TextBlock Text="Code-behind subscribes to SelectedColorProperty changes via DependencyPropertyDescriptor."
+                       FontSize="{StaticResource TextSm}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       Margin="{StaticResource Mb2}"/>
+            <StackPanel Orientation="Horizontal" Margin="{StaticResource Mb6}">
+                <wpfctrl:ColorPicker x:Name="ColorPicker" Margin="{StaticResource Mr3}"/>
+                <StackPanel VerticalAlignment="Top">
+                    <TextBlock Text="Live preview:"
+                               Foreground="{DynamicResource TextSecondary}"
+                               FontSize="{StaticResource TextSm}"
+                               Margin="{StaticResource Mb1}"/>
+                    <Border x:Name="ColorPreview"
+                            Width="160" Height="80"
+                            BorderBrush="{DynamicResource BorderDefault}"
+                            BorderThickness="{StaticResource Border}"
+                            CornerRadius="{StaticResource RoundedMd}"
+                            Margin="{StaticResource Mb2}"/>
+                    <Button x:Name="ColorSampleButton"
+                            Content="Sample Button"
+                            Foreground="White"
+                            Padding="{StaticResource Px3Py2}"
+                            HorizontalAlignment="Left"/>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

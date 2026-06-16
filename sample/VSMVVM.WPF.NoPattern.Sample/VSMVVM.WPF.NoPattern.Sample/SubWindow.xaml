@@ -1,0 +1,28 @@
+<Window x:Class="VSMVVM.WPF.NoPattern.Sample.SubWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Style="{StaticResource VSMVVMWindowStyle}"
+        Title="Sub Window"
+        Width="400" Height="280"
+        WindowStartupLocation="CenterOwner">
+    <Grid>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock Text="Shared Counter"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource TextSecondary}"
+                       FontSize="{StaticResource TextSm}"/>
+            <TextBlock x:Name="CountText"
+                       Text="0"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource AccentPrimary}"
+                       FontSize="{StaticResource Text4xl}"
+                       FontWeight="{StaticResource FontBold}"
+                       FontFamily="Consolas"
+                       Margin="{StaticResource Mt2}"/>
+            <Button Content="Increment from Sub"
+                    HorizontalAlignment="Center"
+                    Margin="{StaticResource Mt4}"
+                    Click="Increment_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

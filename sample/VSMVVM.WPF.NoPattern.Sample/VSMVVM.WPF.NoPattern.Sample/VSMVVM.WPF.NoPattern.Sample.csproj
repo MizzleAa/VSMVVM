@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="vsmvvm.wpf" Version="1.2.7" />
-    <PackageReference Include="vsmvvm.wpf.design" Version="1.2.7" />
+    <PackageReference Include="vsmvvm.wpf" Version="1.2.10" />
+    <PackageReference Include="vsmvvm.wpf.design" Version="1.2.10" />
   </ItemGroup>
 
 </Project>

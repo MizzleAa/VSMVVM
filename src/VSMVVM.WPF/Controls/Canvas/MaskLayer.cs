@@ -410,7 +410,11 @@ namespace VSMVVM.WPF.Controls
         /// </summary>
         public void Cleanup()
         {
-            DisplayImage = null;
+            // 모든 DP 갱신은 SetCurrentValue/SetValue(key) 로 — 직접 `DP = null` 은 local value 우선순위로
+            // 호출자가 걸어둔 binding 을 끊는다 (WPF DP value precedence). Cleanup 의 contract 는
+            // "메모리 해제" 이지 "binding 끊기" 가 아니다. PixelInfo RGB 가 그룹 전환 후 안 보이던 버그의 원인.
+            // DisplayImage 는 read-only DP — DependencyPropertyKey 로 SetValue.
+            SetValue(DisplayImagePropertyKey, null);
             _displayBitmap = null;
             _sourcePixels = null;
             _sourceGradient = null;
@@ -422,10 +426,16 @@ namespace VSMVVM.WPF.Controls
             _diffInstancesBefore = null;
             _layers.Clear();
             _instances.Clear();
-            SelectedInstance = null;
-            SelectedInstanceId = MaskInstanceCollection.BackgroundId;
-            IsVertexEditMode = false;
-            SourceImage = null;
+            SetCurrentValue(SelectedInstanceProperty, null);
+            SetCurrentValue(SelectedInstanceIdProperty, MaskInstanceCollection.BackgroundId);
+            SetCurrentValue(IsVertexEditModeProperty, false);
+            // 차원 리셋: _width/_height 가 stale 상태로 남으면 다음 그룹의 SourceImage 가 먼저 set 될 때
+            // RebuildSourceCaches 가 이전 차원으로 _sourcePixels 를 잘못 채움 (PixelInfo RGB stale 버그).
+            _width = 0;
+            _height = 0;
+            SetCurrentValue(MaskWidthProperty, 0);
+            SetCurrentValue(MaskHeightProperty, 0);
+            SetCurrentValue(SourceImageProperty, null);
 
             System.Runtime.GCSettings.LargeObjectHeapCompactionMode = System.Runtime.GCLargeObjectHeapCompactionMode.CompactOnce;
             System.GC.Collect(2, System.GCCollectionMode.Aggressive, true, true);
@@ -2628,11 +2638,13 @@ namespace VSMVVM.WPF.Controls
             BitmapSource toRead = src;
             if (src.PixelWidth != _width || src.PixelHeight != _height || src.Format != PixelFormats.Bgra32)
             {
-                // 스케일 + 포맷 변환.
+                // 스케일 + 포맷 변환. Freeze 로 lazy wrapper 의 평가 시점을 확정해 CopyPixels race 차단.
                 var scaleX = (double)_width / src.PixelWidth;
                 var scaleY = (double)_height / src.PixelHeight;
                 var scaled = new TransformedBitmap(src, new ScaleTransform(scaleX, scaleY));
-                toRead = new FormatConvertedBitmap(scaled, PixelFormats.Bgra32, null, 0);
+                var converted = new FormatConvertedBitmap(scaled, PixelFormats.Bgra32, null, 0);
+                converted.Freeze();
+                toRead = converted;
             }
             var buf = new byte[_width * _height * 4];
             toRead.CopyPixels(buf, _width * 4, 0);

@@ -1,7 +1,7 @@
 # VSMVVM
 
 [![CI](https://github.com/MizzleAa/VSMVVM/actions/workflows/ci.yml/badge.svg)](https://github.com/MizzleAa/VSMVVM/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-388%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-398%20passing-brightgreen)](#testing)
 [![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20net9.0-blue)](#testing)
 [![NuGet](https://img.shields.io/nuget/v/VSMVVM.Core?label=NuGet)](https://www.nuget.org/packages/VSMVVM.Core/)
 
@@ -24,6 +24,8 @@ GitHub Actions 에서 빌드/테스트되고 [nuget.org](https://www.nuget.org/p
 ## Installation
 
 [nuget.org](https://www.nuget.org/packages?q=VSMVVM) 에서 설치합니다.
+
+### 패키지 설치
 
 ```bash
 dotnet add package VSMVVM.WPF
@@ -570,13 +572,13 @@ dotnet test tests/VSMVVM.Core.Tests/
 dotnet test tests/VSMVVM.WPF.Tests/
 ```
 
-### 현재 테스트 수치 (v1.2.7)
+### 현재 테스트 수치 (v1.2.10)
 
 | Suite | net8.0 | net9.0 | Total | Coverage |
 |---|---:|---:|---:|---|
 | VSMVVM.Core.Tests | 165 | 165 | **330** | DI, Guard, Messenger, ViewModelBase, RelayCommand, AsyncRelayCommand, StateStore, ObservableValidator, BatchObservableCollection, Logging (ILoggerService + `[Log]` for Command/Property/ObservableValidator + CommandParameter 보간), RegionManager (Back/Forward, DisplayName) |
-| VSMVVM.WPF.Tests | 29 | 29 | **58** | ServiceLocator, DialogResult, Canvas (Mask, Histogram), Behaviors |
-| **합계** | **194** | **194** | **388** | |
+| VSMVVM.WPF.Tests | 34 | 34 | **68** | ServiceLocator, DialogResult, Canvas (Mask, Histogram, MaskLayer source cache invalidation + Cleanup binding preservation), Behaviors |
+| **합계** | **199** | **199** | **398** | |
 
 ---
 

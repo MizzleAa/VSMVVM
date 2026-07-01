@@ -1,7 +1,7 @@
 # VSMVVM
 
-[![CI](https://github.com/mizzleaaa/VSMVVM/actions/workflows/ci.yml/badge.svg)](https://github.com/mizzleaaa/VSMVVM/actions/workflows/ci.yml)
-[![Publish](https://github.com/mizzleaaa/VSMVVM/actions/workflows/publish-nuget.yml/badge.svg)](https://github.com/mizzleaaa/VSMVVM/actions/workflows/publish-nuget.yml)
+[![CI](https://github.com/MizzleAa/VSMVVM/actions/workflows/ci.yml/badge.svg)](https://github.com/MizzleAa/VSMVVM/actions/workflows/ci.yml)
+[![Publish](https://github.com/MizzleAa/VSMVVM/actions/workflows/publish-nuget.yml/badge.svg)](https://github.com/MizzleAa/VSMVVM/actions/workflows/publish-nuget.yml)
 [![Tests](https://img.shields.io/badge/tests-727%20passing-brightgreen)](#testing)
 [![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20net9.0-blue)](#testing)
 [![NuGet](https://img.shields.io/nuget/v/VSMVVM.Core?label=NuGet)](https://www.nuget.org/packages/VSMVVM.Core/)

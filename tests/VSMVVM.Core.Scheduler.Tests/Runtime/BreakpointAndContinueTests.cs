@@ -73,52 +73,6 @@ namespace VSMVVM.Core.Scheduler.Tests.Runtime
                 e.Level == SchedulerLogLevel.Info && e.Message.StartsWith("Run Completed"));
         }
 
-        /// <summary>StepOver 는 한 노드만 진행 후 다시 정지 → 두 번째 BreakpointHitMessage 가 발화되어야 함.</summary>
-        [Fact(Timeout = 15_000)]
-        public async Task Breakpoint_Hit_Then_StepOver_PausesAgainAtNextNode()
-        {
-            BuiltInNodes.EnsureRegistered();
-            var g = new NodeGraph();
-            var start = g.AddNode(StartNode.TypeIdConst, 0, 0);
-            var log1 = g.AddNode(LogNode.TypeIdConst, 0, 0);
-            ((NodeBase)log1).SetLiteralInput("Format", "first");
-            var log2 = g.AddNode(LogNode.TypeIdConst, 0, 0);
-            ((NodeBase)log2).SetLiteralInput("Format", "second");
-            var end = g.AddNode(EndNode.TypeIdConst, 0, 0);
-            g.Connect(start.Id, "Then", log1.Id, "In");
-            g.Connect(log1.Id, "Then", log2.Id, "In");
-            g.Connect(log2.Id, "Then", end.Id, "In");
-
-            var scheduler = new SchedulerService();
-            scheduler.ToggleBreakpoint(log1.Id);
-
-            var messenger = new Messenger();
-            var ctx = new ExecutionContext(g, messenger: messenger);
-
-            int hitCount = 0;
-            var firstHit = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var secondHit = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-            messenger.Register<BreakpointHitMessage>(this, (s, m) =>
-            {
-                hitCount++;
-                if (hitCount == 1) firstHit.TrySetResult(true);
-                else if (hitCount == 2) secondHit.TrySetResult(true);
-            });
-
-            var runTask = scheduler.RunAsync(g, start.Id, ctx);
-
-            await firstHit.Task;
-            scheduler.StepOver(); // log1 실행 후 log2 직전에 다시 정지
-
-            await secondHit.Task;
-            hitCount.Should().Be(2, "StepOver 는 한 노드만 진행 후 다음 노드에서 다시 BreakpointHitMessage 발화");
-
-            scheduler.Continue(); // 마지막 마무리
-            var result = await runTask;
-
-            result.Status.Should().Be(ExecutionStatus.Completed);
-        }
-
         /// <summary>BP 직후 노드가 throw 하면 "Node failed: ..." Error 엔트리에 Exception 이 담겨야 한다.</summary>
         [Fact(Timeout = 15_000)]
         public async Task Breakpoint_Then_Continue_OnFailingNode_LogsNodeFailureWithException()

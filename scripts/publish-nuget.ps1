@@ -3,8 +3,10 @@
     VSMVVM NuGet 패키지 빌드/팩/푸시 자동화 스크립트
 
 .DESCRIPTION
-    VSMVVM.Core, VSMVVM.WPF, VSMVVM.WPF.Design 세 패키지를
-    의존성 순서(Core -> WPF -> Design)대로 빌드, 팩, NuGet.org에 푸시합니다.
+    VSMVVM 의 NuGet 패키지 7종을 의존성 순서대로 빌드, 팩, NuGet.org 에 푸시합니다.
+
+    Core 그룹: VSMVVM.Core, VSMVVM.Core.Scheduler, VSMVVM.Core.Scheduler.Scripting
+    WPF 그룹:  VSMVVM.WPF, VSMVVM.WPF.Design, VSMVVM.WPF.Scheduler, VSMVVM.WPF.Scheduler.Editor
 
 .PARAMETER Version
     배포할 버전 (예: 1.0.1). 지정하면 Directory.Build.props의 <Version>을 갱신합니다.
@@ -52,8 +54,12 @@ if (-not (Test-Path $propsFile)) {
 
 $projects = @(
     "src/VSMVVM.Core/VSMVVM.Core.csproj",
+    "src/VSMVVM.Core.Scheduler/VSMVVM.Core.Scheduler.csproj",
+    "src/VSMVVM.Core.Scheduler.Scripting/VSMVVM.Core.Scheduler.Scripting.csproj",
     "src/VSMVVM.WPF/VSMVVM.WPF.csproj",
-    "src/VSMVVM.WPF.Design/VSMVVM.WPF.Design.csproj"
+    "src/VSMVVM.WPF.Design/VSMVVM.WPF.Design.csproj",
+    "src/VSMVVM.WPF.Scheduler/VSMVVM.WPF.Scheduler.csproj",
+    "src/VSMVVM.WPF.Scheduler.Editor/VSMVVM.WPF.Scheduler.Editor.csproj"
 )
 
 function Write-Step($msg) {
@@ -108,7 +114,15 @@ if ($SkipPush) {
     return
 }
 
-$packageIds = @("VSMVVM.Core", "VSMVVM.WPF", "VSMVVM.WPF.Design")
+$packageIds = @(
+    "VSMVVM.Core",
+    "VSMVVM.Core.Scheduler",
+    "VSMVVM.Core.Scheduler.Scripting",
+    "VSMVVM.WPF",
+    "VSMVVM.WPF.Design",
+    "VSMVVM.WPF.Scheduler",
+    "VSMVVM.WPF.Scheduler.Editor"
+)
 foreach ($id in $packageIds) {
     $pkg = Join-Path $OutputDir "$id.$Version.nupkg"
     if (-not (Test-Path $pkg)) {
@@ -121,6 +135,6 @@ foreach ($id in $packageIds) {
 
 Write-Step "완료!"
 Write-Host "인덱싱에 최대 1시간 소요될 수 있습니다."
-Write-Host "   https://www.nuget.org/packages/VSMVVM.Core/$Version"
-Write-Host "   https://www.nuget.org/packages/VSMVVM.WPF/$Version"
-Write-Host "   https://www.nuget.org/packages/VSMVVM.WPF.Design/$Version"
+foreach ($id in $packageIds) {
+    Write-Host "   https://www.nuget.org/packages/$id/$Version"
+}

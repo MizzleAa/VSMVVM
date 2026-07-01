@@ -74,8 +74,12 @@ jobs:
           New-Item -ItemType Directory -Force -Path ./nupkgs | Out-Null
           foreach ($p in @(
             'src/VSMVVM.Core/VSMVVM.Core.csproj',
+            'src/VSMVVM.Core.Scheduler/VSMVVM.Core.Scheduler.csproj',
+            'src/VSMVVM.Core.Scheduler.Scripting/VSMVVM.Core.Scheduler.Scripting.csproj',
             'src/VSMVVM.WPF/VSMVVM.WPF.csproj',
-            'src/VSMVVM.WPF.Design/VSMVVM.WPF.Design.csproj'
+            'src/VSMVVM.WPF.Design/VSMVVM.WPF.Design.csproj',
+            'src/VSMVVM.WPF.Scheduler/VSMVVM.WPF.Scheduler.csproj',
+            'src/VSMVVM.WPF.Scheduler.Editor/VSMVVM.WPF.Scheduler.Editor.csproj'
           )) {
             dotnet pack $p -c Release -o ./nupkgs --no-build
             if ($LASTEXITCODE -ne 0) { throw "pack failed: $p" }
@@ -95,7 +99,15 @@ jobs:
         run: |
           if (-not $env:NUGET_API_KEY) { throw 'NUGET_API_KEY secret is not set.' }
           $v = '${{ steps.ver.outputs.version }}'
-          foreach ($id in @('VSMVVM.Core','VSMVVM.WPF','VSMVVM.WPF.Design')) {
+          foreach ($id in @(
+            'VSMVVM.Core',
+            'VSMVVM.Core.Scheduler',
+            'VSMVVM.Core.Scheduler.Scripting',
+            'VSMVVM.WPF',
+            'VSMVVM.WPF.Design',
+            'VSMVVM.WPF.Scheduler',
+            'VSMVVM.WPF.Scheduler.Editor'
+          )) {
             $pkg = "./nupkgs/$id.$v.nupkg"
             if (-not (Test-Path $pkg)) { throw "package not found: $pkg" }
             dotnet nuget push $pkg `

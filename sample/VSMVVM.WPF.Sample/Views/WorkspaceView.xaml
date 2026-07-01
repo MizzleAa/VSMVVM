@@ -1,0 +1,187 @@
+<UserControl x:Class="VSMVVM.WPF.Sample.Views.WorkspaceView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:scheduler="clr-namespace:VSMVVM.WPF.Scheduler.Controls;assembly=VSMVVM.WPF.Scheduler"
+             xmlns:paletteSvc="clr-namespace:VSMVVM.WPF.Scheduler.Services;assembly=VSMVVM.WPF.Scheduler"
+             Background="{DynamicResource BgPrimary}">
+
+    <!--
+        한 워크스페이스(탭)의 화면. DataContext = SampleWorkspaceViewModel.
+        구성:
+          • 상단: 워크스페이스 액션 바 (NodeGraphToolbar + Load/Save JSON + Edit Code/Variables + Demo 버튼들)
+          • 본문: 좌측 팔레트 / 중앙 캔버스 + 미니맵 / 우측 인스펙터
+          • 하단: 상태 줄
+          • 하단 탭: Log / Run History
+    -->
+    <DockPanel LastChildFill="True">
+
+        <!-- 상단 워크스페이스 액션 바 -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource BgSecondary}"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="{StaticResource Mb0_5}"
+                Padding="{DynamicResource P1}">
+            <DockPanel LastChildFill="False">
+                <DockPanel.Resources>
+                    <Style x:Key="CompactActionButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                        <Setter Property="FontSize" Value="11"/>
+                        <Setter Property="Padding" Value="{DynamicResource Px2Py0_5}"/>
+                        <Setter Property="MinHeight" Value="0"/>
+                        <Setter Property="DockPanel.Dock" Value="Right"/>
+                        <Setter Property="Margin" Value="{DynamicResource Ml1}"/>
+                    </Style>
+                </DockPanel.Resources>
+
+                <!-- 그래프 실행 컨트롤 (Run/Stop/Continue/Step/Breakpoint/Layout) -->
+                <scheduler:NodeGraphToolbar DockPanel.Dock="Left"
+                                            DataContext="{Binding GraphVm}"/>
+
+                <!-- 워크스페이스 전용 액션 -->
+                <Button Style="{StaticResource CompactActionButton}"
+                        Content="Load JSON" Command="{Binding LoadJsonCommand}"/>
+                <Button Style="{StaticResource CompactActionButton}"
+                        Content="Save JSON" Command="{Binding SaveJsonCommand}"/>
+                <Button Style="{StaticResource CompactActionButton}"
+                        Content="Variables…" Command="{Binding OpenVariablesManagerCommand}"/>
+                <Button Style="{StaticResource CompactActionButton}"
+                        Content="OpenCV Demo" Command="{Binding LoadOpenCvDemoCommand}"/>
+                <Button Style="{StaticResource CompactActionButton}"
+                        Content="Collection Demo" Command="{Binding LoadCollectionDemoCommand}"/>
+                <Button Style="{StaticResource CompactActionButton}"
+                        Content="Random Demo" Command="{Binding LoadRandomDemoCommand}"/>
+                <Button Style="{StaticResource CompactActionButton}"
+                        Content="Parameter Demo" Command="{Binding LoadParameterDemoCommand}"
+                        ToolTip="3 ParameterNode 정적 필드 + 1 MethodNode 가 함께 동작하는 시연 — 코드 에디터에서 필드 값을 바꾸면 다음 Run 부터 반영"/>
+            </DockPanel>
+        </Border>
+
+        <!-- 하단 상태 줄 (워크스페이스 단위 StatusMessage) -->
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource BgSecondary}"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="0,1,0,0"
+                Padding="{DynamicResource Px3Py1}">
+            <TextBlock Text="{Binding StatusMessage}"
+                       Foreground="{DynamicResource TextSecondary}"
+                       FontFamily="Cascadia Mono, Consolas"
+                       FontSize="12"/>
+        </Border>
+
+        <!-- 하단 탭: Log / Run History (워크스페이스 단위 LogVm/HistoryVm) -->
+        <TabControl DockPanel.Dock="Bottom"
+                    Height="220"
+                    Background="{DynamicResource BgPrimary}"
+                    Foreground="{DynamicResource TextPrimary}"
+                    BorderThickness="0,1,0,0"
+                    BorderBrush="{DynamicResource BorderDefault}">
+            <TabItem Header="Log">
+                <scheduler:SchedulerLogPanel DataContext="{Binding LogVm}"/>
+            </TabItem>
+            <TabItem Header="Run History">
+                <scheduler:ExecutionHistoryPanel DataContext="{Binding HistoryVm}"/>
+            </TabItem>
+        </TabControl>
+
+        <!-- 본문: 좌측 팔레트 / 중앙 캔버스 + 미니맵 / 우측 인스펙터 -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="320"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 좌측: 노드 팔레트 -->
+            <DockPanel Grid.Column="0" Background="{DynamicResource BgSecondary}">
+                <TextBlock DockPanel.Dock="Top"
+                           Text="Node Palette"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextPrimary}"
+                           Padding="{DynamicResource Px3Py2}"/>
+                <TextBlock DockPanel.Dock="Top"
+                           Text="드래그해서 캔버스에 추가"
+                           Foreground="{DynamicResource TextMuted}"
+                           FontSize="11"
+                           Padding="{DynamicResource Px3Py0_5}"/>
+                <!--
+                    팔레트 검색 박스 — DisplayName / TypeId / Category 부분 일치 (case-insensitive).
+                    UpdateSourceTrigger=PropertyChanged 로 매 키스트로크마다 필터링.
+                -->
+                <TextBox DockPanel.Dock="Top"
+                         Text="{Binding PaletteSearchQuery, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="{DynamicResource M2}"
+                         Padding="{DynamicResource Px2Py1}"
+                         FontSize="12"
+                         ToolTip="이름/TypeId/카테고리 검색"/>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding PaletteCategories}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type paletteSvc:NodePaletteCategory}">
+                                <Expander Header="{Binding Name}"
+                                          IsExpanded="True"
+                                          Foreground="{DynamicResource TextPrimary}"
+                                          Padding="{DynamicResource Px2Py1}">
+                                    <ItemsControl ItemsSource="{Binding Entries}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type paletteSvc:NodePaletteEntry}">
+                                                <!--
+                                                    드래그-앤-드롭으로 캔버스에 노드 추가.
+                                                    코드비하인드(WorkspaceView.xaml.cs)의 OnPaletteEntryMouseDown / OnPaletteEntryMouseMove 핸들러가
+                                                    임계값 넘으면 DragDrop.DoDragDrop 시작. NodeGraphCanvas 가 Drop 받아 라우티드 이벤트 발화.
+                                                    더블클릭(MouseLeftButtonUp 임계값 미만)은 캔버스 중앙에 추가 (AddNodeFromPaletteCommand fallback).
+                                                -->
+                                                <Border Padding="{DynamicResource Px2Py0_5}"
+                                                        Background="Transparent"
+                                                        Cursor="Hand"
+                                                        ToolTip="드래그해서 캔버스에 떨어뜨리세요"
+                                                        MouseLeftButtonDown="OnPaletteEntryMouseDown"
+                                                        MouseMove="OnPaletteEntryMouseMove">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding DisplayName}"
+                                                                   Foreground="{DynamicResource TextPrimary}"
+                                                                   FontSize="12"/>
+                                                        <TextBlock Text="{Binding TypeId}"
+                                                                   Foreground="{DynamicResource TextMuted}"
+                                                                   FontSize="10"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Expander>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+
+            <Border Grid.Column="1" Width="1" Background="{DynamicResource BorderDefault}"/>
+
+            <!-- 중앙: 노드 그래프 캔버스 + 미니맵 -->
+            <Grid Grid.Column="2">
+                <scheduler:NodeGraphCanvas x:Name="GraphCanvas"
+                                            Graph="{Binding GraphVm}"
+                                            ClipToBounds="True"/>
+                <Border HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="{DynamicResource M3}"
+                        Width="220" Height="140"
+                        Background="{DynamicResource BgSecondary}"
+                        BorderBrush="{DynamicResource BorderDefault}"
+                        BorderThickness="1"
+                        CornerRadius="{DynamicResource Rounded}">
+                    <scheduler:NodeGraphMiniMap Graph="{Binding GraphVm}"
+                                                TargetCanvas="{Binding ElementName=GraphCanvas}"/>
+                </Border>
+            </Grid>
+
+            <Border Grid.Column="3" Width="1" Background="{DynamicResource BorderDefault}"/>
+
+            <!-- 우측: 인스펙터 -->
+            <scheduler:NodeInspectorPanel Grid.Column="4"
+                                          DataContext="{Binding GraphVm.SelectedNode}"/>
+        </Grid>
+    </DockPanel>
+</UserControl>

@@ -158,6 +158,9 @@ namespace VSMVVM.WPF.Sample.ViewModels
         [RelayCommand]
         private void NavigateLogging() => DoNavigate("LoggingView");
 
+        [RelayCommand]
+        private void NavigateScheduler() => DoNavigate("SchedulerDemoView");
+
         #endregion
     }
 }

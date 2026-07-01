@@ -30,6 +30,24 @@ namespace VSMVVM.WPF.Controls
                 typeof(MiniMapControl),
                 new PropertyMetadata(null, OnTargetCanvasChanged));
 
+        /// <summary>
+        /// ImageSource 가 없을 때 콘텐츠 영역에 깔리는 fallback 배경 브러시.
+        /// 기본 DimGray 유지(원본 동작). null 이거나 Transparent 면 콘텐츠 영역 배경을 그리지 않음 —
+        /// NodeGraphMiniMap 처럼 자체적으로 콘텐츠를 OnRender 로 그리는 서브클래스에서 회색 띠 제거용.
+        /// </summary>
+        public static readonly DependencyProperty ContentBackgroundProperty =
+            DependencyProperty.Register(
+                nameof(ContentBackground),
+                typeof(Brush),
+                typeof(MiniMapControl),
+                new FrameworkPropertyMetadata(Brushes.DimGray, FrameworkPropertyMetadataOptions.AffectsRender));
+
+        public Brush? ContentBackground
+        {
+            get => (Brush?)GetValue(ContentBackgroundProperty);
+            set => SetValue(ContentBackgroundProperty, value);
+        }
+
         public static readonly DependencyProperty ImageSourceProperty =
             DependencyProperty.Register(
                 nameof(ImageSource),
@@ -262,9 +280,18 @@ namespace VSMVVM.WPF.Controls
             var contentRect = new Rect(offX, offY, drawW, drawH);
 
             if (ImageSource != null)
+            {
                 dc.DrawImage(ImageSource, contentRect);
+            }
             else
-                dc.DrawRectangle(Brushes.DimGray, null, contentRect);
+            {
+                // ContentBackground 가 null 또는 Transparent 면 fallback 회색 박스를 그리지 않음.
+                var bg = ContentBackground;
+                if (bg != null && !(bg is SolidColorBrush sb && sb.Color.A == 0))
+                {
+                    dc.DrawRectangle(bg, null, contentRect);
+                }
+            }
 
             // 마스크 오버레이 (인스턴스 색상). 배경 이미지 위에 알파 블렌딩.
             var maskImg = MaskOverlay?.DisplayImage;

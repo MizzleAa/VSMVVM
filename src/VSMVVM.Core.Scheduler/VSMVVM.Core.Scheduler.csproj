@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<LangVersion>12</LangVersion>
+		<Nullable>disable</Nullable>
+		<Platforms>AnyCPU;x64;x86</Platforms>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<EnforceExtendedAnalyzerRules>True</EnforceExtendedAnalyzerRules>
+		<CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
+		<RootNamespace>VSMVVM.Core.Scheduler</RootNamespace>
+		<AssemblyName>VSMVVM.Core.Scheduler</AssemblyName>
+		<PackageId>VSMVVM.Core.Scheduler</PackageId>
+		<Title>VSMVVM.Core.Scheduler</Title>
+		<Description>Blueprint-style workflow automation engine for VSMVVM. Graph model, nodes, execution engine.</Description>
+		<PackageTags>scheduler;workflow;node-graph;blueprint;vsmvvm</PackageTags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.12.0" />
+		<PackageReference Include="System.Text.Json" Version="8.0.5" />
+		<ProjectReference Include="..\VSMVVM.Core\VSMVVM.Core.csproj" />
+		<None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+	</ItemGroup>
+
+</Project>

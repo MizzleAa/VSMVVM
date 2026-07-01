@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Windows.Input;
 
 namespace VSMVVM.Core.MVVM
@@ -12,6 +13,8 @@ namespace VSMVVM.Core.MVVM
 
         private readonly Action _execute;
         private readonly Func<bool> _canExecute;
+        // Command 생성 시점의 SynchronizationContext (보통 UI 스레드) — RaiseCanExecuteChanged 마샬링용.
+        private readonly SynchronizationContext _capturedContext;
 
         #endregion
 
@@ -25,6 +28,7 @@ namespace VSMVVM.Core.MVVM
         {
             _execute = execute ?? throw new ArgumentNullException(nameof(execute));
             _canExecute = canExecute;
+            _capturedContext = SynchronizationContext.Current;
         }
 
         #endregion
@@ -51,11 +55,12 @@ namespace VSMVVM.Core.MVVM
         #region Public Methods
 
         /// <summary>
-        /// CanExecute 상태 변경을 UI에 알립니다.
+        /// CanExecute 상태 변경을 UI에 알립니다. 백그라운드 스레드에서 호출되어도 captured
+        /// <see cref="SynchronizationContext"/> 로 마샬링되어 WPF dispatcher access check 통과.
         /// </summary>
         public void RaiseCanExecuteChanged()
         {
-            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            CommandThreadMarshal.Invoke(_capturedContext, CanExecuteChanged, this);
         }
 
         #endregion
@@ -70,6 +75,7 @@ namespace VSMVVM.Core.MVVM
 
         private readonly Action<T> _execute;
         private readonly Func<T, bool> _canExecute;
+        private readonly SynchronizationContext _capturedContext;
 
         #endregion
 
@@ -83,6 +89,7 @@ namespace VSMVVM.Core.MVVM
         {
             _execute = execute ?? throw new ArgumentNullException(nameof(execute));
             _canExecute = canExecute;
+            _capturedContext = SynchronizationContext.Current;
         }
 
         #endregion
@@ -113,7 +120,7 @@ namespace VSMVVM.Core.MVVM
 
         public void RaiseCanExecuteChanged()
         {
-            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            CommandThreadMarshal.Invoke(_capturedContext, CanExecuteChanged, this);
         }
 
         #endregion

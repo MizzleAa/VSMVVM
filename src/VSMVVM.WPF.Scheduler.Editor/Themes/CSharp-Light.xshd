@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<!--
+  VSMVVM C# Light Highlighting — 600/700 톤 사용 (밝은 배경 위 가독성).
+-->
+<SyntaxDefinition name="C#" extensions=".cs" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+
+    <Color name="Comment"        foreground="#52525B" fontStyle="italic"/>  <!-- Zinc600 -->
+    <Color name="String"         foreground="#6D28D9"/>                     <!-- Violet700 -->
+    <Color name="Char"           foreground="#6D28D9"/>
+    <Color name="Number"         foreground="#15803D"/>                     <!-- Green700 -->
+    <Color name="Keyword"        foreground="#1D4ED8" fontWeight="bold"/>   <!-- Blue700 -->
+    <Color name="ContextKeyword" foreground="#0369A1"/>                     <!-- Sky700 -->
+    <Color name="TypeName"       foreground="#B45309"/>                     <!-- Amber700 -->
+    <Color name="Preprocessor"   foreground="#C2410C"/>                     <!-- Orange700 -->
+    <Color name="Punctuation"    foreground="#3F3F46"/>                     <!-- Zinc700 -->
+
+    <RuleSet ignoreCase="false">
+        <Span color="Comment" begin="//"/>
+        <Span color="Comment" multiline="true" begin="/\*" end="\*/"/>
+
+        <Span color="String">
+            <Begin>"</Begin>
+            <End>"</End>
+            <RuleSet>
+                <Span begin="\\" end="."/>
+            </RuleSet>
+        </Span>
+
+        <Span color="String" multiline="true" begin="@&quot;" end="&quot;"/>
+
+        <Span color="Char">
+            <Begin>'</Begin>
+            <End>'</End>
+            <RuleSet>
+                <Span begin="\\" end="."/>
+            </RuleSet>
+        </Span>
+
+        <Span color="Preprocessor" begin="^[\s]*#" end="$"/>
+
+        <Keywords color="Keyword">
+            <Word>abstract</Word>     <Word>as</Word>          <Word>base</Word>
+            <Word>break</Word>        <Word>case</Word>        <Word>catch</Word>
+            <Word>checked</Word>      <Word>class</Word>       <Word>const</Word>
+            <Word>continue</Word>     <Word>default</Word>     <Word>delegate</Word>
+            <Word>do</Word>           <Word>else</Word>        <Word>enum</Word>
+            <Word>event</Word>        <Word>explicit</Word>    <Word>extern</Word>
+            <Word>false</Word>        <Word>finally</Word>     <Word>fixed</Word>
+            <Word>for</Word>          <Word>foreach</Word>     <Word>goto</Word>
+            <Word>if</Word>           <Word>implicit</Word>    <Word>in</Word>
+            <Word>interface</Word>    <Word>internal</Word>    <Word>is</Word>
+            <Word>lock</Word>         <Word>namespace</Word>   <Word>new</Word>
+            <Word>null</Word>         <Word>operator</Word>    <Word>out</Word>
+            <Word>override</Word>     <Word>params</Word>      <Word>private</Word>
+            <Word>protected</Word>    <Word>public</Word>      <Word>readonly</Word>
+            <Word>ref</Word>          <Word>return</Word>      <Word>sealed</Word>
+            <Word>sizeof</Word>       <Word>stackalloc</Word>  <Word>static</Word>
+            <Word>struct</Word>       <Word>switch</Word>      <Word>this</Word>
+            <Word>throw</Word>        <Word>true</Word>        <Word>try</Word>
+            <Word>typeof</Word>       <Word>unchecked</Word>   <Word>unsafe</Word>
+            <Word>using</Word>        <Word>virtual</Word>     <Word>void</Word>
+            <Word>volatile</Word>     <Word>while</Word>
+        </Keywords>
+
+        <Keywords color="ContextKeyword">
+            <Word>add</Word>          <Word>async</Word>       <Word>await</Word>
+            <Word>dynamic</Word>      <Word>from</Word>        <Word>get</Word>
+            <Word>global</Word>       <Word>group</Word>       <Word>into</Word>
+            <Word>join</Word>         <Word>let</Word>         <Word>nameof</Word>
+            <Word>orderby</Word>      <Word>partial</Word>     <Word>record</Word>
+            <Word>remove</Word>       <Word>select</Word>      <Word>set</Word>
+            <Word>value</Word>        <Word>var</Word>         <Word>when</Word>
+            <Word>where</Word>        <Word>yield</Word>
+        </Keywords>
+
+        <Keywords color="TypeName">
+            <Word>bool</Word>         <Word>byte</Word>        <Word>char</Word>
+            <Word>decimal</Word>      <Word>double</Word>      <Word>float</Word>
+            <Word>int</Word>          <Word>long</Word>        <Word>object</Word>
+            <Word>sbyte</Word>        <Word>short</Word>       <Word>string</Word>
+            <Word>uint</Word>         <Word>ulong</Word>       <Word>ushort</Word>
+        </Keywords>
+
+        <Rule color="Number">
+            \b0[xX][0-9a-fA-F]+
+            |
+            (\b\d+(\.[0-9]+)?|\.[0-9]+)([eE][+-]?[0-9]+)?[fFdDmMlLuU]?
+        </Rule>
+
+        <Rule color="Punctuation">
+            [?,.;()\[\]{}+\-/%*&lt;&gt;^=~!&amp;|@]+
+        </Rule>
+    </RuleSet>
+</SyntaxDefinition>

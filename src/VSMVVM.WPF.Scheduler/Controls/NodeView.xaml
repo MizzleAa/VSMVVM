@@ -1,0 +1,177 @@
+<UserControl x:Class="VSMVVM.WPF.Scheduler.Controls.NodeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:VSMVVM.WPF.Scheduler.Converters"
+             xmlns:local="clr-namespace:VSMVVM.WPF.Scheduler.Controls"
+             MinWidth="160">
+    <UserControl.Resources>
+        <conv:BooleanToVisibilityConverterSafe x:Key="BoolToVisibility"/>
+    </UserControl.Resources>
+    <Border x:Name="RootBorder"
+            BorderThickness="1"
+            CornerRadius="{DynamicResource RoundedMd}"
+            Background="{DynamicResource BgSecondary}"
+            BorderBrush="{DynamicResource BorderDefault}">
+        <Border.Style>
+            <Style TargetType="Border">
+                <Style.Triggers>
+                    <!-- 선택 상태: 강조 보더 + Blue 글로우 -->
+                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource BorderFocus}"/>
+                        <Setter Property="BorderThickness" Value="2"/>
+                        <Setter Property="Effect">
+                            <Setter.Value>
+                                <DropShadowEffect Color="#60A5FA" BlurRadius="12" ShadowDepth="0" Opacity="0.85"/>
+                            </Setter.Value>
+                        </Setter>
+                    </DataTrigger>
+                    <!-- Run 진행 중 실행 흔적: Success(초록) 보더 유지 (글로우 없음) -->
+                    <DataTrigger Binding="{Binding HasExecutedInCurrentRun}" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource Success}"/>
+                        <Setter Property="BorderThickness" Value="2"/>
+                    </DataTrigger>
+                    <!-- 실행 실패: Error(빨강) 보더 + 글로우 (다음 Run 까지 유지되어 어떤 노드가 실패했는지 명확) -->
+                    <DataTrigger Binding="{Binding HasErrorInCurrentRun}" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource Error}"/>
+                        <Setter Property="BorderThickness" Value="2"/>
+                        <Setter Property="Effect">
+                            <Setter.Value>
+                                <DropShadowEffect Color="#EF4444" BlurRadius="14" ShadowDepth="0" Opacity="0.85"/>
+                            </Setter.Value>
+                        </Setter>
+                    </DataTrigger>
+                    <!-- 실행 중 (현재 노드): Success(초록) 글로우 + 펄스 -->
+                    <DataTrigger Binding="{Binding IsExecuting}" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource Success}"/>
+                        <Setter Property="BorderThickness" Value="2"/>
+                        <Setter Property="Effect">
+                            <Setter.Value>
+                                <DropShadowEffect Color="#22C55E" BlurRadius="18" ShadowDepth="0" Opacity="1.0"/>
+                            </Setter.Value>
+                        </Setter>
+                        <DataTrigger.EnterActions>
+                            <BeginStoryboard Name="PulseSB">
+                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                    <DoubleAnimation Storyboard.TargetProperty="Effect.BlurRadius"
+                                                     From="8" To="22" Duration="0:0:0.2"/>
+                                    <DoubleAnimation Storyboard.TargetProperty="Effect.Opacity"
+                                                     From="0.55" To="1.0" Duration="0:0:0.2"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </DataTrigger.EnterActions>
+                        <DataTrigger.ExitActions>
+                            <StopStoryboard BeginStoryboardName="PulseSB"/>
+                        </DataTrigger.ExitActions>
+                    </DataTrigger>
+                    <!--
+                        디버그 정지 위치 (현재 BP/Step 위치) — Warning(노란) 굵은 보더 + 글로우 + 느린 펄스.
+                        IDE 디버거의 "현재 명령" 강조와 같은 의미. 우선순위 최상 — 마지막 트리거가 적용.
+                    -->
+                    <DataTrigger Binding="{Binding IsCurrentBreakpoint}" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource Warning}"/>
+                        <Setter Property="BorderThickness" Value="3"/>
+                        <Setter Property="Effect">
+                            <Setter.Value>
+                                <DropShadowEffect Color="#F59E0B" BlurRadius="20" ShadowDepth="0" Opacity="1.0"/>
+                            </Setter.Value>
+                        </Setter>
+                        <DataTrigger.EnterActions>
+                            <BeginStoryboard Name="PausedPulseSB">
+                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                    <DoubleAnimation Storyboard.TargetProperty="Effect.BlurRadius"
+                                                     From="10" To="26" Duration="0:0:0.7"/>
+                                    <DoubleAnimation Storyboard.TargetProperty="Effect.Opacity"
+                                                     From="0.6" To="1.0" Duration="0:0:0.7"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </DataTrigger.EnterActions>
+                        <DataTrigger.ExitActions>
+                            <StopStoryboard BeginStoryboardName="PausedPulseSB"/>
+                        </DataTrigger.ExitActions>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- 헤더: 좌측 브레이크포인트 표시 + 타이틀 + 우측 마지막 실행 시간 (Phase I.3) -->
+            <Border Grid.Row="0"
+                    Background="{DynamicResource BgTertiary}"
+                    Padding="{DynamicResource Px2Py1}"
+                    CornerRadius="6,6,0,0">
+                <DockPanel LastChildFill="True">
+                    <!-- 우측: 마지막 실행 시간. HasElapsedSample일 때만 표시 + Slow/VerySlow에 따른 색상 트리거 -->
+                    <TextBlock DockPanel.Dock="Right"
+                               Text="{Binding LastElapsedMs, StringFormat={}{0:F1} ms}"
+                               VerticalAlignment="Center"
+                               Margin="{DynamicResource Ml2}"
+                               FontSize="10"
+                               FontFamily="Cascadia Mono, Consolas"
+                               Visibility="{Binding HasElapsedSample, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource TextMuted}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSlow}" Value="True">
+                                        <Setter Property="Foreground" Value="{DynamicResource Warning}"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsVerySlow}" Value="True">
+                                        <Setter Property="Foreground" Value="{DynamicResource Error}"/>
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- 좌측: 브레이크포인트 빨간 점 -->
+                    <Ellipse Width="8" Height="8"
+                             Fill="{DynamicResource Error}"
+                             VerticalAlignment="Center"
+                             Margin="{DynamicResource Mr1}"
+                             Visibility="{Binding HasBreakpoint, Converter={StaticResource BoolToVisibility}}"
+                             ToolTip="Breakpoint"/>
+
+                    <!-- 중앙: 타이틀 -->
+                    <TextBlock Text="{Binding DisplayName}"
+                               Foreground="{DynamicResource TextPrimary}"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </DockPanel>
+            </Border>
+
+            <!-- 본문: 좌측 입력 핀, 우측 출력 핀 -->
+            <Grid Grid.Row="1" Margin="{DynamicResource M1}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <ItemsControl Grid.Column="0"
+                              ItemsSource="{Binding InputPins}"
+                              HorizontalAlignment="Left">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <local:PinView Margin="{DynamicResource My0_5}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <ItemsControl Grid.Column="1"
+                              ItemsSource="{Binding OutputPins}"
+                              HorizontalAlignment="Right">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <local:PinView Margin="{DynamicResource My0_5}"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

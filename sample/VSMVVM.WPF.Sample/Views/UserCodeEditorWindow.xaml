@@ -1,0 +1,171 @@
+<Window x:Class="VSMVVM.WPF.Sample.Views.UserCodeEditorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
+        xmlns:editor="clr-namespace:VSMVVM.WPF.Scheduler.Editor.Controls;assembly=VSMVVM.WPF.Scheduler.Editor"
+        xmlns:vm="clr-namespace:VSMVVM.WPF.Scheduler.ViewModels;assembly=VSMVVM.WPF.Scheduler"
+        me:ViewModelLocator.AutoWireViewModel="True"
+        Style="{StaticResource VSMVVMWindowStyle}"
+        Title="User Code Editor" Width="1100" Height="720"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgPrimary}">
+
+    <DockPanel LastChildFill="True">
+
+        <!-- 하단 액션 바 -->
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource BgSecondary}"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="0,1,0,0"
+                Padding="{DynamicResource Px3Py2}">
+            <DockPanel LastChildFill="False">
+                <Button DockPanel.Dock="Right"
+                        Content="Close"
+                        Command="{Binding CloseCommand}"
+                        IsCancel="True"
+                        Margin="{DynamicResource Ml1}"
+                        ToolTip="다이얼로그 닫기 (편집은 유지)"/>
+                <Button DockPanel.Dock="Right"
+                        Content="Compile All"
+                        Command="{Binding CompileAllCommand}"
+                        Margin="{DynamicResource Ml1}"
+                        ToolTip="모든 조각 일괄 컴파일 + 등록"/>
+                <Button DockPanel.Dock="Right"
+                        Content="Compile This"
+                        Command="{Binding CompileThisCommand}"
+                        IsDefault="True"
+                        IsEnabled="{Binding HasSelectedSnippet}"
+                        Margin="{DynamicResource Ml1}"
+                        ToolTip="선택 조각만 컴파일 (Enter)"/>
+                <Button DockPanel.Dock="Right"
+                        Content="Toggle Theme"
+                        Command="{Binding ToggleThemeCommand}"
+                        Margin="{DynamicResource Ml1}"/>
+
+                <!-- 좌측: Status -->
+                <TextBlock DockPanel.Dock="Left"
+                           Text="{Binding Status}"
+                           VerticalAlignment="Center"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondary}"/>
+            </DockPanel>
+        </Border>
+
+        <!-- 본문: 좌측 조각 리스트 + 우측 에디터 -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 좌측: 조각 리스트 + 추가/삭제 -->
+            <DockPanel Grid.Column="0" Background="{DynamicResource BgSecondary}">
+                <Border DockPanel.Dock="Top"
+                        Background="{DynamicResource BgTertiary}"
+                        BorderBrush="{DynamicResource BorderDefault}"
+                        BorderThickness="0,0,0,1"
+                        Padding="{DynamicResource Px3Py2}">
+                    <DockPanel LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left"
+                                   Text="Code Snippets"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary}"
+                                   VerticalAlignment="Center"/>
+                        <Button DockPanel.Dock="Right"
+                                Content="−"
+                                FontWeight="Bold"
+                                Padding="6,0"
+                                MinHeight="0"
+                                IsEnabled="{Binding HasSelectedSnippet}"
+                                Margin="{DynamicResource Ml1}"
+                                Command="{Binding RemoveSelectedSnippetCommand}"
+                                ToolTip="선택 조각 삭제"/>
+                        <Button DockPanel.Dock="Right"
+                                Content="+"
+                                FontWeight="Bold"
+                                Padding="6,0"
+                                MinHeight="0"
+                                Command="{Binding AddSnippetCommand}"
+                                ToolTip="새 조각 추가 (카테고리는 [MethodNode(Category=...)] 에서 자동)"/>
+                    </DockPanel>
+                </Border>
+                <ListBox ItemsSource="{Binding Snippets}"
+                         SelectedItem="{Binding SelectedSnippet, Mode=TwoWay}"
+                         Background="{DynamicResource BgPrimary}"
+                         Foreground="{DynamicResource TextPrimary}"
+                         BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:UserCodeSnippet}">
+                            <StackPanel Margin="{DynamicResource Py1}">
+                                <TextBlock Text="{Binding Category}"
+                                           Foreground="{DynamicResource TextPrimary}"
+                                           FontFamily="Cascadia Mono, Consolas"
+                                           FontSize="12"/>
+                                <!-- LastCompile 이 null 이 아니고 실패면 에러 표시 -->
+                                <TextBlock Text="⚠ has errors"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource Error}"
+                                           Visibility="Collapsed">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding LastCompile.Success}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <!-- 컬럼 구분선 -->
+            <Border Grid.Column="1" Width="1" Background="{DynamicResource BorderDefault}"/>
+
+            <!-- 우측: 에디터 또는 안내문 (조각 없을 때) -->
+            <Grid Grid.Column="2">
+                <!-- 선택 조각 있을 때 에디터 -->
+                <editor:CodeNodeEditor SourceCode="{Binding SelectedSourceCode, Mode=TwoWay}"
+                                       Theme="{Binding EditorTheme}"
+                                       Diagnostics="{Binding SelectedDiagnostics}"
+                                       EnableCompletion="True"
+                                       Margin="{DynamicResource M2}">
+                    <editor:CodeNodeEditor.Style>
+                        <Style TargetType="editor:CodeNodeEditor">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasSelectedSnippet}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </editor:CodeNodeEditor.Style>
+                </editor:CodeNodeEditor>
+
+                <!-- 안내문 (조각 없을 때) -->
+                <TextBlock HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextMuted}"
+                           FontSize="13"
+                           TextAlignment="Center"
+                           Text="좌측 '+' 버튼으로 새 코드 조각을 추가하세요.&#x0a;[MethodNode(...)] 메서드는 함수 노드로, [ParameterNode(...)] 정적 필드는 파라미터 노드로 팔레트에 노출됩니다.">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasSelectedSnippet}" Value="False">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</Window>

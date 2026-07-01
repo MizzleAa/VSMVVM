@@ -1,0 +1,93 @@
+<UserControl x:Class="VSMVVM.WPF.Scheduler.Controls.PinView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:VSMVVM.WPF.Scheduler.Converters"
+             Background="Transparent">
+    <UserControl.Resources>
+        <conv:PinTypeBrushConverter x:Key="PinTypeBrushConverter"/>
+
+        <!--
+            강조 링 스타일. Opacity/Stroke/StrokeThickness 를 PinViewModel 의 3개 상태로 트리거.
+            우선순위: IsConnectionSource > IsCompatibleTarget > IsHovered (Style.Triggers 는 위→아래 평가, 마지막 매치가 win).
+            기본은 투명(Opacity=0) — 평소엔 안 보임.
+        -->
+        <Style x:Key="HighlightRingStyle" TargetType="Ellipse">
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="Fill" Value="Transparent"/>
+            <Setter Property="Stroke" Value="{DynamicResource AccentSecondary}"/>
+            <Setter Property="StrokeThickness" Value="2"/>
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsHovered}" Value="True">
+                    <Setter Property="Opacity" Value="0.7"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsCompatibleTarget}" Value="True">
+                    <Setter Property="Opacity" Value="0.9"/>
+                    <Setter Property="Stroke" Value="{DynamicResource Success}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsConnectionSource}" Value="True">
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="Stroke" Value="{DynamicResource Warning}"/>
+                    <Setter Property="StrokeThickness" Value="3"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- 라벨 색 — 호버/호환/소스 상태에서 강조 -->
+        <Style x:Key="LabelStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="{DynamicResource Ml1_5}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsHovered}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsCompatibleTarget}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsConnectionSource}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource Warning}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!--
+            핀 글리프 슬롯 — 외곽 강조 링(투명 기본) + Exec 삼각형 또는 Data 원.
+            슬롯 크기 12→20 으로 키워서 호버 hit area 도 같이 확대. 글리프 자체 크기는 유지.
+        -->
+        <Grid x:Name="GlyphSlot"
+              Grid.Column="0"
+              Width="20" Height="20"
+              VerticalAlignment="Center">
+            <Ellipse Style="{StaticResource HighlightRingStyle}"/>
+            <!-- Exec 삼각형 (IsExec일 때만 보임) -->
+            <Polygon Points="0,0 0,12 10,6"
+                     Fill="{DynamicResource TextPrimary}"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     Visibility="{Binding IsExec, Converter={x:Static conv:BooleanToVisibilityConverterSafe.Instance}}"/>
+            <!-- Data 원 -->
+            <Ellipse Width="10" Height="10"
+                     Fill="{Binding ValueType, Converter={StaticResource PinTypeBrushConverter}}"
+                     Stroke="{DynamicResource BorderDefault}"
+                     StrokeThickness="1"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     Visibility="{Binding Kind, Converter={x:Static conv:PinKindToVisibilityConverter.DataInstance}}"/>
+        </Grid>
+
+        <!-- 핀 이름 -->
+        <TextBlock Grid.Column="1"
+                   Text="{Binding DisplayName}"
+                   Style="{StaticResource LabelStyle}"/>
+    </Grid>
+</UserControl>

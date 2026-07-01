@@ -1,0 +1,83 @@
+<UserControl x:Class="VSMVVM.WPF.Scheduler.Controls.ExecutionHistoryPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:VSMVVM.WPF.Scheduler.Controls"
+             xmlns:runtime="clr-namespace:VSMVVM.Core.Scheduler.Runtime;assembly=VSMVVM.Core.Scheduler"
+             xmlns:vm="clr-namespace:VSMVVM.WPF.Scheduler.ViewModels"
+             d:DataContext="{d:DesignInstance Type=vm:ExecutionHistoryViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+    <Border Background="{DynamicResource BgPrimary}"
+            BorderBrush="{DynamicResource BorderDefault}"
+            BorderThickness="0,1,0,0">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <DockPanel Grid.Column="0">
+                <Border DockPanel.Dock="Top"
+                        Background="{DynamicResource BgTertiary}"
+                        BorderBrush="{DynamicResource BorderDefault}"
+                        BorderThickness="0,0,0,1"
+                        Padding="{DynamicResource Px3Py1}">
+                    <TextBlock Text="Run History"
+                               Foreground="{DynamicResource TextPrimary}"
+                               FontWeight="Bold"/>
+                </Border>
+                <ListBox ItemsSource="{Binding Runs}"
+                         SelectedItem="{Binding SelectedRun}"
+                         Background="{DynamicResource BgPrimary}"
+                         Foreground="{DynamicResource TextPrimary}"
+                         BorderThickness="0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type runtime:ExecutionRun}">
+                            <Border Padding="{DynamicResource Px2Py0_5}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding StartedAt, StringFormat={}{0:HH:mm:ss}}"
+                                               Foreground="{DynamicResource TextPrimary}"
+                                               FontFamily="Cascadia Mono, Consolas"
+                                               FontSize="12"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Status}"
+                                                   Foreground="{DynamicResource TextSecondary}"
+                                                   FontSize="11"
+                                                   Margin="{DynamicResource Mr2}"/>
+                                        <TextBlock Text="{Binding Elapsed, StringFormat={}{0:fff} ms}"
+                                                   Foreground="{DynamicResource TextMuted}"
+                                                   FontSize="11"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <Border Grid.Column="1"
+                    Width="1"
+                    Background="{DynamicResource BorderDefault}"/>
+
+            <DockPanel Grid.Column="2">
+                <Border DockPanel.Dock="Top"
+                        Background="{DynamicResource BgTertiary}"
+                        BorderBrush="{DynamicResource BorderDefault}"
+                        BorderThickness="0,0,0,1"
+                        Padding="{DynamicResource Px3Py1}">
+                    <TextBlock Text="Gantt"
+                               Foreground="{DynamicResource TextPrimary}"
+                               FontWeight="Bold"/>
+                </Border>
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Auto">
+                    <local:GanttChartView Run="{Binding SelectedRun}"
+                                          Breakpoints="{Binding BreakpointNodeIds}"
+                                          MinHeight="60"/>
+                </ScrollViewer>
+            </DockPanel>
+        </Grid>
+    </Border>
+</UserControl>

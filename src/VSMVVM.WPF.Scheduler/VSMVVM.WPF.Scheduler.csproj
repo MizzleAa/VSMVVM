@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net8.0-windows;net9.0-windows</TargetFrameworks>
+		<UseWPF>true</UseWPF>
+		<LangVersion>12</LangVersion>
+		<Nullable>disable</Nullable>
+		<Platforms>AnyCPU;x64;x86</Platforms>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
+		<RootNamespace>VSMVVM.WPF.Scheduler</RootNamespace>
+		<AssemblyName>VSMVVM.WPF.Scheduler</AssemblyName>
+		<PackageId>VSMVVM.WPF.Scheduler</PackageId>
+		<Title>VSMVVM.WPF.Scheduler</Title>
+		<Description>Blueprint-style node graph editor controls for VSMVVM Scheduler. NodeGraphCanvas + ViewModels with Tailwind-inspired theming.</Description>
+		<PackageTags>scheduler;wpf;node-graph;blueprint;vsmvvm</PackageTags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VSMVVM.Core\VSMVVM.Core.csproj"
+		                  OutputItemType="Analyzer" />
+		<ProjectReference Include="..\VSMVVM.Core.Scheduler\VSMVVM.Core.Scheduler.csproj"
+		                  OutputItemType="Analyzer" />
+		<ProjectReference Include="..\VSMVVM.WPF\VSMVVM.WPF.csproj" />
+		<ProjectReference Include="..\VSMVVM.WPF.Design\VSMVVM.WPF.Design.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="VSMVVM.WPF.Scheduler.Tests" />
+	</ItemGroup>
+
+</Project>

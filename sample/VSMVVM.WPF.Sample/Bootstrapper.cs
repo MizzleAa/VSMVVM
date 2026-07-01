@@ -1,8 +1,12 @@
 using System.Threading;
 using VSMVVM.Core.MVVM;
+using VSMVVM.Core.Scheduler.Compilation;
+using VSMVVM.Core.Scheduler.Runtime;
+using VSMVVM.Core.Scheduler.Scripting;
 using VSMVVM.WPF.Sample.ViewModels;
 using VSMVVM.WPF.Sample.Views;
 using VSMVVM.WPF.Sample.Services;
+using VSMVVM.WPF.Scheduler.Services;
 using VSMVVM.WPF.Services;
 
 namespace VSMVVM.WPF.Sample
@@ -19,6 +23,7 @@ namespace VSMVVM.WPF.Sample
             serviceCollection.AddSingleton<IDispatcherService, WPFDispatcherService>();
             serviceCollection.AddSingleton<IUndoRedoService, UndoRedoService>();
             serviceCollection.AddSingleton<IFileDialogService, WpfFileDialogService>();
+            serviceCollection.AddSingleton<IWindowService, WindowService>();
 
             serviceCollection.AddTransient<MainWindow>();
             serviceCollection.AddTransient<HomeView>();
@@ -39,6 +44,10 @@ namespace VSMVVM.WPF.Sample
             serviceCollection.AddTransient<ChartsDemoView>();
             serviceCollection.AddTransient<LoggingView>();
             serviceCollection.AddTransient<SubWindow>();
+            serviceCollection.AddTransient<SchedulerDemoView>();
+            serviceCollection.AddTransient<UserCodeEditorWindow>();
+            serviceCollection.AddTransient<VariablesManagerWindow>();
+            serviceCollection.AddTransient<ImageViewWindow>();
 
             serviceCollection.AddTransient<MainViewModel>();
             serviceCollection.AddTransient<HomeViewModel>();
@@ -59,6 +68,16 @@ namespace VSMVVM.WPF.Sample
             serviceCollection.AddTransient<ChartsDemoViewModel>();
             serviceCollection.AddTransient<LoggingViewModel>();
             serviceCollection.AddTransient<SubWindowViewModel>();
+            serviceCollection.AddTransient<SchedulerDemoViewModel>();
+            serviceCollection.AddTransient<UserCodeEditorWindowViewModel>();
+            serviceCollection.AddTransient<VariablesManagerWindowViewModel>();
+            serviceCollection.AddTransient<ImageViewWindowViewModel>();
+
+            // === Scheduler 서비스 (Phase 9 PoC) ===
+            serviceCollection.AddSingleton<IMessenger, Messenger>();
+            serviceCollection.AddSingleton<ISchedulerService, SchedulerService>();
+            serviceCollection.AddSingleton<ICompilationService, RoslynCompilationService>();
+            serviceCollection.AddSingleton<INodePaletteService, NodePaletteService>();
 
             // DI Lifetime demo services
             serviceCollection.AddSingleton<SingletonDemo>();
@@ -100,6 +119,10 @@ namespace VSMVVM.WPF.Sample
             viewModelMapper.Register<ChartsDemoView, ChartsDemoViewModel>();
             viewModelMapper.Register<LoggingView, LoggingViewModel>();
             viewModelMapper.Register<SubWindow, SubWindowViewModel>();
+            viewModelMapper.Register<SchedulerDemoView, SchedulerDemoViewModel>();
+            viewModelMapper.Register<UserCodeEditorWindow, UserCodeEditorWindowViewModel>();
+            viewModelMapper.Register<VariablesManagerWindow, VariablesManagerWindowViewModel>();
+            viewModelMapper.Register<ImageViewWindow, ImageViewWindowViewModel>();
         }
 
         protected override void RegionMapping(IRegionManager regionManager)

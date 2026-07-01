@@ -348,6 +348,7 @@ namespace VSMVVM.WPF.Controls.Behaviors
             System.Diagnostics.Debug.WriteLine($"[StrokeCmd-SNAPSHOT] (legacy Snapshot path called! before={before != null}, after={after != null})");
             var cmd = StrokeCompletedCommand;
             if (cmd == null) return;
+            if (before == null || after == null) return;
 
             var args = new MaskStrokeCompletedArgs(before, after, snapshot => mask.RestoreFull(snapshot));
             if (cmd.CanExecute(args))

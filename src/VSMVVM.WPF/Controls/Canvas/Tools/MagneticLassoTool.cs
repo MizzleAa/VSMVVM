@@ -53,6 +53,10 @@ namespace VSMVVM.WPF.Controls.Tools
             if (grad == null) return false; // SourceImage 미설정.
 
             var p = BrushTool.ToMaskPixel(ctx, position);
+            // 이미지 밖 클릭 무시 — OnMouseMove 와 동일 패턴. 이 가드가 없으면 _active 인 상태에서
+            // 두 번째 클릭이 raster 밖일 때 FlushPreviewToConfirmed → LiveWire.Backtrack 에서 IndexOutOfRangeException.
+            int px = (int)p.X, py = (int)p.Y;
+            if ((uint)px >= (uint)mask.MaskWidth || (uint)py >= (uint)mask.MaskHeight) return false;
 
             if (!_active)
             {

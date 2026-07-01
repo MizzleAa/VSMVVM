@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -16,6 +17,7 @@ namespace VSMVVM.Core.MVVM
 
         private readonly Func<Task> _execute;
         private readonly Func<bool> _canExecute;
+        private readonly SynchronizationContext _capturedContext;
         private bool _isRunning;
 
         #endregion
@@ -30,6 +32,7 @@ namespace VSMVVM.Core.MVVM
         {
             _execute = execute ?? throw new ArgumentNullException(nameof(execute));
             _canExecute = canExecute;
+            _capturedContext = SynchronizationContext.Current;
         }
 
         #endregion
@@ -113,7 +116,7 @@ namespace VSMVVM.Core.MVVM
 
         public void RaiseCanExecuteChanged()
         {
-            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            CommandThreadMarshal.Invoke(_capturedContext, CanExecuteChanged, this);
         }
 
         #endregion
@@ -128,6 +131,7 @@ namespace VSMVVM.Core.MVVM
 
         private readonly Func<T, Task> _execute;
         private readonly Func<T, bool> _canExecute;
+        private readonly SynchronizationContext _capturedContext;
         private bool _isRunning;
 
         #endregion
@@ -142,6 +146,7 @@ namespace VSMVVM.Core.MVVM
         {
             _execute = execute ?? throw new ArgumentNullException(nameof(execute));
             _canExecute = canExecute;
+            _capturedContext = SynchronizationContext.Current;
         }
 
         #endregion
@@ -225,7 +230,7 @@ namespace VSMVVM.Core.MVVM
 
         public void RaiseCanExecuteChanged()
         {
-            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            CommandThreadMarshal.Invoke(_capturedContext, CanExecuteChanged, this);
         }
 
         #endregion

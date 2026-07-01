@@ -46,10 +46,31 @@
 		<ProjectReference Include="..\..\src\VSMVVM.WPF\VSMVVM.WPF.csproj" />
 		<!-- Design System -->
 		<ProjectReference Include="..\..\src\VSMVVM.WPF.Design\VSMVVM.WPF.Design.csproj" />
+		<!-- Scheduler stack -->
+		<ProjectReference Include="..\..\src\VSMVVM.Core.Scheduler\VSMVVM.Core.Scheduler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="true" />
+		<ProjectReference Include="..\..\src\VSMVVM.Core.Scheduler.Scripting\VSMVVM.Core.Scheduler.Scripting.csproj" />
+		<ProjectReference Include="..\..\src\VSMVVM.WPF.Scheduler\VSMVVM.WPF.Scheduler.csproj" />
+		<ProjectReference Include="..\..\src\VSMVVM.WPF.Scheduler.Editor\VSMVVM.WPF.Scheduler.Editor.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+		<!-- OpenCV demo — managed wrapper + Windows native runtime + WPF BitmapConverter. Sample 만 의존. -->
+		<PackageReference Include="OpenCvSharp4" Version="4.10.0.20240616" />
+		<PackageReference Include="OpenCvSharp4.runtime.win" Version="4.10.0.20240616" />
+		<PackageReference Include="OpenCvSharp4.Extensions" Version="4.10.0.20240616" />
+		<PackageReference Include="OpenCvSharp4.WpfExtensions" Version="4.10.0.20240616" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="VSMVVM.WPF.Sample.AcceptanceTests" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- OpenCV ImRead/ImWrite 데모용 — Resource 가 아닌 실제 파일이 필요해 출력 디렉토리로 복사. -->
+		<None Update="Assets\app.png">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>

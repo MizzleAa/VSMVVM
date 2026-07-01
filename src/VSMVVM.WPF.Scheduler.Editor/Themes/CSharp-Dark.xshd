@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<!--
+  VSMVVM C# Dark Highlighting — VSMVVM.WPF.Design 팔레트의 400 톤을 매핑.
+  AvalonEdit 표준 C# 모드의 색만 덮어쓰며, 토큰 분류 규칙은 단순화한 PoC 수준이다.
+  (정밀한 의미 분석은 Phase 8c의 Roslyn CompletionService 도입 시 강화).
+-->
+<SyntaxDefinition name="C#" extensions=".cs" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
+
+    <Color name="Comment"        foreground="#71717A" fontStyle="italic"/>  <!-- Zinc500 -->
+    <Color name="String"         foreground="#A78BFA"/>                     <!-- Violet400 -->
+    <Color name="Char"           foreground="#A78BFA"/>
+    <Color name="Number"         foreground="#34D399"/>                     <!-- Emerald400 -->
+    <Color name="Keyword"        foreground="#60A5FA" fontWeight="bold"/>   <!-- Blue400 -->
+    <Color name="ContextKeyword" foreground="#7DD3FC"/>                     <!-- Sky300 -->
+    <Color name="TypeName"       foreground="#FBBF24"/>                     <!-- Amber400 -->
+    <Color name="Preprocessor"   foreground="#FB923C"/>                     <!-- Orange400 -->
+    <Color name="Punctuation"    foreground="#D4D4D8"/>                     <!-- Zinc300 -->
+
+    <RuleSet ignoreCase="false">
+        <Span color="Comment" begin="//"/>
+        <Span color="Comment" multiline="true" begin="/\*" end="\*/"/>
+
+        <Span color="String">
+            <Begin>"</Begin>
+            <End>"</End>
+            <RuleSet>
+                <Span begin="\\" end="."/>
+            </RuleSet>
+        </Span>
+
+        <Span color="String" multiline="true" begin="@&quot;" end="&quot;"/>
+
+        <Span color="Char">
+            <Begin>'</Begin>
+            <End>'</End>
+            <RuleSet>
+                <Span begin="\\" end="."/>
+            </RuleSet>
+        </Span>
+
+        <Span color="Preprocessor" begin="^[\s]*#" end="$"/>
+
+        <Keywords color="Keyword">
+            <Word>abstract</Word>     <Word>as</Word>          <Word>base</Word>
+            <Word>break</Word>        <Word>case</Word>        <Word>catch</Word>
+            <Word>checked</Word>      <Word>class</Word>       <Word>const</Word>
+            <Word>continue</Word>     <Word>default</Word>     <Word>delegate</Word>
+            <Word>do</Word>           <Word>else</Word>        <Word>enum</Word>
+            <Word>event</Word>        <Word>explicit</Word>    <Word>extern</Word>
+            <Word>false</Word>        <Word>finally</Word>     <Word>fixed</Word>
+            <Word>for</Word>          <Word>foreach</Word>     <Word>goto</Word>
+            <Word>if</Word>           <Word>implicit</Word>    <Word>in</Word>
+            <Word>interface</Word>    <Word>internal</Word>    <Word>is</Word>
+            <Word>lock</Word>         <Word>namespace</Word>   <Word>new</Word>
+            <Word>null</Word>         <Word>operator</Word>    <Word>out</Word>
+            <Word>override</Word>     <Word>params</Word>      <Word>private</Word>
+            <Word>protected</Word>    <Word>public</Word>      <Word>readonly</Word>
+            <Word>ref</Word>          <Word>return</Word>      <Word>sealed</Word>
+            <Word>sizeof</Word>       <Word>stackalloc</Word>  <Word>static</Word>
+            <Word>struct</Word>       <Word>switch</Word>      <Word>this</Word>
+            <Word>throw</Word>        <Word>true</Word>        <Word>try</Word>
+            <Word>typeof</Word>       <Word>unchecked</Word>   <Word>unsafe</Word>
+            <Word>using</Word>        <Word>virtual</Word>     <Word>void</Word>
+            <Word>volatile</Word>     <Word>while</Word>
+        </Keywords>
+
+        <Keywords color="ContextKeyword">
+            <Word>add</Word>          <Word>async</Word>       <Word>await</Word>
+            <Word>dynamic</Word>      <Word>from</Word>        <Word>get</Word>
+            <Word>global</Word>       <Word>group</Word>       <Word>into</Word>
+            <Word>join</Word>         <Word>let</Word>         <Word>nameof</Word>
+            <Word>orderby</Word>      <Word>partial</Word>     <Word>record</Word>
+            <Word>remove</Word>       <Word>select</Word>      <Word>set</Word>
+            <Word>value</Word>        <Word>var</Word>         <Word>when</Word>
+            <Word>where</Word>        <Word>yield</Word>
+        </Keywords>
+
+        <Keywords color="TypeName">
+            <Word>bool</Word>         <Word>byte</Word>        <Word>char</Word>
+            <Word>decimal</Word>      <Word>double</Word>      <Word>float</Word>
+            <Word>int</Word>          <Word>long</Word>        <Word>object</Word>
+            <Word>sbyte</Word>        <Word>short</Word>       <Word>string</Word>
+            <Word>uint</Word>         <Word>ulong</Word>       <Word>ushort</Word>
+        </Keywords>
+
+        <Rule color="Number">
+            \b0[xX][0-9a-fA-F]+      # hex
+            |
+            (\b\d+(\.[0-9]+)?|\.[0-9]+)([eE][+-]?[0-9]+)?[fFdDmMlLuU]?
+        </Rule>
+
+        <Rule color="Punctuation">
+            [?,.;()\[\]{}+\-/%*&lt;&gt;^=~!&amp;|@]+
+        </Rule>
+    </RuleSet>
+</SyntaxDefinition>

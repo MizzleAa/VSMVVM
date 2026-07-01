@@ -53,8 +53,12 @@ fi
 
 PROJECTS=(
     "src/VSMVVM.Core/VSMVVM.Core.csproj"
+    "src/VSMVVM.Core.Scheduler/VSMVVM.Core.Scheduler.csproj"
+    "src/VSMVVM.Core.Scheduler.Scripting/VSMVVM.Core.Scheduler.Scripting.csproj"
     "src/VSMVVM.WPF/VSMVVM.WPF.csproj"
     "src/VSMVVM.WPF.Design/VSMVVM.WPF.Design.csproj"
+    "src/VSMVVM.WPF.Scheduler/VSMVVM.WPF.Scheduler.csproj"
+    "src/VSMVVM.WPF.Scheduler.Editor/VSMVVM.WPF.Scheduler.Editor.csproj"
 )
 
 step() {
@@ -97,7 +101,15 @@ if [[ $SKIP_PUSH -eq 1 ]]; then
     exit 0
 fi
 
-PACKAGE_IDS=("VSMVVM.Core" "VSMVVM.WPF" "VSMVVM.WPF.Design")
+PACKAGE_IDS=(
+    "VSMVVM.Core"
+    "VSMVVM.Core.Scheduler"
+    "VSMVVM.Core.Scheduler.Scripting"
+    "VSMVVM.WPF"
+    "VSMVVM.WPF.Design"
+    "VSMVVM.WPF.Scheduler"
+    "VSMVVM.WPF.Scheduler.Editor"
+)
 for id in "${PACKAGE_IDS[@]}"; do
     PKG="$OUTPUT_DIR/$id.$VERSION.nupkg"
     if [[ ! -f "$PKG" ]]; then
@@ -110,6 +122,6 @@ done
 
 step "완료!"
 echo "인덱싱에 최대 1시간 소요될 수 있습니다."
-echo "   https://www.nuget.org/packages/VSMVVM.Core/$VERSION"
-echo "   https://www.nuget.org/packages/VSMVVM.WPF/$VERSION"
-echo "   https://www.nuget.org/packages/VSMVVM.WPF.Design/$VERSION"
+for id in "${PACKAGE_IDS[@]}"; do
+    echo "   https://www.nuget.org/packages/$id/$VERSION"
+done

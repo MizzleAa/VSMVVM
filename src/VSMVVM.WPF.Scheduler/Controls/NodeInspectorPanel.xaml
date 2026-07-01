@@ -1,0 +1,342 @@
+<UserControl x:Class="VSMVVM.WPF.Scheduler.Controls.NodeInspectorPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:VSMVVM.WPF.Scheduler.ViewModels"
+             xmlns:conv="clr-namespace:VSMVVM.WPF.Scheduler.Converters"
+             d:DataContext="{d:DesignInstance Type=vm:NodeViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <conv:BooleanToVisibilityConverterSafe x:Key="BoolToVisibility"/>
+
+        <!--
+            Phase L — IsEditable=True ComboBox 의 다크 테마.
+            디자인 시스템의 기본 ComboBox Style (Sizing.GridW7_5 화살표 컬럼 + ComboBoxToggleButtonTemplate) 을 BasedOn 으로 받되,
+            ControlTemplate 에 PART_EditableTextBox 를 추가하여 IsEditable=True 모드를 지원.
+            기본 스타일과 동일한 ToggleButton 템플릿을 재사용 — hit-area / 비주얼 일관성 보장.
+        -->
+        <Style x:Key="DarkEditableComboBoxStyle" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="toggleButton"
+                                          Template="{DynamicResource ComboBoxToggleButtonTemplate}"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          Focusable="False"
+                                          ClickMode="Press"/>
+                            <TextBox x:Name="PART_EditableTextBox"
+                                     Background="Transparent"
+                                     Foreground="{DynamicResource TextPrimary}"
+                                     CaretBrush="{DynamicResource TextPrimary}"
+                                     BorderThickness="0"
+                                     Margin="{TemplateBinding Padding}"
+                                     VerticalAlignment="Center"
+                                     HorizontalAlignment="Stretch"
+                                     IsReadOnly="{TemplateBinding IsReadOnly}"
+                                     FontFamily="Cascadia Mono, Consolas"/>
+                            <Popup x:Name="PART_Popup"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom"
+                                   AllowsTransparency="True"
+                                   PopupAnimation="Slide"
+                                   Focusable="False">
+                                <Border Background="{DynamicResource BgSecondary}"
+                                        BorderBrush="{DynamicResource BorderDefault}"
+                                        BorderThickness="{StaticResource Border}"
+                                        CornerRadius="{StaticResource RoundedMd}"
+                                        Margin="{StaticResource Mt0_5}"
+                                        MinWidth="{TemplateBinding ActualWidth}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                        Padding="{StaticResource P1}"
+                                        SnapsToDevicePixels="True">
+                                    <ScrollViewer SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="{StaticResource Opacity50}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- 핀 행 템플릿 — 한 줄에 [DisplayName : Value (TypeName)] -->
+        <DataTemplate x:Key="PinSnapshotRowTemplate" DataType="{x:Type vm:PinValueSnapshot}">
+            <Border Padding="{DynamicResource Px2Py1}"
+                    Margin="{DynamicResource Mb0_5}"
+                    Background="{DynamicResource BgPrimary}"
+                    BorderBrush="{DynamicResource BorderMuted}"
+                    BorderThickness="0,0,0,1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="2*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding DisplayName}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimary}"/>
+                        <TextBlock Text="{Binding TypeName}"
+                                   FontSize="10"
+                                   Foreground="{DynamicResource TextMuted}"/>
+                    </StackPanel>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding DisplayValue}"
+                               TextWrapping="Wrap"
+                               FontFamily="Cascadia Mono, Consolas"
+                               Foreground="{DynamicResource TextSecondary}"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Border Background="{DynamicResource BgSecondary}"
+            BorderBrush="{DynamicResource BorderDefault}"
+            BorderThickness="1,0,0,0">
+
+        <Grid>
+            <!-- 선택된 노드가 없을 때 안내 -->
+            <TextBlock Text="(노드를 선택하면 마지막 실행 시 핀 값이 표시됩니다)"
+                       Foreground="{DynamicResource TextMuted}"
+                       FontStyle="Italic"
+                       TextWrapping="Wrap"
+                       Margin="{DynamicResource P3}">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <!-- 선택된 노드가 있을 때 — 헤더 + Inputs/Outputs 섹션 -->
+            <DockPanel>
+                <DockPanel.Style>
+                    <Style TargetType="DockPanel">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DockPanel.Style>
+
+                <!-- 헤더 — 노드명 + 실행 시간 -->
+                <Border DockPanel.Dock="Top"
+                        Background="{DynamicResource BgTertiary}"
+                        Padding="{DynamicResource Px3Py2}"
+                        BorderBrush="{DynamicResource BorderDefault}"
+                        BorderThickness="0,0,0,1">
+                    <StackPanel>
+                        <TextBlock Text="{Binding DisplayName}"
+                                   FontSize="14"
+                                   FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimary}"/>
+                        <TextBlock Foreground="{DynamicResource TextMuted}"
+                                   FontSize="11"
+                                   Margin="{DynamicResource Mt0_5}">
+                            <Run Text="TypeId:"/>
+                            <Run Text="{Binding TypeId, Mode=OneWay}"/>
+                        </TextBlock>
+                        <TextBlock Foreground="{DynamicResource TextSecondary}"
+                                   FontSize="11"
+                                   Margin="{DynamicResource Mt0_5}"
+                                   Visibility="{Binding HasElapsedSample, Converter={StaticResource BoolToVisibility}}">
+                            <Run Text="Last elapsed:"/>
+                            <Run Text="{Binding LastElapsedMs, StringFormat={}{0:F2} ms, Mode=OneWay}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Literals (편집 가능) + Inputs/Outputs 스냅샷 (read-only) 섹션 -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="{DynamicResource P2}">
+
+                        <!--
+                            DYNAMIC PINS — IDynamicPinCountNode (LogNode, ParameterGroupNode 등) 만 노출.
+                            +/- 버튼으로 ArgCount/PinCount 조절 → 핀이 즉시 재생성되어 LITERALS/팔레트 갱신.
+                        -->
+                        <StackPanel Margin="{DynamicResource Mb3}"
+                                    Visibility="{Binding IsDynamicPinCount, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="DYNAMIC PINS"
+                                       FontWeight="Bold"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource AccentPrimary}"
+                                       Margin="{DynamicResource Mb1}"/>
+                            <DockPanel LastChildFill="True">
+                                <Button DockPanel.Dock="Right"
+                                        Content="+"
+                                        FontWeight="Bold"
+                                        Padding="8,2"
+                                        MinHeight="0"
+                                        Margin="{DynamicResource Ml1}"
+                                        Command="{Binding AddPinCommand}"
+                                        ToolTip="핀 추가"/>
+                                <Button DockPanel.Dock="Right"
+                                        Content="−"
+                                        FontWeight="Bold"
+                                        Padding="8,2"
+                                        MinHeight="0"
+                                        Margin="{DynamicResource Ml1}"
+                                        Command="{Binding RemovePinCommand}"
+                                        ToolTip="핀 제거"/>
+                                <TextBlock VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           FontFamily="Cascadia Mono, Consolas"
+                                           FontSize="12">
+                                    <Run Text="{Binding DynamicPinCountLabel, Mode=OneWay}"/>
+                                    <Run Text=": "/>
+                                    <Run Text="{Binding DynamicPinCount, Mode=OneWay}"/>
+                                </TextBlock>
+                            </DockPanel>
+                        </StackPanel>
+
+                        <!--
+                            NODE PROPERTIES — Phase K. 인스턴스 단위 속성 (ItemType, VariableName 등).
+                            INodeInstancePropertyHost 구현 노드만 노출. 후보값 있으면 ComboBox, 없으면 TextBox.
+                        -->
+                        <StackPanel Margin="{DynamicResource Mb3}"
+                                    Visibility="{Binding HasInstanceProperties, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="NODE PROPERTIES"
+                                       FontWeight="Bold"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource AccentPrimary}"
+                                       Margin="{DynamicResource Mb1}"/>
+                            <ItemsControl ItemsSource="{Binding InstanceProperties}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:NodeInstancePropertyViewModel}">
+                                        <Border Padding="{DynamicResource Px2Py1}"
+                                                Margin="{DynamicResource Mb0_5}"
+                                                Background="{DynamicResource BgPrimary}"
+                                                BorderBrush="{DynamicResource BorderMuted}"
+                                                BorderThickness="0,0,0,1">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="2*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0"
+                                                           Text="{Binding DisplayName}"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextPrimary}"
+                                                           VerticalAlignment="Center"/>
+                                                <Grid Grid.Column="1">
+                                                    <!-- 후보값 있을 때 ComboBox (편집 가능 — 변수 이름 자유 입력 허용) -->
+                                                    <ComboBox IsEditable="True"
+                                                              ItemsSource="{Binding Candidates}"
+                                                              Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=LostFocus}">
+                                                        <ComboBox.Style>
+                                                            <Style TargetType="ComboBox" BasedOn="{StaticResource DarkEditableComboBoxStyle}">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsText}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </ComboBox.Style>
+                                                    </ComboBox>
+                                                    <!-- 자유 텍스트는 TextBox -->
+                                                    <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                             FontFamily="Cascadia Mono, Consolas"
+                                                             Background="{DynamicResource BgSecondary}"
+                                                             Foreground="{DynamicResource TextPrimary}"
+                                                             BorderBrush="{DynamicResource BorderDefault}"
+                                                             Padding="{DynamicResource Px1Py0_5}"
+                                                             Visibility="{Binding IsText, Converter={StaticResource BoolToVisibility}}"/>
+                                                </Grid>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- LITERALS — 미연결 데이터 입력 핀들. TextBox로 편집 가능. -->
+                        <TextBlock Text="LITERALS (편집 가능)"
+                                   FontWeight="Bold"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource AccentPrimary}"
+                                   Margin="{DynamicResource Mb1}"/>
+                        <ItemsControl ItemsSource="{Binding InputPins}" Margin="{DynamicResource Mb3}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:PinViewModel}">
+                                    <Border Padding="{DynamicResource Px2Py1}"
+                                            Margin="{DynamicResource Mb0_5}"
+                                            Background="{DynamicResource BgPrimary}"
+                                            BorderBrush="{DynamicResource BorderMuted}"
+                                            BorderThickness="0,0,0,1">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <!-- Exec 핀이나 출력 핀은 숨김 -->
+                                                    <DataTrigger Binding="{Binding IsExec}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="2*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding DisplayName}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextPrimary}"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="1"
+                                                     Text="{Binding LiteralValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     FontFamily="Cascadia Mono, Consolas"
+                                                     Background="{DynamicResource BgSecondary}"
+                                                     Foreground="{DynamicResource TextPrimary}"
+                                                     BorderBrush="{DynamicResource BorderDefault}"
+                                                     Padding="{DynamicResource Px1Py0_5}"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- 마지막 실행 스냅샷 (HasSnapshot 일 때만) -->
+                        <StackPanel Visibility="{Binding HasSnapshot, Converter={StaticResource BoolToVisibility}}">
+                            <!-- INPUTS -->
+                            <TextBlock Text="LAST RUN INPUTS"
+                                       FontWeight="Bold"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource AccentSecondary}"
+                                       Margin="{DynamicResource Mb1}"/>
+                            <ItemsControl ItemsSource="{Binding LastInputs}"
+                                          ItemTemplate="{StaticResource PinSnapshotRowTemplate}"
+                                          Margin="{DynamicResource Mb3}"/>
+
+                            <!-- OUTPUTS -->
+                            <TextBlock Text="LAST RUN OUTPUTS"
+                                       FontWeight="Bold"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource AccentSecondary}"
+                                       Margin="{DynamicResource Mb1}"/>
+                            <ItemsControl ItemsSource="{Binding LastOutputs}"
+                                          ItemTemplate="{StaticResource PinSnapshotRowTemplate}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Grid>
+    </Border>
+</UserControl>

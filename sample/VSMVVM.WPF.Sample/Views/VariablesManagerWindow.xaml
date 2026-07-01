@@ -1,0 +1,132 @@
+<Window x:Class="VSMVVM.WPF.Sample.Views.VariablesManagerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
+        me:ViewModelLocator.AutoWireViewModel="True"
+        Style="{StaticResource VSMVVMWindowStyle}"
+        Title="Graph Variables" Width="520" Height="540"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource BgPrimary}">
+
+    <DockPanel LastChildFill="True">
+
+        <!-- 하단: Close + 상태 -->
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource BgSecondary}"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="0,1,0,0"
+                Padding="{DynamicResource Px3Py2}">
+            <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Right"
+                        Content="Close"
+                        Command="{Binding CloseCommand}"
+                        Margin="{DynamicResource Ml1}"/>
+                <TextBlock Text="{Binding Status}"
+                           Foreground="{DynamicResource TextMuted}"
+                           VerticalAlignment="Center"
+                           FontSize="11"/>
+            </DockPanel>
+        </Border>
+
+        <!-- 상단: 신규 변수 추가 폼 -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource BgSecondary}"
+                BorderBrush="{DynamicResource BorderDefault}"
+                BorderThickness="0,0,0,1"
+                Padding="{DynamicResource P3}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Name"
+                           Foreground="{DynamicResource TextMuted}" FontSize="11"
+                           Margin="{DynamicResource Mb0_5}"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="Type"
+                           Foreground="{DynamicResource TextMuted}" FontSize="11"
+                           Margin="4,0,0,2"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="Default"
+                           Foreground="{DynamicResource TextMuted}" FontSize="11"
+                           Margin="4,0,0,2"/>
+
+                <TextBox Grid.Row="1" Grid.Column="0"
+                         Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}"
+                         Background="{DynamicResource BgPrimary}"
+                         Foreground="{DynamicResource TextPrimary}"
+                         BorderBrush="{DynamicResource BorderDefault}"
+                         Padding="{DynamicResource Px2Py1}"/>
+                <ComboBox Grid.Row="1" Grid.Column="1"
+                          ItemsSource="{Binding TypeOptions}"
+                          SelectedItem="{Binding NewTypeLabel, Mode=TwoWay}"
+                          Margin="4,0,0,0"
+                          Background="{DynamicResource BgPrimary}"
+                          Foreground="{DynamicResource TextPrimary}"
+                          BorderBrush="{DynamicResource BorderDefault}"/>
+                <TextBox Grid.Row="1" Grid.Column="2"
+                         Text="{Binding NewDefault, UpdateSourceTrigger=PropertyChanged}"
+                         Margin="4,0,0,0"
+                         Background="{DynamicResource BgPrimary}"
+                         Foreground="{DynamicResource TextPrimary}"
+                         BorderBrush="{DynamicResource BorderDefault}"
+                         Padding="{DynamicResource Px2Py1}"/>
+                <Button Grid.Row="1" Grid.Column="3"
+                        Content="Add"
+                        Command="{Binding AddCommand}"
+                        Margin="{DynamicResource Ml1}"/>
+            </Grid>
+        </Border>
+
+        <!-- 본문: 변수 목록 -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                      Padding="{DynamicResource P2}">
+            <ItemsControl ItemsSource="{Binding Variables}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="{DynamicResource Px3Py2}"
+                                Margin="{DynamicResource Mb0_5}"
+                                Background="{DynamicResource BgSecondary}"
+                                BorderBrush="{DynamicResource BorderMuted}"
+                                BorderThickness="0,0,0,1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding Name}"
+                                           Foreground="{DynamicResource TextPrimary}"
+                                           FontWeight="SemiBold"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding ClrType.Name}"
+                                           Foreground="{DynamicResource TextMuted}"
+                                           FontFamily="Cascadia Mono, Consolas"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding DefaultValue}"
+                                           Foreground="{DynamicResource TextSecondary}"
+                                           FontFamily="Cascadia Mono, Consolas"
+                                           VerticalAlignment="Center"/>
+                                <Button Grid.Column="3"
+                                        Content="Remove"
+                                        Command="{Binding DataContext.RemoveCommand,
+                                                  RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding Name}"
+                                        Foreground="{DynamicResource Error}"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

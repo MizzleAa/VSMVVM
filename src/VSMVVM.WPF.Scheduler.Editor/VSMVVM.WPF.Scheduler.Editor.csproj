@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>net8.0-windows;net9.0-windows</TargetFrameworks>
+		<UseWPF>true</UseWPF>
+		<LangVersion>12</LangVersion>
+		<Nullable>disable</Nullable>
+		<Platforms>AnyCPU;x64;x86</Platforms>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<CopyLocalLockFileAssemblies>True</CopyLocalLockFileAssemblies>
+		<RootNamespace>VSMVVM.WPF.Scheduler.Editor</RootNamespace>
+		<AssemblyName>VSMVVM.WPF.Scheduler.Editor</AssemblyName>
+		<PackageId>VSMVVM.WPF.Scheduler.Editor</PackageId>
+		<Title>VSMVVM.WPF.Scheduler.Editor</Title>
+		<Description>AvalonEdit-hosted C# code editor for VSMVVM.WPF.Scheduler with VSMVVM.WPF.Design tokens, Roslyn diagnostic inline display and theme-following XSHD highlighting.</Description>
+		<PackageTags>scheduler;wpf;avalonedit;roslyn;code-editor;vsmvvm</PackageTags>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="AvalonEdit" Version="6.3.0.90" />
+		<!-- Roslyn CompletionService 사용을 위해 Features 패키지가 필요 (Workspaces + CSharp.Workspaces도 함께 끌어옴) -->
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Features" Version="4.12.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\VSMVVM.Core\VSMVVM.Core.csproj" />
+		<ProjectReference Include="..\VSMVVM.Core.Scheduler\VSMVVM.Core.Scheduler.csproj" />
+		<ProjectReference Include="..\VSMVVM.WPF\VSMVVM.WPF.csproj" />
+		<ProjectReference Include="..\VSMVVM.WPF.Design\VSMVVM.WPF.Design.csproj" />
+		<ProjectReference Include="..\VSMVVM.WPF.Scheduler\VSMVVM.WPF.Scheduler.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="VSMVVM.WPF.Scheduler.Editor.Tests" />
+	</ItemGroup>
+
+	<!-- XSHD 신택스 정의는 embedded resource로 패킹되어 HighlightingThemeService가 GetManifestResourceStream으로 로드 -->
+	<ItemGroup>
+		<EmbeddedResource Include="Themes\CSharp-Dark.xshd" />
+		<EmbeddedResource Include="Themes\CSharp-Light.xshd" />
+	</ItemGroup>
+
+</Project>

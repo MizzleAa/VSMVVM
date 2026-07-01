@@ -89,14 +89,22 @@ namespace VSMVVM.WPF.Imaging
             return prev;
         }
 
-        /// <summary>Dijkstra 결과 prev 로 dst → src 역추적하여 Point 경로(dst → src 순서 역전 없이 dst가 끝).</summary>
+        /// <summary>Dijkstra 결과 prev 로 dst → src 역추적하여 Point 경로(dst → src 순서 역전 없이 dst가 끝).
+        /// (dstX, dstY) 가 raster 영역 밖이거나 width 가 비정상이면 빈 리스트를 반환 — 호출자에서 잡지 않아도
+        /// IndexOutOfRangeException 으로 앱이 죽지 않게 한다 (자석 올가미 도구의 mouse-down 좌표가 이미지 밖에
+        /// 있을 때 발생하던 크래시 가드).</summary>
         public static IReadOnlyList<Point> Backtrack(int[] prev, int width, int dstX, int dstY)
         {
             var path = new List<Point>();
+            if (prev == null || prev.Length == 0 || width <= 0) return path;
+            int height = prev.Length / width;
+            if ((uint)dstX >= (uint)width || (uint)dstY >= (uint)height) return path;
+
             int idx = dstY * width + dstX;
             int safety = width * 4; // 무한 루프 방어.
             while (idx != UNREACHABLE && safety-- > 0)
             {
+                if ((uint)idx >= (uint)prev.Length) break; // prev 인덱스 가드 (Dijkstra 가 만든 잘못된 링크 방어).
                 int x = idx % width;
                 int y = idx / width;
                 path.Add(new Point(x, y));

@@ -1090,7 +1090,7 @@ namespace VSMVVM.WPF.Controls
             // 4. Strategy 에 위임 — MergeOnOverlap 은 흡수 + remap, IndependentInstances 는 BoundingBox freeze.
             //    Strategy 가 RecomputeInstanceMetadata 까지 호출하므로 아래에서 중복 호출 안 함.
             var resampleCtx = new MaskLayerMergeContext(this, mask, labelIdx, id, newBBox, sameLabelReplaced);
-            MergeStrategy.OnResampleOverlap(resampleCtx);
+            MergeStrategy?.OnResampleOverlap(resampleCtx);
 
             // 5. 리사이즈로 병합이 일어난 경우 disconnected 면 자동 재분리.
             //    pureTranslate(이동) 에서는 Merge 로 묶인 사용자 의도를 존중해 자동 재분리 생략 —

@@ -62,6 +62,12 @@ namespace VSMVVM.WPF.Sample.ViewModels
         /// <summary>컨테이너 레벨 상태 메시지 — CompileAll / SaveCodeJson / LoadCodeJson 결과 표시.</summary>
         [Property] private string _containerStatusMessage = string.Empty;
 
+        /// <summary>사용자 코드 에디터를 열 때 미리 선택할 스니펫의 카테고리. UserCodeEditorWindowViewModel.DialogParameter setter 가 소비.
+        /// null/empty 면 첫 스니펫이 선택된다. 사용 후 자동으로 클리어됨(1회성).</summary>
+        public string InitialSnippetCategory { get; set; }
+
+        private readonly IDialogService _dialogService;
+
         public SchedulerDemoViewModel(
             ISchedulerService scheduler,
             IMessenger messenger,
@@ -70,7 +76,8 @@ namespace VSMVVM.WPF.Sample.ViewModels
             IFileDialogService fileDialog,
             INodePaletteService palette,
             ILoggerService logger,
-            IWindowService windowService = null)
+            IWindowService windowService = null,
+            IDialogService dialogService = null)
         {
             _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
             _messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
@@ -80,9 +87,23 @@ namespace VSMVVM.WPF.Sample.ViewModels
             _palette = palette ?? throw new ArgumentNullException(nameof(palette));
             _logger = logger;
             _windowService = windowService;
+            _dialogService = dialogService;
 
             BuiltInNodes.EnsureRegistered();
             RegisterSampleNodes();
+
+            // 팔레트에서 감출 빌트인 노드. 라이브러리 등록은 유지 (그래프 로드/AddNode 는 정상).
+            // ParameterNode 로 대체 가능하거나 사용 빈도가 낮은 것들.
+            if (_palette is NodePaletteService concretePalette)
+            {
+                concretePalette.HiddenTypeIds.Add(ConstantNode.TypeIdConst);       // Math > Constant
+                concretePalette.HiddenTypeIds.Add(ListAddNode.TypeIdConst);        // Collections > List.Add
+                concretePalette.HiddenTypeIds.Add(ListGetNode.TypeIdConst);        // Collections > List.Get
+                concretePalette.HiddenTypeIds.Add(ListCountNode.TypeIdConst);      // Collections > List.Count
+                concretePalette.HiddenTypeIds.Add(ListClearNode.TypeIdConst);      // Collections > List.Clear
+                concretePalette.HiddenTypeIds.Add(ListContainsNode.TypeIdConst);   // Collections > List.Contains
+                concretePalette.HiddenTypeIds.Add(ListRemoveAtNode.TypeIdConst);   // Collections > List.RemoveAt
+            }
             // Phase K — Variable Get/Set 노드는 단일 등록이라 타입별 사전 등록 불필요.
             // 인스턴스의 ItemType 속성으로 그래프 변수의 CLR 타입과 매칭.
 
@@ -104,6 +125,7 @@ namespace VSMVVM.WPF.Sample.ViewModels
                 logger: _logger,
                 fileDialog: _fileDialog,
                 windowService: _windowService,
+                dialogService: _dialogService,
                 container: this,
                 displayName: $"Workspace {n}");
         }
@@ -357,10 +379,11 @@ namespace VSMVVM.WPF.Sample.ViewModels
         private static void RegisterSampleNodes()
         {
             if (System.Threading.Interlocked.Exchange(ref _sampleNodesRegistered, 1) != 0) return;
-            NodeMetadataRegistry.UnregisterForTests(OutputCaptureNode.TypeIdConst);
-            NodeMetadataRegistry.Register(OutputCaptureNode.CreateMetadata());
             NodeMetadataRegistry.UnregisterForTests(ImageViewNode.TypeIdConst);
             NodeMetadataRegistry.Register(ImageViewNode.CreateMetadata());
+            NodeMetadataRegistry.UnregisterForTests(ChartViewNode.TypeIdConst);
+            NodeMetadataRegistry.Register(ChartViewNode.CreateMetadata());
         }
+
     }
 }

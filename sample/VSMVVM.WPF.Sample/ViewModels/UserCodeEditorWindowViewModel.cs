@@ -69,7 +69,16 @@ namespace VSMVVM.WPF.Sample.ViewModels
             {
                 _container = value;
                 OnPropertyChanged(nameof(Snippets));
-                SelectedSnippet = _container?.Snippets?.FirstOrDefault();
+                // 컨테이너가 초기 카테고리를 요청했으면 해당 스니펫으로, 아니면 첫 번째.
+                UserCodeSnippet initial = null;
+                var hint = _container?.InitialSnippetCategory;
+                if (!string.IsNullOrEmpty(hint))
+                {
+                    initial = _container?.Snippets?.FirstOrDefault(
+                        s => string.Equals(s.Category, hint, StringComparison.Ordinal));
+                    _container.InitialSnippetCategory = null; // 1회성 소비
+                }
+                SelectedSnippet = initial ?? _container?.Snippets?.FirstOrDefault();
             }
         }
 

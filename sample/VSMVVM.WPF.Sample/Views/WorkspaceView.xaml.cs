@@ -80,7 +80,9 @@ namespace VSMVVM.WPF.Sample.Views
             if (e.OriginalSource is not NodeView nv) return;
             if (nv.DataContext is not NodeViewModel nvm) return;
             if (DataContext is not SampleWorkspaceViewModel ws) return;
+            // ImageView 와 ChartView 노드 각각 자기 창을 오픈 (다른 노드면 no-op).
             ws.OpenImageViewForNode(nvm.Model);
+            ws.OpenChartViewForNode(nvm.Model);
         }
 
         private void OnPreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)

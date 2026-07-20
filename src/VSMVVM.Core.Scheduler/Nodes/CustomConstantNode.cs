@@ -20,6 +20,9 @@ namespace VSMVVM.Core.Scheduler.Nodes
         /// <summary>인스턴스 메소드용 대상 객체. 정적 메소드면 null.</summary>
         public object Instance { get; set; }
 
+        /// <summary>이 노드가 래핑하는 원본 메서드. UI에서 "Open Code" 등 소스 역추적 용도.</summary>
+        public MethodInfo Method => _method;
+
         public override string TypeId => _typeId;
 
         public CustomConstantNode(string typeId, MethodInfo method, IReadOnlyList<PinDescriptor> pins)
@@ -55,7 +58,29 @@ namespace VSMVVM.Core.Scheduler.Nodes
             var effective = SignatureToPinsBuilder.GetEffectiveReturnType(_method);
             if (effective != typeof(void))
             {
-                InvokeSetOutputGeneric(context, SignatureToPinsBuilder.ConstantOutPinId, effective, result);
+                if (SignatureToPinsBuilder.IsValueTuple(effective))
+                {
+                    WriteTupleOutputs(context, effective, result);
+                }
+                else
+                {
+                    InvokeSetOutputGeneric(context, SignatureToPinsBuilder.ConstantOutPinId, effective, result);
+                }
+            }
+        }
+
+        private void WriteTupleOutputs(ExecutionContext ctx, Type tupleType, object tupleValue)
+        {
+            var elementTypes = tupleType.GetGenericArguments();
+            var names = SignatureToPinsBuilder.ReadTupleElementNames(_method);
+            for (int i = 0; i < elementTypes.Length; i++)
+            {
+                var name = (names != null && i < names.Count && !string.IsNullOrEmpty(names[i]))
+                    ? names[i]
+                    : "Item" + (i + 1);
+                var f = tupleType.GetField("Item" + (i + 1), BindingFlags.Public | BindingFlags.Instance);
+                var value = (tupleValue == null || f == null) ? null : f.GetValue(tupleValue);
+                InvokeSetOutputGeneric(ctx, name, elementTypes[i], value);
             }
         }
 

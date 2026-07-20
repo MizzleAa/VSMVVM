@@ -19,7 +19,10 @@ namespace VSMVVM.Core.Scheduler.Nodes.BuiltIn
                 EnsureOne(EndNode.TypeIdConst, EndNode.CreateMetadata);
                 EnsureOne(SequenceNode.TypeIdConst, SequenceNode.CreateMetadata);
                 EnsureOne(BranchNode.TypeIdConst, BranchNode.CreateMetadata);
+                EnsureOne(ForkNode.TypeIdConst, ForkNode.CreateMetadata);
+                EnsureOne(JoinNode.TypeIdConst, JoinNode.CreateMetadata);
                 EnsureOne(DelayNode.TypeIdConst, DelayNode.CreateMetadata);
+                EnsureOne(RepeatNode.TypeIdConst, RepeatNode.CreateMetadata);
                 EnsureOne(LogNode.TypeIdConst, LogNode.CreateMetadata);
                 EnsureOne(OutputNode.TypeIdConst, OutputNode.CreateMetadata);
                 EnsureOne(InputNode.TypeIdConst, InputNode.CreateMetadata);

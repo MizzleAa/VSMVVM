@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Windows.Threading;
 using VSMVVM.Core.Attributes;
 using VSMVVM.Core.MVVM;
@@ -19,15 +21,21 @@ namespace VSMVVM.WPF.Scheduler.ViewModels
     {
         private readonly IExecutionHistoryStore _store;
         private readonly Dispatcher _dispatcher;
+        private readonly ConcurrentQueue<ExecutionRun> _pending = new ConcurrentQueue<ExecutionRun>();
+        private readonly BulkObservableCollection<ExecutionRun> _runs = new();
+        private int _flushScheduled;
         private bool _disposed;
         private NodeGraphViewModel _graphVm;
 
-        public ObservableCollection<ExecutionRun> Runs { get; } = new();
+        public ObservableCollection<ExecutionRun> Runs => _runs;
 
         /// <summary>NodeGraphViewModel 의 노드들 중 HasBreakpoint=true 인 NodeId 집합 (라이브).</summary>
         public ObservableCollection<Guid> BreakpointNodeIds { get; } = new();
 
         [Property] private ExecutionRun _selectedRun;
+
+        /// <summary>최대 유지 Runs 개수. 초과 시 가장 오래된 항목 제거. 0 이하면 무제한.</summary>
+        [Property] private int _maxRuns = 10;
 
         /// <summary>옵션 — 간트차트가 브레이크포인트 행을 강조하도록 NodeGraphViewModel 을 연결한다.</summary>
         public NodeGraphViewModel Graph
@@ -83,29 +91,55 @@ namespace VSMVVM.WPF.Scheduler.ViewModels
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _dispatcher = dispatcher ?? Dispatcher.CurrentDispatcher;
-            foreach (var r in _store.GetAll())
+            var initial = _store.GetAll();
+            if (initial.Count > 0)
             {
-                Runs.Add(r);
+                var list = new List<ExecutionRun>(initial.Count);
+                for (int i = 0; i < initial.Count; i++) list.Add(initial[i]);
+                _runs.AddRange(list);
             }
+            TrimExcess();
             _store.RunAdded += OnRunAdded;
         }
 
+        /// <summary>
+        /// 부하 대응: RunAdded 폭주 시 UI 스레드가 굳지 않도록 coalescing 배치 처리.
+        /// 큐에 push 후 flush 예약 1회. flush 콜백이 큐 전체를 한 번에 처리 → CollectionChanged 폭발 방지.
+        /// </summary>
         private void OnRunAdded(object sender, ExecutionRun run)
         {
             if (_disposed) return;
-            if (_dispatcher.CheckAccess())
+            _pending.Enqueue(run);
+            if (_dispatcher.CheckAccess() && Volatile.Read(ref _flushScheduled) == 0)
             {
-                Runs.Add(run);
-                SelectedRun = run; // 가장 최근 run 자동 선택
+                Flush();
+                return;
             }
-            else
+            if (Interlocked.CompareExchange(ref _flushScheduled, 1, 0) == 0)
             {
-                _dispatcher.BeginInvoke(new Action(() =>
-                {
-                    Runs.Add(run);
-                    SelectedRun = run;
-                }));
+                _dispatcher.BeginInvoke(new Action(Flush), DispatcherPriority.Background);
             }
+        }
+
+        private void Flush()
+        {
+            Volatile.Write(ref _flushScheduled, 0);
+            if (_disposed) return;
+
+            var batch = new List<ExecutionRun>();
+            while (_pending.TryDequeue(out var r)) batch.Add(r);
+            if (batch.Count == 0) return;
+
+            _runs.AddRange(batch);
+            TrimExcess();
+            SelectedRun = batch[batch.Count - 1]; // 배치 마지막 run 만 선택 → SelectedRun change 폭발 방지.
+        }
+
+        private void TrimExcess()
+        {
+            if (MaxRuns <= 0) return;
+            int overflow = _runs.Count - MaxRuns;
+            if (overflow > 0) _runs.RemoveRangeFromStart(overflow);
         }
 
         protected override void Dispose(bool disposing)

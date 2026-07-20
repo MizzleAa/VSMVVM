@@ -45,14 +45,8 @@
                 <Button Style="{StaticResource CompactActionButton}"
                         Content="Variables…" Command="{Binding OpenVariablesManagerCommand}"/>
                 <Button Style="{StaticResource CompactActionButton}"
-                        Content="OpenCV Demo" Command="{Binding LoadOpenCvDemoCommand}"/>
-                <Button Style="{StaticResource CompactActionButton}"
-                        Content="Collection Demo" Command="{Binding LoadCollectionDemoCommand}"/>
-                <Button Style="{StaticResource CompactActionButton}"
-                        Content="Random Demo" Command="{Binding LoadRandomDemoCommand}"/>
-                <Button Style="{StaticResource CompactActionButton}"
-                        Content="Parameter Demo" Command="{Binding LoadParameterDemoCommand}"
-                        ToolTip="3 ParameterNode 정적 필드 + 1 MethodNode 가 함께 동작하는 시연 — 코드 에디터에서 필드 값을 바꾸면 다음 Run 부터 반영"/>
+                        Content="Demo…" Command="{Binding OpenDemoPickerCommand}"
+                        ToolTip="데모 목록에서 하나를 선택 — 현재 워크스페이스의 그래프가 교체됩니다. Log Flood 는 그래프 대신 UI 부하 시연."/>
             </DockPanel>
         </Border>
 

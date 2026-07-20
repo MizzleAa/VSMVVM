@@ -15,6 +15,9 @@ namespace VSMVVM.Core.Scheduler.Runtime
         /// <summary>특정 노드에 브레이크포인트를 토글.</summary>
         void ToggleBreakpoint(Guid nodeId);
 
+        /// <summary>특정 노드의 브레이크포인트를 명시적으로 설정/해제. 토글보다 안전 — 여러 소스가 상태를 동기화할 때 사용.</summary>
+        void SetBreakpoint(Guid nodeId, bool enabled);
+
         /// <summary>일시정지된 실행을 재개. 게이트가 없으면 무시.</summary>
         void Continue();
 

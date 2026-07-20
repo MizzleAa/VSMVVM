@@ -48,6 +48,8 @@ namespace VSMVVM.WPF.Sample
             serviceCollection.AddTransient<UserCodeEditorWindow>();
             serviceCollection.AddTransient<VariablesManagerWindow>();
             serviceCollection.AddTransient<ImageViewWindow>();
+            serviceCollection.AddTransient<ChartViewWindow>();
+            serviceCollection.AddTransient<SampleDemoPickerView>();
 
             serviceCollection.AddTransient<MainViewModel>();
             serviceCollection.AddTransient<HomeViewModel>();
@@ -72,6 +74,8 @@ namespace VSMVVM.WPF.Sample
             serviceCollection.AddTransient<UserCodeEditorWindowViewModel>();
             serviceCollection.AddTransient<VariablesManagerWindowViewModel>();
             serviceCollection.AddTransient<ImageViewWindowViewModel>();
+            serviceCollection.AddTransient<ChartViewWindowViewModel>();
+            serviceCollection.AddTransient<SampleDemoPickerViewModel>();
 
             // === Scheduler 서비스 (Phase 9 PoC) ===
             serviceCollection.AddSingleton<IMessenger, Messenger>();
@@ -123,6 +127,8 @@ namespace VSMVVM.WPF.Sample
             viewModelMapper.Register<UserCodeEditorWindow, UserCodeEditorWindowViewModel>();
             viewModelMapper.Register<VariablesManagerWindow, VariablesManagerWindowViewModel>();
             viewModelMapper.Register<ImageViewWindow, ImageViewWindowViewModel>();
+            viewModelMapper.Register<ChartViewWindow, ChartViewWindowViewModel>();
+            viewModelMapper.Register<SampleDemoPickerView, SampleDemoPickerViewModel>();
         }
 
         protected override void RegionMapping(IRegionManager regionManager)

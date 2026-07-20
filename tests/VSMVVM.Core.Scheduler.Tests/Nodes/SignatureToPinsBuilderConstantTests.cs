@@ -77,5 +77,25 @@ namespace VSMVVM.Core.Scheduler.Tests.Nodes
             SignatureToPinsBuilder.IsConstantLike(none).Should().BeFalse();
             SignatureToPinsBuilder.IsConstantLike(add).Should().BeFalse();
         }
+
+        private static (string Name, int Score, bool IsWinner) GetParams() => ("hero", 100, true);
+
+        [Fact]
+        public void BuildAsConstant_NamedValueTuple_ProducesPinPerElement()
+        {
+            var method = typeof(SignatureToPinsBuilderConstantTests).GetMethod(
+                nameof(GetParams), BindingFlags.NonPublic | BindingFlags.Static);
+
+            var pins = SignatureToPinsBuilder.BuildAsConstant(method);
+
+            pins.Should().HaveCount(3);
+            pins[0].Id.Should().Be("Name");
+            pins[0].ValueType.Should().Be(typeof(string));
+            pins[1].Id.Should().Be("Score");
+            pins[1].ValueType.Should().Be(typeof(int));
+            pins[2].Id.Should().Be("IsWinner");
+            pins[2].ValueType.Should().Be(typeof(bool));
+            pins.Should().OnlyContain(p => p.Direction == PinDirection.Output && p.Kind == PinKind.Data);
+        }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using VSMVVM.Core.MVVM;
@@ -12,13 +13,22 @@ namespace VSMVVM.Core.Scheduler.Runtime
     /// 한 번의 그래프 실행 컨텍스트. SchedulerService가 생성하여 각 노드에 전달합니다.
     /// 노드는 ctx.GetInput&lt;T&gt;(node, "PinId")로 데이터 입력을 풀하고,
     /// ctx.SetOutput&lt;T&gt;(node, "PinId", value)로 결과를 캐시에 둡니다.
+    /// <para>
+    /// ForkNode 병렬 브랜치가 같은 ExecutionContext 를 공유하므로 pull-eval 캐시는 스레드 안전 컬렉션 사용.
+    /// 상류 노드 evaluate 는 노드 id 별 SemaphoreSlim 으로 직렬화 — 같은 상류를 두 브랜치가 동시에 풀해도 1 회만 실행.
+    /// </para>
     /// </summary>
     public sealed class ExecutionContext
     {
-        private readonly Dictionary<(Guid nodeId, string pinId), object> _dataCache
-            = new Dictionary<(Guid, string), object>();
-        private readonly HashSet<(Guid nodeId, string pinId)> _pullVisitedSet
-            = new HashSet<(Guid, string)>();
+        private readonly ConcurrentDictionary<(Guid nodeId, string pinId), object> _dataCache
+            = new ConcurrentDictionary<(Guid, string), object>();
+        // Set 대체 — value 는 사용 안 함 (byte 0). TryAdd 성공 = 최초 방문.
+        private readonly ConcurrentDictionary<(Guid nodeId, string pinId), byte> _pullVisitedSet
+            = new ConcurrentDictionary<(Guid, string), byte>();
+        // 상류 노드 evaluate 직렬화용 per-node lock. Sample Fork/Join 데모에서 두 브랜치가 같은
+        // 상류 데이터 노드를 동시 pull 하는 상황 방지.
+        private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _evaluateLocks
+            = new ConcurrentDictionary<Guid, SemaphoreSlim>();
 
         public Guid RunId { get; }
         public NodeGraph Graph { get; }
@@ -94,8 +104,8 @@ namespace VSMVVM.Core.Scheduler.Runtime
                 return (T)cached;
             }
 
-            // 순환 의존성 보호
-            if (!_pullVisitedSet.Add(key))
+            // 순환 의존성 보호 — ConcurrentDictionary.TryAdd 로 원자적 검사·삽입.
+            if (!_pullVisitedSet.TryAdd(key, 0))
             {
                 throw new CyclicDataDependencyException(node.Id, pinId);
             }
@@ -107,7 +117,7 @@ namespace VSMVVM.Core.Scheduler.Runtime
             }
             finally
             {
-                _pullVisitedSet.Remove(key);
+                _pullVisitedSet.TryRemove(key, out _);
             }
         }
 
@@ -157,10 +167,24 @@ namespace VSMVVM.Core.Scheduler.Runtime
             var upstreamKey = (sourceNode.Id, match.SourcePinId);
             if (!_dataCache.TryGetValue(upstreamKey, out var upstream))
             {
-                // EvaluateAsync는 보통 ExecuteAsync를 호출하여 SetOutput을 채운다.
-                // Phase 3a는 동기 wait — 데이터 노드는 보통 비동기성이 약함.
-                sourceNode.EvaluateAsync(this).GetAwaiter().GetResult();
-                _dataCache.TryGetValue(upstreamKey, out upstream);
+                // Fork 병렬 브랜치가 같은 상류 노드를 동시 pull 하면 EvaluateAsync 가 두 번 호출되어
+                // SetOutput 이 이중 실행 · 상태 오염. 노드 id 별 SemaphoreSlim 으로 직렬화한 뒤 double-check.
+                var sem = _evaluateLocks.GetOrAdd(sourceNode.Id, _ => new SemaphoreSlim(1, 1));
+                sem.Wait();
+                try
+                {
+                    if (!_dataCache.TryGetValue(upstreamKey, out upstream))
+                    {
+                        // EvaluateAsync는 보통 ExecuteAsync를 호출하여 SetOutput을 채운다.
+                        // Phase 3a는 동기 wait — 데이터 노드는 보통 비동기성이 약함.
+                        sourceNode.EvaluateAsync(this).GetAwaiter().GetResult();
+                        _dataCache.TryGetValue(upstreamKey, out upstream);
+                    }
+                }
+                finally
+                {
+                    sem.Release();
+                }
             }
 
             if (upstream == null) return default;
@@ -180,5 +204,12 @@ namespace VSMVVM.Core.Scheduler.Runtime
 
         /// <summary>테스트/디버그용 — 캐시 스냅샷.</summary>
         public IReadOnlyDictionary<(Guid, string), object> DataCacheSnapshot => _dataCache;
+
+        /// <summary>루프/반복 노드 (예: RepeatNode) 가 매 반복 시작 시 호출하여 이전 반복의 pull-eval 캐시를 비운다.
+        /// 이걸 안 하면 GetVariable 등이 첫 iteration 의 값을 계속 반환하고, 그래프 변수 갱신이 반영되지 않는다.</summary>
+        public void InvalidateDataCache()
+        {
+            _dataCache.Clear();
+        }
     }
 }

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/MizzleAa/VSMVVM/actions/workflows/ci.yml/badge.svg)](https://github.com/MizzleAa/VSMVVM/actions/workflows/ci.yml)
 [![Publish](https://github.com/MizzleAa/VSMVVM/actions/workflows/publish-nuget.yml/badge.svg)](https://github.com/MizzleAa/VSMVVM/actions/workflows/publish-nuget.yml)
-[![Tests](https://img.shields.io/badge/tests-727%20passing-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-768%20passing-brightgreen)](#testing)
 [![Targets](https://img.shields.io/badge/targets-net8.0%20%7C%20net9.0-blue)](#testing)
 [![NuGet](https://img.shields.io/nuget/v/VSMVVM.Core?label=NuGet)](https://www.nuget.org/packages/VSMVVM.Core/)
 
@@ -15,9 +15,9 @@ Lightweight, modular MVVM framework for **WPF** with built-in Source Generator, 
 | **VSMVVM.Core** | .NET Standard 2.0 | MVVM base, DI, Source Generator, Messenger, Guard |
 | **VSMVVM.WPF** | .NET 8 / .NET 9 (WPF) | Host, Services, Controls, Behaviors, SVG |
 | **VSMVVM.WPF.Design** | .NET 8 / .NET 9 (WPF) | Tailwind-inspired design tokens, themed controls |
-| **VSMVVM.Core.Scheduler** | .NET Standard 2.0 | Blueprint-style workflow engine — graph model, pins (`IPinTypeRegistry` 확장 포인트, 사용자 타입/`List<>`/`Dictionary<,>`/배열 generic 자동 인스턴스화, StableName 라운드트립), **다형성 핀 시스템** (`Phase K~L` — `PinDescriptor.TypeParameterName`, `IPolymorphicNode`, `INodeInstancePropertyHost`), 빌트인 노드: 흐름 (Start/End/Sequence/Branch/Delay/Toggle), 진단 (Log 가변 인자, Assert/Guard/RangeAssert), IO (Output/Input), 데이터 소스 (다형성 Constant, Random Int/Double/Bool), **Variables** (다형성 GetVariable/SetVariable + GraphVariable), **컬렉션** (다형성 `List<T>`: Add/Get/Count/Clear/Contains/RemoveAt + `Dictionary<K,V>`: Set/Get/ContainsKey/Remove/Keys/Values/Count), execution engine, Source Generator, `[MethodNode]` 메서드 / **`[ParameterNode]` 정적 필드** → 자동 노드 등록 (`CustomNodeFactory`), **ProfilingStats**, **ExecutionRun + IExecutionHistoryStore**, **ISchedulerLogSink** (Trace/Debug/Info/Warn/Error), **시스템 가드** (MaxNodes/Timeout/MemoryBudget), `ICompilationService` 추상화 |
+| **VSMVVM.Core.Scheduler** | .NET Standard 2.0 | Blueprint-style workflow engine — graph model, pins (`IPinTypeRegistry` 확장 포인트, 사용자 타입/`List<>`/`Dictionary<,>`/배열 generic 자동 인스턴스화, StableName 라운드트립), **다형성 핀 시스템** (`Phase K~L` — `PinDescriptor.TypeParameterName`, `IPolymorphicNode`, `INodeInstancePropertyHost`), 빌트인 노드: 흐름 (Start/End/Sequence/Branch/Delay/Toggle/**Repeat**/**Fork**/**Join**), 진단 (Log 가변 인자, Assert/Guard/RangeAssert), IO (Output/Input), 데이터 소스 (다형성 Constant, Random Int/Double/Bool), **Variables** (다형성 GetVariable/SetVariable + GraphVariable), **컬렉션** (다형성 `List<T>`: Add/Get/Count/Clear/Contains/RemoveAt + `Dictionary<K,V>`: Set/Get/ContainsKey/Remove/Keys/Values/Count), execution engine (**`InvalidateDataCache` — 루프 iteration 사이 pull-cache 리셋**, **`ISchedulerService.SetBreakpoint(id, bool)` — 실행 중 브레이크포인트 명시 동기화**), Source Generator, `[MethodNode]` 메서드 / **`[ParameterNode]` 정적 필드** / **`ValueTuple` 반환 자동 다중 출력 핀** → 자동 노드 등록 (`CustomNodeFactory`), **ProfilingStats**, **ExecutionRun + IExecutionHistoryStore**, **ISchedulerLogSink** (Trace/Debug/Info/Warn/Error), **시스템 가드** (MaxNodes/Timeout/MemoryBudget), `ICompilationService` 추상화 |
 | **VSMVVM.Core.Scheduler.Scripting** | .NET 8 / .NET 9 | Roslyn-backed `ICompilationService` — 사용자 C# 코드를 collectible ALC로 동적 컴파일 (선택적) |
-| **VSMVVM.WPF.Scheduler** | .NET 8 / .NET 9 (WPF) | NodeGraphCanvas + NodeView/PinView/ConnectionView + ViewModel 6종 (Node/Pin/Connection/Graph + **SchedulerLogVM/ExecutionHistoryVM**) + Pin 타입별 색상 컨버터 + **NodeInspectorPanel** / **SchedulerLogPanel** / **ExecutionHistoryPanel (GanttChartView)**. `VSMVVM.WPF.Design` 토큰 기반 테마 |
+| **VSMVVM.WPF.Scheduler** | .NET 8 / .NET 9 (WPF) | NodeGraphCanvas + NodeView/PinView/ConnectionView + ViewModel 6종 (Node/Pin/Connection/Graph + **SchedulerLogVM/ExecutionHistoryVM**) + Pin 타입별 색상 컨버터 + **NodeInspectorPanel** / **SchedulerLogPanel** / **ExecutionHistoryPanel (GanttChartView)** / **CollectionDetailWindow** (컬렉션 값 브레드크럼 드릴다운 + LineChart/ConfusionMatrix/Heatmap 통합 뷰) + `NodeViewModel.OpenSourceRequested` (인스펙터 "Open Code"). `VSMVVM.WPF.Design` 토큰 기반 테마 |
 | **VSMVVM.WPF.Scheduler.Editor** | .NET 8 / .NET 9 (WPF) | AvalonEdit 호스팅 `CodeNodeEditor` UserControl + 디자인 토큰 신택스 하이라이팅(Dark/Light XSHD) + `Theme`/`SourceCode`/`Diagnostics` DP. 사용자 코드 노드 편집 UI |
 
 기존 MVVM 의존성: `VSMVVM.WPF.Design` → `VSMVVM.WPF` → `VSMVVM.Core` (NuGet 이 자동 해결).
@@ -1093,7 +1093,7 @@ editor.EnableCompletion = false;
 - **그래프 (`NodeGraph`) + 그래프 변수 (`NodeGraph.Variables`)** — 워크스페이스 (탭) 단위. 각 탭이 자기 그래프 + 변수 보관.
 - **사용자 코드 조각 (`UserCodeSnippet`) + 컴파일 + `NodeMetadataRegistry` 등록** — **컨테이너 단위 전역**. `NodeMetadataRegistry` 가 프로세스 전역 싱글톤이므로 워크스페이스 단위로 두면 typeId 충돌 발생.
 - **저장/복원** — 그래프 JSON 은 워크스페이스의 `Save JSON` / `Load JSON` (그래프 + 변수만). 사용자 코드 JSON 은 컨테이너의 `Save Code…` / `Load Code…` (디폴트 경로 `%APPDATA%/VSMVVM.WPF.Sample/userCode.json`, `Dictionary<string,string>` 포맷). 운영 흐름은 *Load Code → Load Graph* 순서 (typeId 가 먼저 등록되어 있어야 노드 복원 성공).
-- **데모 (`LoadOpenCvDemo` / `LoadCollectionDemo` / `LoadParameterDemo`)** — 컨테이너의 `Snippets` 에 코드 조각을 주입 + `CompileAllSnippetsCommand` 실행 → 자기 워크스페이스의 그래프 빌드.
+- **데모 (`LoadOpenCvDemo` / `LoadCollectionDemo` / `LoadParameterDemo` / `LoadRandomDemo` / **`LoadIrisDemo`** / **`LoadMnistDemo`**)** — 컨테이너의 `Snippets` 에 코드 조각을 주입 + `CompileAllSnippetsCommand` 실행 → 자기 워크스페이스의 그래프 빌드. Iris/MNIST 데모는 **`Core.Repeat` 노드 + `Core.Delay` + `ChartViewNode`** 조합으로 매 에폭 실시간 학습 곡선 (LineChart) / 혼동행렬 (ConfusionMatrix) / 입력 미리보기 (Heatmap) 를 별도 창에 스트리밍. MNIST 는 `MnistDataLoader` 로 `%LOCALAPPDATA%/VSMVVM/Data/mnist/` CSV 자동 다운로드/캐시.
 
 인스펙터의 NODE PROPERTIES 섹션 (Phase K~M) 이 다형성 노드의 `ItemType` 과 Variable 노드의 `VariableName` 을 ComboBox 로 노출. Variable 드롭다운 마지막에 항상 `+ Add new variable…` 항목이 있어 즉시 변수 추가 가능 (Sample 은 `VariablesManagerWindow` 모달 호출, 기본 구현은 자동 `var{N}` 추가).
 
@@ -1272,11 +1272,11 @@ dotnet test tests/VSMVVM.WPF.Tests/
 | ----- | -----: | -----: | ----: |
 | VSMVVM.Core.Tests | 169 | 169 | **338** |
 | VSMVVM.WPF.Tests | 225 | 225 | **450** |
-| VSMVVM.Core.Scheduler.Tests | 222 | 222 | **444** |
+| VSMVVM.Core.Scheduler.Tests | 232 | 232 | **464** |
 | VSMVVM.Core.Scheduler.Scripting.Tests | 9 | 9 | **18** |
-| VSMVVM.WPF.Scheduler.Tests | 72 | 72 | **144** |
+| VSMVVM.WPF.Scheduler.Tests | 103 | 103 | **206** |
 | VSMVVM.WPF.Scheduler.Editor.Tests | 30 | 30 | **60** |
-| **합계** | **727** | **727** | **1,454** |
+| **합계** | **768** | **768** | **1,536** |
 
 주요 커버리지: DI / Messenger / RelayCommand / StateStore / ObservableValidator / Logging (`[Log]`) / RegionManager · WPF Canvas (Mask/Histogram), Imaging, Behaviors, dispatcher/window/shortcut services · Graph / Pin / NodeBase / Source Generator emit / SchedulerService (push exec + pull data, branch/sequence/취소/timeout/순환) / 빌트인 노드 (Flow, IO, Validation, Math, Variables, Collections, Diagnostics) / SignatureToPinsBuilder / CustomFunctionNode / CustomConstantNode / `[ParameterNode]` 정적 필드 + CustomParameterNode (`Phase L`) / NodeGraphSerializer 라운드트립 (그래프 + 변수만, `Phase M`) / **다형성 핀 시스템 (`Phase K~L`)** — PinDescriptor TypeParameterName, IPolymorphicNode TypeArguments, NodeBase.BuildPins 치환, INodeInstancePropertyHost (인스펙터 NODE PROPERTIES) · Roslyn (Compile/Analyze/UnloadAssembly), collectible ALC · NodeGraphViewModel / Undo-Redo / NodePaletteService (검색 포함, `Phase G`) / NodeGraphMiniMap / Profiling / Inspector 스냅샷 / N:M 시각화 / **인스펙터 NODE PROPERTIES (ItemType / VariableName ComboBox + "+ Add new variable…" 마법 항목, `Phase M`)** · CodeNodeEditor / RoslynCompletion. 샘플 앱의 인수 시나리오 (Run/Stop, 사용자 코드 컴파일, ParameterNode 시연 등) 는 `sample/VSMVVM.WPF.Sample` 의 *데모 버튼* 으로 직접 시연 — NuGet 배포 라이브러리 자체엔 포함되지 않음.
 
@@ -1299,7 +1299,7 @@ GitHub Actions 기반. 워크플로우 2개.
 
 | 트리거 | 동작 |
 |---|---|
-| `v*.*.*` 태그 push (예: `v1.2.13`) | 태그에서 버전 추출 → props 갱신 → build/test → pack (7종) → **`nuget.org` 에 push** |
+| `v*.*.*` 태그 push (예: `v1.2.18`) | 태그에서 버전 추출 → props 갱신 → build/test → pack (7종) → **`nuget.org` 에 push** |
 | GitHub UI 의 "Run workflow" | `version` 입력 후 동일 흐름 |
 
 Push 대상은 `secrets.NUGET_API_KEY` 로 인증. 이미 게시된 버전이면 `--skip-duplicate` 로 무시.
@@ -1311,9 +1311,9 @@ Push 대상은 `secrets.NUGET_API_KEY` 로 인증. 이미 게시된 버전이면
 ```powershell
 # props 의 <Version> 을 원하는 버전으로 수정 후:
 git add Directory.Build.props
-git commit -m "release: 1.2.13"
-git tag v1.2.13
-git push origin main v1.2.13
+git commit -m "release: 1.2.18"
+git tag v1.2.18
+git push origin main v1.2.18
 ```
 
 또는 GitHub UI 의 Actions → "Publish to NuGet" → "Run workflow" 에서 `version` 만 입력하면 태그 없이도 즉시 게시 가능.
@@ -1322,11 +1322,11 @@ git push origin main v1.2.13
 
 ```powershell
 $env:NUGET_API_KEY = "..."
-.\scripts\publish-nuget.ps1 -Version 1.2.13
+.\scripts\publish-nuget.ps1 -Version 1.2.18
 ```
 
 ```bash
-NUGET_API_KEY=... ./scripts/publish-nuget.sh --version 1.2.13
+NUGET_API_KEY=... ./scripts/publish-nuget.sh --version 1.2.18
 ```
 
 ---

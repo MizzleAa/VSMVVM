@@ -74,6 +74,19 @@ namespace VSMVVM.WPF.Scheduler.ViewModels
         public string DisplayName =>
             NodeMetadataRegistry.Get(Model.TypeId)?.DisplayName ?? Model.TypeId;
 
+        /// <summary>사용자 코드(사용자가 편집 가능한 스니펫)에서 온 노드인가.
+        /// CustomFunctionNode/CustomConstantNode/CustomParameterNode 이면 true — 인스펙터 헤더의 "Open Code" 버튼 노출 조건.
+        /// 실제 소스 열기는 호스트(예: SampleWorkspaceViewModel)가 <see cref="OpenSourceRequested"/> 이벤트를 처리.</summary>
+        public bool HasUserSource =>
+            Model is CustomFunctionNode
+            || Model is CustomConstantNode
+            || Model is CustomParameterNode;
+
+        /// <summary>인스펙터 "Open Code" 버튼이 발화. 인수 = 이 노드의 <see cref="Model"/>. 호스트가 구독하여 스니펫 에디터 오픈.</summary>
+        public event EventHandler<INode> OpenSourceRequested;
+
+        internal void RaiseOpenSourceRequested() => OpenSourceRequested?.Invoke(this, Model);
+
         public ObservableCollection<PinViewModel> InputPins { get; } = new();
         public ObservableCollection<PinViewModel> OutputPins { get; } = new();
 

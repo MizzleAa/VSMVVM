@@ -31,10 +31,13 @@ namespace VSMVVM.Core.Scheduler.Runtime
             if (graph == null) throw new ArgumentNullException(nameof(graph));
             if (context == null) throw new ArgumentNullException(nameof(context));
 
-            // 글로벌 브레이크포인트를 컨텍스트로 복사
-            foreach (var kv in _globalBreakpoints)
+            // 글로벌 브레이크포인트를 컨텍스트로 복사 (Breakpoints 는 HashSet 이므로 lock 아래).
+            lock (_gateLock)
             {
-                context.Breakpoints.Add(kv.Key);
+                foreach (var kv in _globalBreakpoints)
+                {
+                    context.Breakpoints.Add(kv.Key);
+                }
             }
 
             var entry = graph.GetNode(entryNodeId)
@@ -43,7 +46,7 @@ namespace VSMVVM.Core.Scheduler.Runtime
             using var linkedCts = CreateLinkedCancellation(context);
             var effectiveToken = linkedCts.Token;
 
-            int nodesExecuted = 0;
+            var runState = new ParallelRunState();
             var stopwatch = Stopwatch.StartNew();
             var runStartedAt = DateTimeOffset.UtcNow;
             var run = new ExecutionRun(context.RunId, graph.Id, runStartedAt);
@@ -55,107 +58,13 @@ namespace VSMVVM.Core.Scheduler.Runtime
 
             WriteLog(context, SchedulerLogLevel.Info, null, null, $"Run started for graph {graph.Id}.", null);
 
-            // 직렬 스택. ExecutionFlow.Continue가 여러 핀을 반환하면 발화 순서대로 LIFO로 push하기 위해
-            // 일반 큐가 아닌 명시적 스택 사용. 같은 발화 안에서는 declaration 순서대로 실행되도록 역순 push.
-            var pending = new Stack<INode>();
-            pending.Push(entry);
-
             // Continue() 가 StepMode 를 리셋할 수 있도록 활성 컨텍스트 등록. finally 에서 clear.
             lock (_gateLock) { _activeContext = context; }
 
             try
             {
-                while (pending.Count > 0)
-                {
-                    effectiveToken.ThrowIfCancellationRequested();
-
-                    if (nodesExecuted >= context.MaxNodesExecuted)
-                    {
-                        var msg = $"MaxNodesExecuted ({context.MaxNodesExecuted}) exceeded.";
-                        Emit(context, new GuardTriggeredMessage(context.RunId, graph.Id, "MaxNodes", msg));
-                        WriteLog(context, SchedulerLogLevel.Error, null, null, msg, null);
-                        throw new SchedulerOverflowException(context.MaxNodesExecuted);
-                    }
-
-                    if (context.MemoryBudgetBytes.HasValue)
-                    {
-                        var observed = GC.GetTotalMemory(forceFullCollection: false) - memoryBaseline;
-                        if (observed > context.MemoryBudgetBytes.Value)
-                        {
-                            var msg = $"MemoryBudget ({context.MemoryBudgetBytes.Value} bytes) exceeded (observed {observed}).";
-                            Emit(context, new GuardTriggeredMessage(context.RunId, graph.Id, "Memory", msg));
-                            WriteLog(context, SchedulerLogLevel.Error, null, null, msg, null);
-                            throw new GraphMemoryBudgetExceededException(context.MemoryBudgetBytes.Value, observed);
-                        }
-                    }
-
-                    var current = pending.Pop();
-
-                    // 브레이크포인트 검사
-                    if (context.Breakpoints.Contains(current.Id))
-                    {
-                        Emit(context, new BreakpointHitMessage(context.RunId, graph.Id, current.Id));
-                        context.StepMode = DebugStepMode.Paused;
-                        await WaitForContinueAsync(effectiveToken).ConfigureAwait(false);
-                    }
-                    else if (context.StepMode == DebugStepMode.Paused)
-                    {
-                        Emit(context, new BreakpointHitMessage(context.RunId, graph.Id, current.Id));
-                        await WaitForContinueAsync(effectiveToken).ConfigureAwait(false);
-                    }
-
-                    Emit(context, new NodeEnteringMessage(context.RunId, graph.Id, current.Id, current.TypeId));
-                    WriteLog(context, SchedulerLogLevel.Debug, current.Id, current.TypeId,
-                        $"Node entering: {current.TypeId}", null);
-
-                    var nodeStartedAt = DateTimeOffset.UtcNow;
-                    var nodeStart = Stopwatch.StartNew();
-                    ExecutionFlow flow;
-                    Exception nodeError = null;
-                    try
-                    {
-                        flow = await ExecuteWithTimeoutAsync(current, context, effectiveToken).ConfigureAwait(false);
-                    }
-                    catch (Exception ex)
-                    {
-                        nodeError = ex;
-                        flow = ExecutionFlow.Halt;
-                    }
-                    nodeStart.Stop();
-                    nodesExecuted++;
-
-                    var (inSnap, outSnap) = CapturePinSnapshots(context, current);
-                    run.AddRecord(new NodeExecutionRecord(
-                        current.Id, current.TypeId, nodeStartedAt, nodeStart.Elapsed,
-                        inSnap, outSnap, nodeError));
-                    Emit(context, new NodeExitedMessage(context.RunId, graph.Id, current.Id, current.TypeId,
-                        nodeError == null, nodeStart.Elapsed, nodeError, inSnap, outSnap));
-
-                    if (nodeError == null)
-                    {
-                        WriteLog(context, SchedulerLogLevel.Debug, current.Id, current.TypeId,
-                            $"Node exited OK in {nodeStart.Elapsed.TotalMilliseconds:F1} ms.", null);
-                    }
-                    else
-                    {
-                        WriteLog(context, SchedulerLogLevel.Error, current.Id, current.TypeId,
-                            $"Node failed: {nodeError.Message}", nodeError);
-                        throw nodeError; // 상위 try/catch에서 처리하여 ExecutionResult로 변환
-                    }
-
-                    if (flow.IsHalt)
-                    {
-                        continue;
-                    }
-
-                    // 발화된 exec-out 핀 × 연결 → 다음 노드 push.
-                    // declaration/발화 순서 보존: pending이 Stack이므로 역순 push.
-                    var nextNodes = ResolveNextNodes(graph, current, flow);
-                    for (int i = nextNodes.Count - 1; i >= 0; i--)
-                    {
-                        pending.Push(nextNodes[i]);
-                    }
-                }
+                await ExecuteBranchAsync(graph, entry, context, run, runState, memoryBaseline, effectiveToken)
+                    .ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -166,7 +75,12 @@ namespace VSMVVM.Core.Scheduler.Runtime
                 status = ExecutionStatus.Failed;
                 error = ex;
                 context.Logger?.Error($"Graph {graph.Id} run failed: {ex.Message}", ex);
+                // 진단용: 스택트레이스를 SchedulerLogSink 에 그대로 남겨 UI/파일에서 확인 가능하게.
+                WriteLog(context, SchedulerLogLevel.Error, null, null,
+                    $"Run FAILED. Type={ex.GetType().Name} Msg={ex.Message}\nStack:\n{ex.StackTrace}", ex);
             }
+
+            int nodesExecuted = runState.NodesExecuted;
 
             stopwatch.Stop();
             var outputsSnapshot = new Dictionary<string, object>(context.Outputs);
@@ -225,6 +139,188 @@ namespace VSMVVM.Core.Scheduler.Runtime
                 }
             }
             return (ins, outs);
+        }
+
+        /// <summary>
+        /// 하나의 exec 브랜치를 직렬 실행한다. <see cref="IParallelForkNode"/> 노드를 만나면 각 발화 브랜치를
+        /// <c>Task.Run</c> 으로 재귀 호출해 병렬화한 뒤 <c>Task.WhenAll</c> 로 재합류.
+        /// <see cref="IJoinBarrierNode"/> 노드는 도착 카운터를 증가시키고 마지막 도달자만 downstream 을 이어간다.
+        /// </summary>
+        private async Task ExecuteBranchAsync(
+            NodeGraph graph, INode entry, ExecutionContext context, ExecutionRun run,
+            ParallelRunState state, long memoryBaseline, CancellationToken effectiveToken)
+        {
+            // 브랜치별 직렬 스택 — 기존 로직 유지.
+            var pending = new Stack<INode>();
+            pending.Push(entry);
+
+            while (pending.Count > 0)
+            {
+                effectiveToken.ThrowIfCancellationRequested();
+
+                if (state.NodesExecuted >= context.MaxNodesExecuted)
+                {
+                    var msg = $"MaxNodesExecuted ({context.MaxNodesExecuted}) exceeded.";
+                    Emit(context, new GuardTriggeredMessage(context.RunId, graph.Id, "MaxNodes", msg));
+                    WriteLog(context, SchedulerLogLevel.Error, null, null, msg, null);
+                    throw new SchedulerOverflowException(context.MaxNodesExecuted);
+                }
+
+                if (context.MemoryBudgetBytes.HasValue)
+                {
+                    var observed = GC.GetTotalMemory(forceFullCollection: false) - memoryBaseline;
+                    if (observed > context.MemoryBudgetBytes.Value)
+                    {
+                        var msg = $"MemoryBudget ({context.MemoryBudgetBytes.Value} bytes) exceeded (observed {observed}).";
+                        Emit(context, new GuardTriggeredMessage(context.RunId, graph.Id, "Memory", msg));
+                        WriteLog(context, SchedulerLogLevel.Error, null, null, msg, null);
+                        throw new GraphMemoryBudgetExceededException(context.MemoryBudgetBytes.Value, observed);
+                    }
+                }
+
+                var current = pending.Pop();
+
+                // Join 노드는 도착 카운트가 목표에 도달한 경우에만 실제 실행 · downstream 진행.
+                // 그 외 도착은 이 브랜치 실행을 여기서 종료 (다른 브랜치가 마지막 도착자로서 이어감).
+                if (current is IJoinBarrierNode barrier)
+                {
+                    int arrivals = state.RecordJoinArrival(current.Id);
+                    int expected = ResolveExpectedArrivals(graph, current, barrier);
+                    if (arrivals < expected)
+                    {
+                        // 아직 다른 브랜치가 남았음 — 이 브랜치는 여기서 대기 종료.
+                        WriteLog(context, SchedulerLogLevel.Debug, current.Id, current.TypeId,
+                            $"Join arrivals {arrivals}/{expected} — awaiting siblings.", null);
+                        return;
+                    }
+                    // 마지막 도착 — 계속 진행. 다음 iteration 에서 이 Join 노드를 정상 실행.
+                }
+
+                // 브레이크포인트 검사 — UI 스레드가 SyncActiveContext 로 동시 수정할 수 있으므로 lock.
+                bool hasBreakpoint;
+                lock (_gateLock) { hasBreakpoint = context.Breakpoints.Contains(current.Id); }
+                if (hasBreakpoint)
+                {
+                    Emit(context, new BreakpointHitMessage(context.RunId, graph.Id, current.Id));
+                    context.StepMode = DebugStepMode.Paused;
+                    await WaitForContinueAsync(effectiveToken).ConfigureAwait(false);
+                }
+                else if (context.StepMode == DebugStepMode.Paused)
+                {
+                    Emit(context, new BreakpointHitMessage(context.RunId, graph.Id, current.Id));
+                    await WaitForContinueAsync(effectiveToken).ConfigureAwait(false);
+                }
+
+                Emit(context, new NodeEnteringMessage(context.RunId, graph.Id, current.Id, current.TypeId));
+                WriteLog(context, SchedulerLogLevel.Debug, current.Id, current.TypeId,
+                    $"Node entering: {current.TypeId}", null);
+
+                var nodeStartedAt = DateTimeOffset.UtcNow;
+                var nodeStart = Stopwatch.StartNew();
+                ExecutionFlow flow;
+                Exception nodeError = null;
+                try
+                {
+                    flow = await ExecuteWithTimeoutAsync(current, context, effectiveToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    nodeError = ex;
+                    flow = ExecutionFlow.Halt;
+                }
+                nodeStart.Stop();
+                state.IncrementNodesExecuted();
+
+                var (inSnap, outSnap) = CapturePinSnapshots(context, current);
+                run.AddRecord(new NodeExecutionRecord(
+                    current.Id, current.TypeId, nodeStartedAt, nodeStart.Elapsed,
+                    inSnap, outSnap, nodeError));
+                Emit(context, new NodeExitedMessage(context.RunId, graph.Id, current.Id, current.TypeId,
+                    nodeError == null, nodeStart.Elapsed, nodeError, inSnap, outSnap));
+
+                if (nodeError == null)
+                {
+                    WriteLog(context, SchedulerLogLevel.Debug, current.Id, current.TypeId,
+                        $"Node exited OK in {nodeStart.Elapsed.TotalMilliseconds:F1} ms.", null);
+                }
+                else
+                {
+                    WriteLog(context, SchedulerLogLevel.Error, current.Id, current.TypeId,
+                        $"Node failed: {nodeError.Message}", nodeError);
+                    throw nodeError; // 상위 RunAsync try/catch 에서 처리하여 ExecutionResult 로 변환
+                }
+
+                if (flow.IsHalt)
+                {
+                    continue;
+                }
+
+                // IParallelForkNode 이고 다중 발화면 각 발화 핀의 다음 노드들을 병렬 Task 로 분기.
+                bool parallelFork = current is IParallelForkNode && flow.FiredPinIds.Count > 1;
+                if (parallelFork)
+                {
+                    var branchTasks = new List<Task>(flow.FiredPinIds.Count);
+                    for (int i = 0; i < flow.FiredPinIds.Count; i++)
+                    {
+                        var pinNextNodes = ResolveNextNodesForPin(graph, current, flow.FiredPinIds[i]);
+                        foreach (var nextNode in pinNextNodes)
+                        {
+                            var branchEntry = nextNode; // capture
+                            branchTasks.Add(Task.Run(
+                                () => ExecuteBranchAsync(graph, branchEntry, context, run, state,
+                                    memoryBaseline, effectiveToken),
+                                effectiveToken));
+                        }
+                    }
+                    await Task.WhenAll(branchTasks).ConfigureAwait(false);
+                    // Fork 이후 흐름은 각 브랜치가 각각 이어감 (Join 에서 재합류) — 이 프레임에서는 종료.
+                    return;
+                }
+
+                // 발화된 exec-out 핀 × 연결 → 다음 노드 push.
+                // declaration/발화 순서 보존: pending 이 Stack 이므로 역순 push.
+                var nextNodes = ResolveNextNodes(graph, current, flow);
+                for (int i = nextNodes.Count - 1; i >= 0; i--)
+                {
+                    pending.Push(nextNodes[i]);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Join 노드가 기대해야 할 arrival 수를 결정. 노드가 <see cref="IJoinBarrierNode.ExpectedArrivals"/> 로
+        /// 명시한 값이 있으면 그걸 사용하되, 그래프 상 실제 연결된 exec-in 개수와 비교해 더 작은 값을 채택
+        /// (사용자가 InputCount 는 4 로 잡아뒀지만 실제 3 개만 연결한 경우도 흘려보내야 함).
+        /// </summary>
+        private static int ResolveExpectedArrivals(NodeGraph graph, INode joinNode, IJoinBarrierNode barrier)
+        {
+            int declared = Math.Max(1, barrier.ExpectedArrivals);
+            int connected = 0;
+            for (int i = 0; i < graph.Connections.Count; i++)
+            {
+                var c = graph.Connections[i];
+                if (c.TargetNodeId == joinNode.Id && c.Kind == PinKind.Exec)
+                {
+                    connected++;
+                }
+            }
+            if (connected <= 0) return declared;
+            return Math.Min(declared, connected);
+        }
+
+        private static IReadOnlyList<INode> ResolveNextNodesForPin(NodeGraph graph, INode current, string firedPinId)
+        {
+            var list = new List<INode>();
+            for (int j = 0; j < graph.Connections.Count; j++)
+            {
+                var c = graph.Connections[j];
+                if (c.SourceNodeId == current.Id && c.SourcePinId == firedPinId && c.Kind == PinKind.Exec)
+                {
+                    var target = graph.GetNode(c.TargetNodeId);
+                    if (target != null) list.Add(target);
+                }
+            }
+            return list;
         }
 
         private static IReadOnlyList<INode> ResolveNextNodes(NodeGraph graph, INode current, ExecutionFlow flow)
@@ -300,10 +396,39 @@ namespace VSMVVM.Core.Scheduler.Runtime
 
         public void ToggleBreakpoint(Guid nodeId)
         {
+            bool nowEnabled;
             if (_globalBreakpoints.ContainsKey(nodeId))
+            {
                 _globalBreakpoints.TryRemove(nodeId, out _);
+                nowEnabled = false;
+            }
             else
+            {
                 _globalBreakpoints.TryAdd(nodeId, 1);
+                nowEnabled = true;
+            }
+            SyncActiveContext(nodeId, nowEnabled);
+        }
+
+        public void SetBreakpoint(Guid nodeId, bool enabled)
+        {
+            if (enabled) _globalBreakpoints.TryAdd(nodeId, 1);
+            else _globalBreakpoints.TryRemove(nodeId, out _);
+            SyncActiveContext(nodeId, enabled);
+        }
+
+        /// <summary>Run 진행 중인 컨텍스트가 있으면 그 컨텍스트의 Breakpoints 도 동기화 —
+        /// 그러지 않으면 실행 중에 해제해도 다음 iteration 에서 다시 정지된다.
+        /// Breakpoints 는 HashSet 이라 스레드 안전 아님 → _gateLock 아래에서 접근.</summary>
+        private void SyncActiveContext(Guid nodeId, bool enabled)
+        {
+            lock (_gateLock)
+            {
+                var ctx = _activeContext;
+                if (ctx == null) return;
+                if (enabled) ctx.Breakpoints.Add(nodeId);
+                else ctx.Breakpoints.Remove(nodeId);
+            }
         }
 
         /// <summary>
@@ -348,6 +473,38 @@ namespace VSMVVM.Core.Scheduler.Runtime
         {
             using var reg = token.Register(() => tcs.TrySetCanceled(token));
             await tcs.Task.ConfigureAwait(false);
+        }
+
+        /// <summary>
+        /// 한 RunAsync 동안 병렬 브랜치 사이에 공유되는 실행 통계 · Join 도착 카운터.
+        /// 여러 Task 가 동시 접근하므로 모든 변경은 lock 아래.
+        /// </summary>
+        private sealed class ParallelRunState
+        {
+            private readonly object _lock = new object();
+            private readonly Dictionary<Guid, int> _joinArrivals = new Dictionary<Guid, int>();
+            private int _nodesExecuted;
+
+            public int NodesExecuted
+            {
+                get { lock (_lock) return _nodesExecuted; }
+            }
+
+            public void IncrementNodesExecuted()
+            {
+                lock (_lock) _nodesExecuted++;
+            }
+
+            public int RecordJoinArrival(Guid joinNodeId)
+            {
+                lock (_lock)
+                {
+                    _joinArrivals.TryGetValue(joinNodeId, out var c);
+                    c++;
+                    _joinArrivals[joinNodeId] = c;
+                    return c;
+                }
+            }
         }
     }
 }

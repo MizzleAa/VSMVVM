@@ -31,6 +31,9 @@ namespace VSMVVM.Core.Scheduler.Tests.Nodes
             LastNoted = v;
         }
 
+        [MethodNode("Test.MathOps.GetStats", Category = "Math")]
+        public static (string Name, int Score, bool IsWinner) GetStats() => ("hero", 100, true);
+
         public static int LastNoted;
     }
 
@@ -123,12 +126,53 @@ namespace VSMVVM.Core.Scheduler.Tests.Nodes
         }
 
         [Fact]
+        public async Task CustomConstantNode_NamedValueTuple_DistributesElementsToNamedOutputPins()
+        {
+            var method = typeof(MathOps).GetMethod(nameof(MathOps.GetStats));
+            var pins = SignatureToPinsBuilder.BuildAsConstant(method);
+            var node = new CustomConstantNode("Direct.GetStats", method, pins);
+
+            BuiltInNodes.EnsureRegistered();
+            var graph = new NodeGraph();
+            var start = graph.AddNode(StartNode.TypeIdConst, 0, 0);
+            graph.AddNode(node, 0, 0);
+            var end = graph.AddNode(EndNode.TypeIdConst, 0, 0);
+
+            // constant-like 노드는 pull 평가 — 소비자 노드가 있어야 실행됨. Output 3개를 각각 소비.
+            var outName = graph.AddNode(OutputNode.TypeIdConst, 0, 0);
+            ((NodeBase)outName).SetLiteralInput("Key", "name");
+            graph.Connect(node.Id, "Name", outName.Id, "Value");
+
+            var outScore = graph.AddNode(OutputNode.TypeIdConst, 0, 0);
+            ((NodeBase)outScore).SetLiteralInput("Key", "score");
+            graph.Connect(node.Id, "Score", outScore.Id, "Value");
+
+            var outWin = graph.AddNode(OutputNode.TypeIdConst, 0, 0);
+            ((NodeBase)outWin).SetLiteralInput("Key", "win");
+            graph.Connect(node.Id, "IsWinner", outWin.Id, "Value");
+
+            graph.Connect(start.Id, "Then", outName.Id, "In");
+            graph.Connect(outName.Id, "Then", outScore.Id, "In");
+            graph.Connect(outScore.Id, "Then", outWin.Id, "In");
+            graph.Connect(outWin.Id, "Then", end.Id, "In");
+
+            var ctx = new ExecutionContext(graph);
+            var result = await new SchedulerService().RunAsync(graph, start.Id, ctx);
+
+            result.Status.Should().Be(ExecutionStatus.Completed);
+            ctx.DataCacheSnapshot[(node.Id, "Name")].Should().Be("hero");
+            ctx.DataCacheSnapshot[(node.Id, "Score")].Should().Be(100);
+            ctx.DataCacheSnapshot[(node.Id, "IsWinner")].Should().Be(true);
+        }
+
+        [Fact]
         public void CustomNodeFactory_RegisterFromAssembly_RegistersMethodNodeAttributedMethods()
         {
             // 미리 정리 (다른 테스트가 등록했을 가능성 대비)
             NodeMetadataRegistry.UnregisterForTests("Test.MathOps.Add");
             NodeMetadataRegistry.UnregisterForTests("Test.MathOps.MultiplyAsync");
             NodeMetadataRegistry.UnregisterForTests("Test.MathOps.NoteValue");
+            NodeMetadataRegistry.UnregisterForTests("Test.MathOps.GetStats");
 
             var registered = CustomNodeFactory.RegisterFromAssembly(typeof(MathOps).Assembly);
 
@@ -151,6 +195,7 @@ namespace VSMVVM.Core.Scheduler.Tests.Nodes
             NodeMetadataRegistry.UnregisterForTests("Test.MathOps.Add");
             NodeMetadataRegistry.UnregisterForTests("Test.MathOps.MultiplyAsync");
             NodeMetadataRegistry.UnregisterForTests("Test.MathOps.NoteValue");
+            NodeMetadataRegistry.UnregisterForTests("Test.MathOps.GetStats");
         }
 
         [Fact]

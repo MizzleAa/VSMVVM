@@ -68,7 +68,7 @@
             </Setter>
         </Style>
 
-        <!-- 핀 행 템플릿 — 한 줄에 [DisplayName : Value (TypeName)] -->
+        <!-- 핀 행 템플릿 — 한 줄에 [DisplayName : Value (TypeName)] + 컬렉션이면 "자세히" 창 -->
         <DataTemplate x:Key="PinSnapshotRowTemplate" DataType="{x:Type vm:PinValueSnapshot}">
             <Border Padding="{DynamicResource Px2Py1}"
                     Margin="{DynamicResource Mb0_5}"
@@ -88,12 +88,23 @@
                                    FontSize="10"
                                    Foreground="{DynamicResource TextMuted}"/>
                     </StackPanel>
-                    <TextBlock Grid.Column="1"
-                               Text="{Binding DisplayValue}"
-                               TextWrapping="Wrap"
-                               FontFamily="Cascadia Mono, Consolas"
-                               Foreground="{DynamicResource TextSecondary}"
-                               VerticalAlignment="Center"/>
+                    <DockPanel Grid.Column="1" LastChildFill="True">
+                        <Button DockPanel.Dock="Right"
+                                Content="자세히"
+                                FontSize="10"
+                                Padding="6,1"
+                                MinHeight="0"
+                                Margin="4,0,0,0"
+                                VerticalAlignment="Center"
+                                Visibility="{Binding IsCollection, Converter={StaticResource BoolToVisibility}}"
+                                Click="OnPinDetailClick"
+                                ToolTip="컬렉션 요소를 테이블로 보기"/>
+                        <TextBlock Text="{Binding DisplayValue}"
+                                   TextWrapping="Wrap"
+                                   FontFamily="Cascadia Mono, Consolas"
+                                   Foreground="{DynamicResource TextSecondary}"
+                                   VerticalAlignment="Center"/>
+                    </DockPanel>
                 </Grid>
             </Border>
         </DataTemplate>
@@ -142,10 +153,23 @@
                         BorderBrush="{DynamicResource BorderDefault}"
                         BorderThickness="0,0,0,1">
                     <StackPanel>
-                        <TextBlock Text="{Binding DisplayName}"
-                                   FontSize="14"
-                                   FontWeight="Bold"
-                                   Foreground="{DynamicResource TextPrimary}"/>
+                        <DockPanel LastChildFill="True">
+                            <Button DockPanel.Dock="Right"
+                                    Content="Open Code"
+                                    FontSize="10"
+                                    Padding="6,1"
+                                    MinHeight="0"
+                                    VerticalAlignment="Center"
+                                    Margin="8,0,0,0"
+                                    Visibility="{Binding HasUserSource, Converter={StaticResource BoolToVisibility}}"
+                                    Click="OnOpenCodeClick"
+                                    ToolTip="이 노드를 정의한 사용자 코드 스니펫 열기"/>
+                            <TextBlock Text="{Binding DisplayName}"
+                                       FontSize="14"
+                                       FontWeight="Bold"
+                                       Foreground="{DynamicResource TextPrimary}"
+                                       TextTrimming="CharacterEllipsis"/>
+                        </DockPanel>
                         <TextBlock Foreground="{DynamicResource TextMuted}"
                                    FontSize="11"
                                    Margin="{DynamicResource Mt0_5}">

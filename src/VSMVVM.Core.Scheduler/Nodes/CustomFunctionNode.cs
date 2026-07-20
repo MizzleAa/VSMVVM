@@ -24,6 +24,9 @@ namespace VSMVVM.Core.Scheduler.Nodes
         /// <summary>인스턴스 메소드용 대상 객체. 정적 메소드면 null.</summary>
         public object Instance { get; set; }
 
+        /// <summary>이 노드가 래핑하는 원본 메서드. UI에서 "Open Code" 등 소스 역추적 용도.</summary>
+        public MethodInfo Method => _method;
+
         public override string TypeId => _typeId;
 
         public CustomFunctionNode(string typeId, MethodInfo method, IReadOnlyList<PinDescriptor> pins)
@@ -64,14 +67,39 @@ namespace VSMVVM.Core.Scheduler.Nodes
                 result = await vtAwaiter.ConfigureAwait(false);
             }
 
-            // 반환값을 Result 핀에 저장 (void/Task면 핀 자체가 없음)
+            // 반환값을 Result 핀에 저장 (void/Task면 핀 자체가 없음).
+            // 튜플 반환이면 각 요소를 요소명(Item1..N 폴백) 핀에 분배.
             var effective = SignatureToPinsBuilder.GetEffectiveReturnType(_method);
             if (effective != typeof(void))
             {
-                InvokeSetOutputGeneric(context, SignatureToPinsBuilder.ResultPinId, effective, result);
+                if (SignatureToPinsBuilder.IsValueTuple(effective))
+                {
+                    WriteTupleOutputs(context, effective, result);
+                }
+                else
+                {
+                    InvokeSetOutputGeneric(context, SignatureToPinsBuilder.ResultPinId, effective, result);
+                }
             }
 
             return ExecutionFlow.Continue(SignatureToPinsBuilder.ExecOutputPinId);
+        }
+
+        private void WriteTupleOutputs(ExecutionContext ctx, Type tupleType, object tupleValue)
+        {
+            var elementTypes = tupleType.GetGenericArguments();
+            var names = SignatureToPinsBuilder.ReadTupleElementNames(_method);
+            for (int i = 0; i < elementTypes.Length; i++)
+            {
+                var name = (names != null && i < names.Count && !string.IsNullOrEmpty(names[i]))
+                    ? names[i]
+                    : "Item" + (i + 1);
+                // ValueTuple의 요소는 Item1..Item7 (+ Rest). CLR 은 GetFields 순서를 보장하지 않으므로 이름으로 조회.
+                var itemFieldName = "Item" + (i + 1);
+                var f = tupleType.GetField(itemFieldName, BindingFlags.Public | BindingFlags.Instance);
+                var value = (tupleValue == null || f == null) ? null : f.GetValue(tupleValue);
+                InvokeSetOutputGeneric(ctx, name, elementTypes[i], value);
+            }
         }
 
         // 강타입 GetInput<T>을 reflection으로 호출. _typeCache로 GenericMethodInfo를 캐시하여 핫 패스 최적화.

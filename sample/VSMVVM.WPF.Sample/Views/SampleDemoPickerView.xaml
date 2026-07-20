@@ -1,0 +1,46 @@
+<UserControl x:Class="VSMVVM.WPF.Sample.Views.SampleDemoPickerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:me="clr-namespace:VSMVVM.WPF.MarkupExtensions;assembly=VSMVVM.WPF"
+             xmlns:vm="clr-namespace:VSMVVM.WPF.Sample.ViewModels"
+             me:ViewModelLocator.AutoWireViewModel="True"
+             Background="{DynamicResource BgPrimary}"
+             d:DataContext="{d:DesignInstance Type=vm:SampleDemoPickerViewModel}"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+
+    <!--
+        DialogService.ShowDialog 로 표시. Wrapping Window 가 OK/Cancel 버튼을 자동 추가하므로
+        여기서는 컨텐츠만 배치. OK 는 SelectedItem 유효할 때만 활성 (VM.AcceptCommand).
+    -->
+    <DockPanel LastChildFill="True" Margin="{DynamicResource P3}">
+        <TextBlock DockPanel.Dock="Top"
+                   Text="데모를 선택하면 현재 워크스페이스의 그래프가 교체됩니다."
+                   Foreground="{DynamicResource TextMuted}"
+                   FontSize="11"
+                   Margin="{DynamicResource Mb2}"/>
+
+        <ListBox ItemsSource="{Binding Items}"
+                 SelectedItem="{Binding SelectedItem}"
+                 Background="{DynamicResource BgSecondary}"
+                 Foreground="{DynamicResource TextPrimary}"
+                 BorderBrush="{DynamicResource BorderDefault}"
+                 MouseDoubleClick="OnListDoubleClick">
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:SampleDemoItem}">
+                    <StackPanel Margin="{DynamicResource Py1}">
+                        <TextBlock Text="{Binding DisplayName}"
+                                   FontWeight="SemiBold"
+                                   FontSize="13"
+                                   Foreground="{DynamicResource TextPrimary}"/>
+                        <TextBlock Text="{Binding Description}"
+                                   Foreground="{DynamicResource TextMuted}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</UserControl>

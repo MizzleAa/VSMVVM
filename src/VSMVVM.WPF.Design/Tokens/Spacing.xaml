@@ -49,6 +49,7 @@
 
     <!-- Scale 1 Compound (multi-axis) -->
     <Thickness x:Key="Mr1Mb1">0,0,4,4</Thickness>
+    <Thickness x:Key="Px1Py0_5">4,2,4,2</Thickness>
     <Thickness x:Key="Px2Py1">8,4,8,4</Thickness>
     <Thickness x:Key="Px3Py2">12,8,12,8</Thickness>
 

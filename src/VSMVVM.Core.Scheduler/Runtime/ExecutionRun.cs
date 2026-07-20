@@ -32,17 +32,29 @@ namespace VSMVVM.Core.Scheduler.Runtime
             StartedAt = startedAt;
         }
 
-        internal void AddRecord(NodeExecutionRecord record)
+        /// <summary>
+        /// 실행 중 노드 종료마다 SchedulerService 가 호출. 외부에도 열어두어 replay/import/데모 시나리오
+        /// (예: 부하 테스트, 저장된 run 복원) 에서 ExecutionRun 을 재구성할 수 있게 함.
+        /// </summary>
+        public void AppendRecord(NodeExecutionRecord record)
         {
             if (record == null) throw new ArgumentNullException(nameof(record));
             _records.Add(record);
         }
 
-        internal void Complete(ExecutionStatus status, DateTimeOffset completedAt, Exception error)
+        /// <summary>
+        /// run 을 종료 상태로 마감. SchedulerService 가 마지막에 호출.
+        /// replay/import 시나리오를 위해 외부 노출.
+        /// </summary>
+        public void MarkCompleted(ExecutionStatus status, DateTimeOffset completedAt, Exception error = null)
         {
             Status = status;
             CompletedAt = completedAt;
             Error = error;
         }
+
+        internal void AddRecord(NodeExecutionRecord record) => AppendRecord(record);
+        internal void Complete(ExecutionStatus status, DateTimeOffset completedAt, Exception error)
+            => MarkCompleted(status, completedAt, error);
     }
 }

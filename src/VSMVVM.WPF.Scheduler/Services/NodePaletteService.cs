@@ -17,11 +17,16 @@ namespace VSMVVM.WPF.Scheduler.Services
         /// <summary>메타데이터 Category 가 비어있을 때 fallback 카테고리. UserCodeCategoryExtractor.FallbackCategory 와 일치.</summary>
         public const string UserCodeCategory = "User Code";
 
+        /// <summary>팔레트에 노출하지 않을 TypeId 집합. 라이브러리 등록은 유지 — 그래프 로드/AddNode 는 정상 동작.
+        /// 호스트가 부트스트랩 시점에 채워 특정 빌트인 노드를 UI 에서만 숨긴다.</summary>
+        public HashSet<string> HiddenTypeIds { get; } = new HashSet<string>(StringComparer.Ordinal);
+
         public IReadOnlyList<NodePaletteCategory> GetCategories()
         {
             BuiltInNodes.EnsureRegistered();
 
             return NodeMetadataRegistry.All
+                .Where(m => !HiddenTypeIds.Contains(m.TypeId))
                 .GroupBy(EffectiveCategory)
                 .OrderBy(g => g.Key)
                 .Select(g => new NodePaletteCategory(

@@ -928,14 +928,15 @@ namespace VSMVVM.WPF.Scheduler.ViewModels
             IsPaused = false;
         }
 
-        /// <summary>지정 노드의 브레이크포인트를 토글한다. 글로벌 SchedulerService 등록도 함께 갱신.</summary>
+        /// <summary>지정 노드의 브레이크포인트를 토글. ViewModel 상태를 소스 오브 트루스로 삼아
+        /// scheduler 의 글로벌 등록을 명시적으로 동기화 (XOR toggle 이 아니라서 상태 불일치 발생 안 함).</summary>
         [RelayCommand]
         private void ToggleBreakpoint(NodeViewModel target)
         {
             target ??= SelectedNode;
             if (target == null) return;
             target.HasBreakpoint = !target.HasBreakpoint;
-            _scheduler?.ToggleBreakpoint(target.Id);
+            _scheduler?.SetBreakpoint(target.Id, target.HasBreakpoint);
         }
 
         // === Messenger handlers (Phase 7) ===
@@ -943,19 +944,27 @@ namespace VSMVVM.WPF.Scheduler.ViewModels
         // ObservableCollection (LastInputs/LastOutputs) 변경 + 바인딩된 속성 setter 를 안전하게 처리하려면
         // 생성 시 capture 한 SynchronizationContext (보통 UI) 로 마샬링해야 한다.
 
-        /// <summary>capture context 가 있고 현재 스레드가 다르면 Post, 아니면 직접 실행.</summary>
+        /// <summary>
+        /// UI 스레드로 마샬링. capture 한 SynchronizationContext 우선, 없으면 Application.Current.Dispatcher 로 폴백.
+        /// _capturedContext 가 null 인 경우 (뷰모델이 UI Dispatcher.Run 이전에 생성된 경우 등) 에도 안전.
+        /// </summary>
         private void MarshalToUI(Action action)
         {
             if (action == null) return;
             var ctx = _capturedContext;
-            if (ctx == null || ctx == System.Threading.SynchronizationContext.Current)
-            {
-                action();
-            }
-            else
+            if (ctx != null && ctx != System.Threading.SynchronizationContext.Current)
             {
                 ctx.Post(_ => action(), null);
+                return;
             }
+            // capture 실패 or 이미 같은 컨텍스트 — Dispatcher 폴백으로 UI 스레드 여부 재확인.
+            var dispatcher = System.Windows.Application.Current?.Dispatcher;
+            if (dispatcher != null && !dispatcher.CheckAccess())
+            {
+                dispatcher.BeginInvoke(action);
+                return;
+            }
+            action();
         }
 
         private void OnNodeEntering(object sender, NodeEnteringMessage msg) => MarshalToUI(() =>

@@ -22,6 +22,9 @@ namespace VSMVVM.Core.Scheduler.Nodes
 
         public override string TypeId => _typeId;
 
+        /// <summary>이 노드가 래핑하는 원본 필드. UI에서 "Open Code" 등 소스 역추적 용도.</summary>
+        public FieldInfo Field => _field;
+
         public CustomParameterNode(string typeId, FieldInfo field, IReadOnlyList<PinDescriptor> pins)
         {
             _typeId = typeId ?? throw new ArgumentNullException(nameof(typeId));

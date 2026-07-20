@@ -71,6 +71,10 @@
 		<None Update="Assets\app.png">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+		<!-- Iris 데모용 — 사용자 스니펫이 AppContext.BaseDirectory 에서 File.ReadAllLines 로 로드. -->
+		<None Update="Data\iris.csv">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>

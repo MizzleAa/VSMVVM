@@ -20,6 +20,9 @@ namespace VSMVVM.Core.Scheduler.Tests.Nodes
             public static async ValueTask<int> ValueAsync(int x) { await Task.Yield(); return x * 2; }
             public static int WithDefault(int a, int b = 10) => a + b;
             public static void RefParam(ref int x) { x++; }
+            public static (string Name, int Score, bool IsWinner) NamedTuple() => ("hero", 100, true);
+            public static (string, int, bool) UnnamedTuple() => ("x", 1, false);
+            public static async Task<(string A, int B)> NamedTupleAsync() { await Task.Yield(); return ("a", 1); }
         }
 
         private static MethodInfo M(string name) =>
@@ -107,6 +110,45 @@ namespace VSMVVM.Core.Scheduler.Tests.Nodes
             Action act = () => SignatureToPinsBuilder.Build(M(nameof(Samples.RefParam)));
             act.Should().Throw<NotSupportedException>()
                .WithMessage("*ref/out/in*");
+        }
+
+        [Fact]
+        public void NamedValueTuple_ProducesOneOutputPinPerElementWithNames()
+        {
+            var pins = SignatureToPinsBuilder.Build(M(nameof(Samples.NamedTuple)));
+
+            // In, Then, Name, Score, IsWinner
+            pins.Should().HaveCount(5);
+            pins[0].Id.Should().Be("In");
+            pins[1].Id.Should().Be("Then");
+            pins[2].Id.Should().Be("Name");
+            pins[2].ValueType.Should().Be(typeof(string));
+            pins[2].Direction.Should().Be(PinDirection.Output);
+            pins[3].Id.Should().Be("Score");
+            pins[3].ValueType.Should().Be(typeof(int));
+            pins[4].Id.Should().Be("IsWinner");
+            pins[4].ValueType.Should().Be(typeof(bool));
+        }
+
+        [Fact]
+        public void UnnamedValueTuple_Throws_NotSupportedException()
+        {
+            Action act = () => SignatureToPinsBuilder.Build(M(nameof(Samples.UnnamedTuple)));
+            act.Should().Throw<NotSupportedException>()
+               .WithMessage("*unnamed ValueTuple*");
+        }
+
+        [Fact]
+        public void TaskOfNamedValueTuple_UnwrapsAndProducesPerElementPins()
+        {
+            var pins = SignatureToPinsBuilder.Build(M(nameof(Samples.NamedTupleAsync)));
+
+            // In, Then, A, B
+            pins.Should().HaveCount(4);
+            pins[2].Id.Should().Be("A");
+            pins[2].ValueType.Should().Be(typeof(string));
+            pins[3].Id.Should().Be("B");
+            pins[3].ValueType.Should().Be(typeof(int));
         }
 
         [Fact]

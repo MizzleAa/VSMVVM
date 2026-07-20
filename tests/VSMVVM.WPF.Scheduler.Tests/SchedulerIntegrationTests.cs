@@ -111,6 +111,7 @@ namespace VSMVVM.WPF.Scheduler.Tests
         }
 
         [Fact]
+        [Trait("Category", "Stress")]
         public async Task Breakpoint_PausesRun_ContinueResumes()
         {
             // Start → BranchNode (브레이크포인트) → True/False End. 사실 SchedulerService의 게이트는

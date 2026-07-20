@@ -14,6 +14,7 @@ namespace VSMVVM.WPF.Scheduler.Tests.ViewModels
     /// <summary>
     /// ExecutionHistoryViewModel 부하 테스트. Runs 폭주 시 hang/크래시 방지 + Runs 상한 유지.
     /// </summary>
+    [Trait("Category", "Stress")]
     public class ExecutionHistoryViewModelStressTests
     {
         private sealed class FakeStore : IExecutionHistoryStore

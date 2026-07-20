@@ -19,6 +19,7 @@ namespace VSMVVM.WPF.Scheduler.Tests.ViewModels
     /// Dispatcher.BeginInvoke 를 큐잉한다. Dispatcher 처리 지연 + Entries trim(RemoveAt(0)) 이
     /// 응답성을 죽이는지, 그리고 최종 상태는 정상인지.
     /// </summary>
+    [Trait("Category", "Stress")]
     public class SchedulerLogViewModelStressTests
     {
         private sealed class FakeSink : ISchedulerLogSink

@@ -23,6 +23,7 @@ namespace VSMVVM.Core.Scheduler.Tests.Runtime
     /// - 브랜치 하나에서 예외 발생 시 그래프가 Failed 로 종결
     /// - 기존 직렬 그래프 회귀 없음
     /// </summary>
+    [Trait("Category", "Stress")]
     public class ForkJoinNodeTests
     {
         [Fact]

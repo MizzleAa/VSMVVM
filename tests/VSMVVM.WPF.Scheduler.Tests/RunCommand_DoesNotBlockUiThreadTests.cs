@@ -27,6 +27,7 @@ namespace VSMVVM.WPF.Scheduler.Tests
     /// 즉시 양보. 메시지 핸들러는 기존 UI 마샬링 인프라가 UI 로 다시 가져옴.
     /// </para>
     /// </summary>
+    [Trait("Category", "Stress")]
     public class RunCommand_DoesNotBlockUiThreadTests
     {
         /// <summary>CPU 동기 sleep 으로 호출 스레드를 점유하는 테스트 노드.</summary>

@@ -22,6 +22,7 @@ namespace VSMVVM.WPF.Scheduler.Tests
     /// 모든 메시지 핸들러가 capture 한 context 로 마샬링한다. capture 가 null (테스트/콘솔) 이면 직접 호출.
     /// </para>
     /// </summary>
+    [Trait("Category", "Stress")]
     public class NodeGraphViewModelThreadMarshalingTests
     {
         /// <summary>큐잉 SyncContext — Post 된 콜백이 Drain 호출 시 실행. capture 가능한 SynchronizationContext.</summary>

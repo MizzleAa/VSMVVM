@@ -27,12 +27,35 @@ jobs:
     - name: Build
       run: dotnet build --no-restore --configuration Release
 
-    - name: Test
-      run: dotnet test --no-build --configuration Release --verbosity normal --filter "Category!=Stress" --logger "trx;LogFileName=test-results.trx"
+    - name: Test - Core
+      run: dotnet test tests/VSMVVM.Core.Tests/VSMVVM.Core.Tests.csproj --no-build --configuration Release --verbosity normal --filter "Category!=Stress" --blame-hang-timeout 3m --blame-hang-dump-type mini --logger "trx;LogFileName=test-results.trx"
+
+    - name: Test - Core.Scheduler
+      if: always()
+      run: dotnet test tests/VSMVVM.Core.Scheduler.Tests/VSMVVM.Core.Scheduler.Tests.csproj --no-build --configuration Release --verbosity normal --filter "Category!=Stress" --blame-hang-timeout 3m --blame-hang-dump-type mini --logger "trx;LogFileName=test-results.trx"
+
+    - name: Test - Core.Scheduler.Scripting
+      if: always()
+      run: dotnet test tests/VSMVVM.Core.Scheduler.Scripting.Tests/VSMVVM.Core.Scheduler.Scripting.Tests.csproj --no-build --configuration Release --verbosity normal --filter "Category!=Stress" --blame-hang-timeout 3m --blame-hang-dump-type mini --logger "trx;LogFileName=test-results.trx"
+
+    - name: Test - WPF
+      if: always()
+      run: dotnet test tests/VSMVVM.WPF.Tests/VSMVVM.WPF.Tests.csproj --no-build --configuration Release --verbosity normal --filter "Category!=Stress" --blame-hang-timeout 3m --blame-hang-dump-type mini --logger "trx;LogFileName=test-results.trx"
+
+    - name: Test - WPF.Scheduler
+      if: always()
+      run: dotnet test tests/VSMVVM.WPF.Scheduler.Tests/VSMVVM.WPF.Scheduler.Tests.csproj --no-build --configuration Release --verbosity normal --filter "Category!=Stress" --blame-hang-timeout 3m --blame-hang-dump-type mini --logger "trx;LogFileName=test-results.trx"
+
+    - name: Test - WPF.Scheduler.Editor
+      if: always()
+      run: dotnet test tests/VSMVVM.WPF.Scheduler.Editor.Tests/VSMVVM.WPF.Scheduler.Editor.Tests.csproj --no-build --configuration Release --verbosity normal --filter "Category!=Stress" --blame-hang-timeout 3m --blame-hang-dump-type mini --logger "trx;LogFileName=test-results.trx"
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results
-        path: '**/test-results.trx'
+        path: |
+          **/test-results.trx
+          **/*.dmp
+          **/Sequence_*.xml
